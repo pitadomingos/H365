@@ -130,8 +130,7 @@ export default function PatientRegistrationPage() {
     const headers = [
       "NationalID", "FullName", "DateOfBirth (YYYY-MM-DD)", "Gender", 
       "PhoneNumber", "EmailAddress", "FullAddress", "District", "Province", 
-      "HomeHospital", "NextOfKinName", "NextOfKinNumber", "NextOfKinAddress", 
-      "ReasonForVisit"
+      "HomeHospital", "NextOfKinName", "NextOfKinNumber", "NextOfKinAddress"
     ];
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
     const encodedUri = encodeURI(csvContent);
@@ -158,9 +157,7 @@ export default function PatientRegistrationPage() {
         title: "File Upload (Mock)",
         description: `${selectedFile.name} would be processed. This is a mock action.`,
       });
-      // In a real app, you'd send the file to the server here.
-      setSelectedFile(null); // Reset file input
-      // Clear the file input visually
+      setSelectedFile(null); 
       const fileInput = document.getElementById('bulkPatientFile') as HTMLInputElement;
       if (fileInput) fileInput.value = "";
 
@@ -174,12 +171,12 @@ export default function PatientRegistrationPage() {
   };
 
   const waitingList = [
-    { id: 1, name: "Alice Wonderland", time: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor" },
-    { id: 2, name: "Bob The Builder", time: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A" },
-    { id: 3, name: "Charlie Brown", time: "11:00 AM", location: "Laboratory", status: "Awaiting Results" },
-    { id: 4, name: "Diana Prince", time: "11:15 AM", location: "Pharmacy", status: "Collecting Medication" },
-    { id: 5, name: "Edward Scissorhands", time: "11:30 AM", location: "Specialized Dentist", status: "Procedure Complete" },
-    { id: 6, name: "Fiona Gallagher", time: "11:45 AM", location: "Outpatient", status: "Dispatched to Homecare" },
+    { id: 1, name: "Alice Wonderland", time: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
+    { id: 2, name: "Bob The Builder", time: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
+    { id: 3, name: "Charlie Brown", time: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
+    { id: 4, name: "Diana Prince", time: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
+    { id: 5, name: "Edward Scissorhands", time: "11:30 AM", location: "Specialized Dentist", status: "Procedure Complete", photoUrl: "https://placehold.co/40x40.png" },
+    { id: 6, name: "Fiona Gallagher", time: "11:45 AM", location: "Outpatient", status: "Dispatched to Homecare", photoUrl: "https://placehold.co/40x40.png" },
   ];
 
   return (
@@ -214,7 +211,7 @@ export default function PatientRegistrationPage() {
                         <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
                       )}
                       {capturedImage && (
-                        <Image src={capturedImage} alt="Captured patient photo" width={240} height={308} className="w-full h-full object-contain rounded-md" />
+                        <Image src={capturedImage} alt="Captured patient photo" width={240} height={308} className="w-full h-full object-contain rounded-md" data-ai-hint="patient photo"/>
                       )}
                       {!capturedImage && (!stream || hasCameraPermission === false) && ( 
                         <UserCircle className="w-24 h-24 text-muted-foreground" />
@@ -273,13 +270,8 @@ export default function PatientRegistrationPage() {
                         </Select>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Row 2: Camera Controls (aligned below Personal Info) */}
-                <div className="grid lg:grid-cols-3 gap-x-6">
-                    <div className="lg:col-span-1"></div> {/* Empty spacer for alignment with camera visual */}
-                    <div className="lg:col-span-2 space-y-4">
+                     {/* Camera Controls - Moved here, below Personal Info */}
+                    <div className="space-y-4 pt-2">
                         <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
                           <Camera className="h-5 w-5" /> Patient Photo Capture
                         </h3>
@@ -316,10 +308,10 @@ export default function PatientRegistrationPage() {
                            <p className="text-xs text-muted-foreground">Click "Enable Camera" to start.</p>
                          )}
                     </div>
+                  </div>
                 </div>
 
-
-                {/* Row 3: Remaining Information Sections */}
+                {/* Row 3: Remaining Information Sections & Bulk Upload */}
                 <div className="space-y-6 pt-4"> 
                   <div className="space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
@@ -375,10 +367,37 @@ export default function PatientRegistrationPage() {
                     </div>
                   </div>
                  
-                  <div className="space-y-2">
-                    <Label htmlFor="reasonForVisit">Reason for Visit / Chief Complaint (for new registrations)</Label>
-                    <Textarea id="reasonForVisit" placeholder="Describe the primary reason for the visit if known at registration" />
+                  {/* Bulk Patient Registration Section - Integrated here */}
+                  <div className="space-y-4 pt-4 border-t">
+                     <h3 className="text-md font-semibold flex items-center gap-2 pt-2">
+                        <UploadCloud className="h-6 w-6" /> Bulk Patient Registration
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Upload an Excel or CSV file to register multiple patients at once. Download the template for the correct format.
+                    </p>
+                    <Button onClick={downloadCSVTemplate} variant="outline" className="w-full md:w-auto">
+                      <Download className="mr-2 h-4 w-4" /> Download CSV Template
+                    </Button>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="bulkPatientFile">Upload File</Label>
+                      <Input 
+                        id="bulkPatientFile" 
+                        type="file" 
+                        accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                        onChange={handleFileChange} 
+                      />
+                      {selectedFile && <p className="text-xs text-muted-foreground">Selected: {selectedFile.name}</p>}
+                    </div>
+
+                    <Button onClick={handleFileUpload} className="w-full md:w-auto" disabled={!selectedFile}>
+                      <UploadCloud className="mr-2 h-4 w-4" /> Upload and Process File
+                    </Button>
+                    <p className="text-xs text-muted-foreground">
+                      Note: Photos cannot be uploaded in bulk. They must be added individually after registration.
+                    </p>
                   </div>
+
                 </div>
               </div>
             </CardContent>
@@ -402,19 +421,29 @@ export default function PatientRegistrationPage() {
                 {waitingList.length > 0 ? (
                   <ul className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                     {waitingList.map((patient) => (
-                      <li key={patient.id} className="p-3 border rounded-md shadow-sm bg-background hover:bg-muted/50">
-                        <div className="flex justify-between items-start mb-1">
-                          <p className="font-semibold">{patient.name}</p>
-                          <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full whitespace-nowrap">{patient.time}</span>
+                      <li key={patient.id} className="p-3 border rounded-md shadow-sm bg-background hover:bg-muted/50 flex items-start gap-3">
+                        <Image 
+                            src={patient.photoUrl} 
+                            alt={patient.name} 
+                            width={40} 
+                            height={40} 
+                            className="rounded-full mt-1"
+                            data-ai-hint="patient avatar" 
+                        />
+                        <div className="flex-1">
+                            <div className="flex justify-between items-start mb-1">
+                            <p className="font-semibold">{patient.name}</p>
+                            <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full whitespace-nowrap">{patient.time}</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground flex items-center">
+                            <MapPin className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                            Location: {patient.location}
+                            </p>
+                            <p className="text-sm text-muted-foreground flex items-center mt-0.5">
+                            <Activity className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                            Status: {patient.status}
+                            </p>
                         </div>
-                        <p className="text-sm text-muted-foreground flex items-center">
-                          <MapPin className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                          Location: {patient.location}
-                        </p>
-                        <p className="text-sm text-muted-foreground flex items-center mt-0.5">
-                          <Activity className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                          Status: {patient.status}
-                        </p>
                       </li>
                     ))}
                   </ul>
@@ -427,44 +456,10 @@ export default function PatientRegistrationPage() {
                  <Button variant="outline" className="w-full mt-6">Refresh List</Button>
               </CardContent>
             </Card>
-
-            <Card className="shadow-sm lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UploadCloud className="h-6 w-6" /> Bulk Patient Registration
-                </CardTitle>
-                <CardDescription>
-                  Upload an Excel or CSV file to register multiple patients at once. Download the template for the correct format.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button onClick={downloadCSVTemplate} variant="outline" className="w-full">
-                  <Download className="mr-2 h-4 w-4" /> Download CSV Template
-                </Button>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="bulkPatientFile">Upload File</Label>
-                  <Input 
-                    id="bulkPatientFile" 
-                    type="file" 
-                    accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-                    onChange={handleFileChange} 
-                  />
-                  {selectedFile && <p className="text-xs text-muted-foreground">Selected: {selectedFile.name}</p>}
-                </div>
-
-                <Button onClick={handleFileUpload} className="w-full" disabled={!selectedFile}>
-                  <UploadCloud className="mr-2 h-4 w-4" /> Upload and Process File
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  Note: Photos cannot be uploaded in bulk. They must be added individually after registration.
-                </p>
-              </CardContent>
-            </Card>
           </div>
-
         </div>
       </div>
     </AppShell>
   );
 }
+
