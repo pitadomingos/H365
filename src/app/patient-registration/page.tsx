@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, ListChecks, UserPlus, CalendarIcon, Camera, UserCircle, Trash2, ArrowRightCircle, MapPin, Activity, UploadCloud, Download } from "lucide-react";
+import { Users, ListChecks, UserPlus, CalendarIcon, Camera, UserCircle, Trash2, ArrowRightCircle, MapPin, Activity, UploadCloud, Download, Info } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -220,7 +220,7 @@ export default function PatientRegistrationPage() {
                     <canvas ref={canvasRef} className="hidden"></canvas>
                   </div>
 
-                  {/* Personal Information Section (Right Column of Row 1) */}
+                  {/* Personal Information & Camera Controls Section (Right Column of Row 1) */}
                   <div className="lg:col-span-2 space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -270,7 +270,7 @@ export default function PatientRegistrationPage() {
                         </Select>
                       </div>
                     </div>
-                     {/* Camera Controls - Moved here, below Personal Info */}
+                    {/* Camera Controls - Moved here, below Personal Info */}
                     <div className="space-y-4 pt-2">
                         <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
                           <Camera className="h-5 w-5" /> Patient Photo Capture
@@ -456,10 +456,24 @@ export default function PatientRegistrationPage() {
                  <Button variant="outline" className="w-full mt-6">Refresh List</Button>
               </CardContent>
             </Card>
+
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Info className="h-5 w-5 text-primary" />
+                  Reception Quick Tips
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-2">
+                <p>Ensure patient details are entered accurately.</p>
+                <p>Verify National ID for all new and returning patients.</p>
+                <p>For emergencies, follow standard hospital protocol.</p>
+                <p>Keep patient discussions confidential.</p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
     </AppShell>
   );
 }
-
