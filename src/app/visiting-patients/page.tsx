@@ -11,11 +11,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3 } from "lucide-react";
+import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid } from "recharts"
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 
 // Patient data structure (for searched patient)
@@ -33,8 +38,8 @@ interface WaitingListItem {
   patientName: string;
   photoUrl: string;
   timeAdded: string;
-  location: string; // Renamed from department for consistency
-  status: string;   // Renamed from reason for consistency
+  location: string; 
+  status: string;   
 }
 
 // Chart data
@@ -79,18 +84,25 @@ export default function VisitingPatientsPage() {
   const [patientNotFound, setPatientNotFound] = useState(false);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
 
-  const [department, setDepartment] = useState(""); // Used for new visit entry
-  const [reasonForVisit, setReasonForVisit] = useState(""); // Used for new visit entry
+  const [department, setDepartment] = useState(""); 
+  const [reasonForVisit, setReasonForVisit] = useState(""); 
   const [assignedDoctor, setAssignedDoctor] = useState("");
 
   const [currentDate, setCurrentDate] = useState('');
   const hospitalName = "HealthFlow Central Hospital";
 
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalNationalId, setModalNationalId] = useState("");
+  const [modalFullName, setModalFullName] = useState("");
+  const [modalDob, setModalDob] = useState<Date | undefined>();
+  const [modalGender, setModalGender] = useState("");
+
+
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
   }, []);
 
-  // Initial waiting list data matching registration page
   const initialWaitingList: WaitingListItem[] = [
     { id: "WL001", patientName: "Alice Wonderland", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
     { id: "WL002", patientName: "Bob The Builder", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
@@ -109,9 +121,7 @@ export default function VisitingPatientsPage() {
     setSearchedPatient(null);
     setPatientNotFound(false);
 
-    // Mock API call
     setTimeout(() => {
-      // Example: If ID "123456789" is for "Demo Patient One"
       if (searchNationalId === "123456789") {
         setSearchedPatient({
           id: "P001",
@@ -146,9 +156,9 @@ export default function VisitingPatientsPage() {
         return;
     }
     const newWaitingListItem: WaitingListItem = {
-        id: `WL${Math.random().toString(36).substring(2, 7)}`, // More unique ID
+        id: `WL${Math.random().toString(36).substring(2, 7)}`, 
         patientName: searchedPatient.fullName,
-        photoUrl: `https://placehold.co/40x40.png?text=${searchedPatient.fullName.substring(0,2)}`, // Placeholder with initials
+        photoUrl: `https://placehold.co/40x40.png?text=${searchedPatient.fullName.substring(0,2)}`, 
         location: department,
         status: reasonForVisit,
         timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -157,13 +167,34 @@ export default function VisitingPatientsPage() {
     
     toast({ title: "Patient Added", description: `${newWaitingListItem.patientName} added to waiting list for ${department}.`});
     
-    // Reset form state
     setSearchedPatient(null);
     setSearchNationalId("");
     setDepartment("");
     setReasonForVisit("");
     setAssignedDoctor("");
   };
+
+  const handleModalRegister = () => {
+    if (!modalNationalId || !modalFullName || !modalDob || !modalGender) {
+      toast({ variant: "destructive", title: "Missing Fields", description: "Please fill all fields in the modal." });
+      return;
+    }
+    // Mock registration
+    toast({
+      title: "Patient Registered (Mock)",
+      description: `${modalFullName} has been registered. You can now search for them.`,
+    });
+    setSearchNationalId(modalNationalId); // Pre-fill search bar
+    setIsModalOpen(false); // Close modal
+
+    // Clear modal form fields
+    setModalNationalId("");
+    setModalFullName("");
+    setModalDob(undefined);
+    setModalGender("");
+    setPatientNotFound(false); // Reset patient not found state
+  };
+
 
   return (
     <AppShell>
@@ -175,11 +206,10 @@ export default function VisitingPatientsPage() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Patient Search and Visit Details Section */}
           <Card className="lg:col-span-2 shadow-sm">
             <CardHeader>
               <CardTitle>Patient Visit Entry</CardTitle>
-              <CardDescription>Search for an existing patient or register a new one to manage their visit.</CardDescription>
+              <CardDescription>Search for an existing patient to manage their visit.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 py-6">
               <div>
@@ -202,11 +232,71 @@ export default function VisitingPatientsPage() {
                 <Alert variant="default" className="border-orange-500 text-orange-700 dark:border-orange-400 dark:text-orange-300">
                    <Building className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                   <AlertTitle>Patient Not Found</AlertTitle>
-                  <AlertDescription>
-                    No patient found with National ID: {searchNationalId}. You can
-                    <Button variant="link" asChild className="p-0 h-auto ml-1 text-orange-700 dark:text-orange-300 hover:underline">
-                      <Link href="/patient-registration">Register New Patient</Link>
-                    </Button>.
+                  <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <span>
+                      No patient found with National ID: {searchNationalId}.
+                    </span>
+                    <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="mt-2 sm:mt-0 sm:ml-4 border-orange-500 text-orange-700 hover:bg-orange-50 dark:border-orange-400 dark:text-orange-300 dark:hover:bg-orange-900/50">
+                          <UserPlus className="mr-2 h-4 w-4" /> Register New Patient
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[480px]">
+                        <DialogHeader>
+                          <DialogTitle>Register New Patient</DialogTitle>
+                          <DialogDescription>
+                            Quickly register a new patient. For full details, use the main registration page.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="modalNationalId" className="text-right">National ID <span className="text-destructive">*</span></Label>
+                            <Input id="modalNationalId" value={modalNationalId} onChange={(e) => setModalNationalId(e.target.value)} className="col-span-3" placeholder="Patient's National ID" />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="modalFullName" className="text-right">Full Name <span className="text-destructive">*</span></Label>
+                            <Input id="modalFullName" value={modalFullName} onChange={(e) => setModalFullName(e.target.value)} className="col-span-3" placeholder="e.g., John Doe" />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="modalDob" className="text-right">Date of Birth <span className="text-destructive">*</span></Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "col-span-3 justify-start text-left font-normal",
+                                    !modalDob && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {modalDob ? format(modalDob, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                <Calendar mode="single" selected={modalDob} onSelect={setModalDob} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="modalGender" className="text-right">Gender <span className="text-destructive">*</span></Label>
+                            <Select value={modalGender} onValueChange={setModalGender}>
+                              <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="male">Male</SelectItem>
+                                <SelectItem value="female">Female</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button onClick={handleModalRegister}>Register Patient</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </AlertDescription>
                 </Alert>
               )}
@@ -241,7 +331,7 @@ export default function VisitingPatientsPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="reasonForVisit">Reason for Visit / Notes <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="reasonForVisit">Reason for Visit / Status <span className="text-destructive">*</span></Label>
                       <Textarea
                         id="reasonForVisit"
                         placeholder="e.g., Follow-up, New complaint: fever and cough, Scheduled lab tests, Waiting for Doctor, Awaiting Results"
@@ -270,7 +360,6 @@ export default function VisitingPatientsPage() {
             </CardContent>
           </Card>
 
-          {/* Current Waiting List Section - Mirrored from Patient Registration */}
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -283,7 +372,7 @@ export default function VisitingPatientsPage() {
             </CardHeader>
             <CardContent>
               {waitingList.length > 0 ? (
-                <ul className="space-y-3 max-h-[400px] overflow-y-auto pr-2"> {/* Adjusted max-h */}
+                <ul className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                   {waitingList.map((patient) => (
                     <li key={patient.id} className="p-3 border rounded-md shadow-sm bg-background hover:bg-muted/50 flex items-start gap-3">
                       <Image
@@ -322,7 +411,6 @@ export default function VisitingPatientsPage() {
           </Card>
         </div>
 
-        {/* Hospital Visit Analytics Section */}
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -398,3 +486,5 @@ export default function VisitingPatientsPage() {
   );
 }
 
+
+    
