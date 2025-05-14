@@ -27,7 +27,7 @@ export default function PatientRegistrationPage() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [currentDate, setCurrentDate] = useState('');
-  const hospitalName = "HealthFlow Central Hospital"; // Static for now
+  const hospitalName = "HealthFlow Central Hospital"; 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -202,7 +202,7 @@ export default function PatientRegistrationPage() {
             </CardHeader>
             <CardContent className="py-6">
               <div className="space-y-8">
-                {/* Row 1: Camera Visual and Personal Info */}
+                {/* Row 1: Camera Visual and Personal Info Side-by-Side */}
                 <div className="grid lg:grid-cols-3 gap-x-6 gap-y-4">
                   {/* Photo Visual Section (Left Column) */}
                   <div className="lg:col-span-1">
@@ -220,7 +220,7 @@ export default function PatientRegistrationPage() {
                     <canvas ref={canvasRef} className="hidden"></canvas>
                   </div>
 
-                  {/* Personal Information & Camera Controls Section (Right Column of Row 1) */}
+                  {/* Personal Information (Right Column of Row 1) */}
                   <div className="lg:col-span-2 space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -270,7 +270,7 @@ export default function PatientRegistrationPage() {
                         </Select>
                       </div>
                     </div>
-                    {/* Camera Controls - Moved here, below Personal Info */}
+                     {/* Photo Capture Controls - Placed under Personal Info */}
                     <div className="space-y-4 pt-2">
                         <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
                           <Camera className="h-5 w-5" /> Patient Photo Capture
@@ -311,7 +311,7 @@ export default function PatientRegistrationPage() {
                   </div>
                 </div>
 
-                {/* Row 3: Remaining Information Sections & Bulk Upload */}
+                {/* Row 2: Remaining Information Sections (Contact, Location, Next of Kin, Bulk Upload) - Spans full width below the first row */}
                 <div className="space-y-6 pt-4"> 
                   <div className="space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
