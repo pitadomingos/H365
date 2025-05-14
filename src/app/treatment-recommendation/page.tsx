@@ -23,7 +23,7 @@ async function getTreatmentRecommendationAction(
 }
 
 
-export default function TreatmentRecommendationPage() {
+export default async function TreatmentRecommendationPage() {
   return (
     <AppShell>
       <div className="flex flex-col gap-6">
