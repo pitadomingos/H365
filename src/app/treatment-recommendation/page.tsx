@@ -1,29 +1,11 @@
-'use server';
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlaskConical } from "lucide-react";
 import { TreatmentForm } from "./treatment-form";
-import { treatmentRecommendation, TreatmentRecommendationInput, TreatmentRecommendationOutput } from "@/ai/flows/treatment-recommendation";
+import { getTreatmentRecommendationAction } from "./actions"; // Import from the new actions file
 
-// Server action to call the AI flow
-async function getTreatmentRecommendationAction(
-  input: TreatmentRecommendationInput
-): Promise<TreatmentRecommendationOutput | { error: string }> {
-  try {
-    if (!input.symptoms && !input.labResults && !input.imagingData) {
-        return { error: "Please provide at least one input: symptoms, lab results, or imaging data." };
-    }
-    const result = await treatmentRecommendation(input);
-    return result;
-  } catch (error) {
-    console.error("Error in treatment recommendation flow:", error);
-    return { error: "Failed to get treatment recommendation. Please try again." };
-  }
-}
-
-
-export default async function TreatmentRecommendationPage() {
+export default function TreatmentRecommendationPage() {
   return (
     <AppShell>
       <div className="flex flex-col gap-6">
