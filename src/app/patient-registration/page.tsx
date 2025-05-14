@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, ListChecks, UserPlus, CalendarIcon, Camera, UserCircle, Trash2, ArrowRightCircle, MapPin, Activity } from "lucide-react";
+import { Users, ListChecks, UserPlus, CalendarIcon, Camera, UserCircle, Trash2, ArrowRightCircle, MapPin, Activity, UploadCloud, Download } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -28,6 +28,7 @@ export default function PatientRegistrationPage() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [currentDate, setCurrentDate] = useState('');
   const hospitalName = "HealthFlow Central Hospital"; // Static for now
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
@@ -56,7 +57,7 @@ export default function PatientRegistrationPage() {
             });
           }
           setHasCameraPermission(true);
-          setCapturedImage(null); 
+          setCapturedImage(null);
         } catch (err) {
           console.error("Error accessing camera:", err);
           setHasCameraPermission(false);
@@ -82,28 +83,24 @@ export default function PatientRegistrationPage() {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       
-      const targetWidth = 240; // Matching the display container
-      const targetHeight = 308; // Matching the display container
+      const targetWidth = 240; 
+      const targetHeight = 308; 
       canvas.width = targetWidth;
       canvas.height = targetHeight;
 
       const context = canvas.getContext('2d');
       if (context) {
-        // Calculate aspect ratios
         const videoAspectRatio = video.videoWidth / video.videoHeight;
         const canvasAspectRatio = canvas.width / canvas.height;
         
         let drawWidth, drawHeight, offsetX, offsetY;
 
-        // Fit video to canvas while maintaining aspect ratio and covering canvas
         if (videoAspectRatio > canvasAspectRatio) {
-            // Video is wider than canvas: fit height, crop width
             drawHeight = canvas.height;
             drawWidth = drawHeight * videoAspectRatio;
             offsetX = (canvas.width - drawWidth) / 2;
             offsetY = 0;
         } else {
-            // Video is taller than canvas (or same aspect ratio): fit width, crop height
             drawWidth = canvas.width;
             drawHeight = drawWidth / videoAspectRatio;
             offsetX = 0;
@@ -126,6 +123,53 @@ export default function PatientRegistrationPage() {
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
+    }
+  };
+
+  const downloadCSVTemplate = () => {
+    const headers = [
+      "NationalID", "FullName", "DateOfBirth (YYYY-MM-DD)", "Gender", 
+      "PhoneNumber", "EmailAddress", "FullAddress", "District", "Province", 
+      "HomeHospital", "NextOfKinName", "NextOfKinNumber", "NextOfKinAddress", 
+      "ReasonForVisit"
+    ];
+    const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "patient_registration_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Template Downloaded", description: "patient_registration_template.csv" });
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSelectedFile(event.target.files[0]);
+    } else {
+      setSelectedFile(null);
+    }
+  };
+
+  const handleFileUpload = () => {
+    if (selectedFile) {
+      toast({
+        title: "File Upload (Mock)",
+        description: `${selectedFile.name} would be processed. This is a mock action.`,
+      });
+      // In a real app, you'd send the file to the server here.
+      setSelectedFile(null); // Reset file input
+      // Clear the file input visually
+      const fileInput = document.getElementById('bulkPatientFile') as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
+
+    } else {
+      toast({
+        variant: "destructive",
+        title: "No File Selected",
+        description: "Please select a file to upload.",
+      });
     }
   };
 
@@ -162,7 +206,7 @@ export default function PatientRegistrationPage() {
             <CardContent className="py-6">
               <div className="space-y-8">
                 {/* Row 1: Camera Visual and Personal Info */}
-                <div className="grid lg:grid-cols-3 gap-x-6 gap-y-4"> {/* Reduced gap-y for closer rows */}
+                <div className="grid lg:grid-cols-3 gap-x-6 gap-y-4">
                   {/* Photo Visual Section (Left Column) */}
                   <div className="lg:col-span-1">
                     <div className="w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden border border-dashed border-primary/50">
@@ -276,7 +320,7 @@ export default function PatientRegistrationPage() {
 
 
                 {/* Row 3: Remaining Information Sections */}
-                <div className="space-y-6 pt-4"> {/* Added pt-4 for spacing */}
+                <div className="space-y-6 pt-4"> 
                   <div className="space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -343,50 +387,84 @@ export default function PatientRegistrationPage() {
             </CardFooter>
           </Card>
 
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base"> {/* Adjusted title size */}
-                <ListChecks className="h-5 w-5 text-primary" />
-                Today's Waiting List
-              </CardTitle>
-              <CardDescription className="text-xs">
-                {currentDate} at {hospitalName}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {waitingList.length > 0 ? (
-                <ul className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                  {waitingList.map((patient) => (
-                    <li key={patient.id} className="p-3 border rounded-md shadow-sm bg-background hover:bg-muted/50">
-                      <div className="flex justify-between items-start mb-1">
-                        <p className="font-semibold">{patient.name}</p>
-                        <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full whitespace-nowrap">{patient.time}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground flex items-center">
-                        <MapPin className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                        Location: {patient.location}
-                      </p>
-                      <p className="text-sm text-muted-foreground flex items-center mt-0.5">
-                        <Activity className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                        Status: {patient.status}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="mx-auto h-12 w-12 mb-2" />
-                  <p>No patients currently in the waiting list.</p>
+          <div className="lg:col-span-1 space-y-6">
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ListChecks className="h-5 w-5 text-primary" />
+                  Today's Waiting List
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {currentDate} at {hospitalName}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {waitingList.length > 0 ? (
+                  <ul className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+                    {waitingList.map((patient) => (
+                      <li key={patient.id} className="p-3 border rounded-md shadow-sm bg-background hover:bg-muted/50">
+                        <div className="flex justify-between items-start mb-1">
+                          <p className="font-semibold">{patient.name}</p>
+                          <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full whitespace-nowrap">{patient.time}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground flex items-center">
+                          <MapPin className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                          Location: {patient.location}
+                        </p>
+                        <p className="text-sm text-muted-foreground flex items-center mt-0.5">
+                          <Activity className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                          Status: {patient.status}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="mx-auto h-12 w-12 mb-2" />
+                    <p>No patients currently in the waiting list.</p>
+                  </div>
+                )}
+                 <Button variant="outline" className="w-full mt-6">Refresh List</Button>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UploadCloud className="h-6 w-6" /> Bulk Patient Registration
+                </CardTitle>
+                <CardDescription>
+                  Upload an Excel or CSV file to register multiple patients at once. Download the template for the correct format.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button onClick={downloadCSVTemplate} variant="outline" className="w-full">
+                  <Download className="mr-2 h-4 w-4" /> Download CSV Template
+                </Button>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="bulkPatientFile">Upload File</Label>
+                  <Input 
+                    id="bulkPatientFile" 
+                    type="file" 
+                    accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                    onChange={handleFileChange} 
+                  />
+                  {selectedFile && <p className="text-xs text-muted-foreground">Selected: {selectedFile.name}</p>}
                 </div>
-              )}
-               <Button variant="outline" className="w-full mt-6">Refresh List</Button>
-            </CardContent>
-          </Card>
+
+                <Button onClick={handleFileUpload} className="w-full" disabled={!selectedFile}>
+                  <UploadCloud className="mr-2 h-4 w-4" /> Upload and Process File
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Note: Photos cannot be uploaded in bulk. They must be added individually after registration.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
         </div>
       </div>
     </AppShell>
   );
 }
-
-
-    
