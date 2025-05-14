@@ -36,33 +36,41 @@ export default function PatientRegistrationPage() {
   }, [stream]);
 
   const enableCamera = async () => {
-    if (hasCameraPermission === null || !hasCameraPermission) { // Only enable if not already enabled or explicitly denied
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    if (hasCameraPermission === null || !hasCameraPermission) {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
-            const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
-            setStream(mediaStream);
-            if (videoRef.current) {
+          const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          setStream(mediaStream);
+          if (videoRef.current) {
             videoRef.current.srcObject = mediaStream;
-            }
-            setHasCameraPermission(true);
-            setCapturedImage(null); 
+            videoRef.current.play().catch(err => {
+              console.error("Error playing video:", err);
+              toast({
+                variant: "destructive",
+                title: "Video Playback Error",
+                description: "Could not start the camera preview.",
+              });
+            });
+          }
+          setHasCameraPermission(true);
+          setCapturedImage(null); 
         } catch (err) {
-            console.error("Error accessing camera:", err);
-            setHasCameraPermission(false);
-            toast({
+          console.error("Error accessing camera:", err);
+          setHasCameraPermission(false);
+          toast({
             variant: "destructive",
             title: "Camera Access Denied",
             description: "Please enable camera permissions in your browser settings.",
-            });
+          });
         }
-        } else {
+      } else {
         setHasCameraPermission(false);
         toast({
-            variant: "destructive",
-            title: "Camera Not Supported",
-            description: "Your browser does not support camera access.",
+          variant: "destructive",
+          title: "Camera Not Supported",
+          description: "Your browser does not support camera access.",
         });
-        }
+      }
     }
   };
 
@@ -70,27 +78,24 @@ export default function PatientRegistrationPage() {
     if (videoRef.current && canvasRef.current && stream) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      // Approximate passport size aspect ratio (e.g., 3.5cm x 4.5cm, so roughly 350x450 or 300x385)
-      // Let's use a fixed size for the canvas for captured image.
+      
       const targetWidth = 300;
-      const targetHeight = 385; // Approx 4:5 ratio for passport-like
+      const targetHeight = 385; 
       canvas.width = targetWidth;
       canvas.height = targetHeight;
 
       const context = canvas.getContext('2d');
       if (context) {
-        // Calculate aspect ratios
         const videoAspectRatio = video.videoWidth / video.videoHeight;
         const canvasAspectRatio = canvas.width / canvas.height;
         let drawWidth, drawHeight, offsetX, offsetY;
 
-        // Fit video into canvas, cropping as needed (center crop)
-        if (videoAspectRatio > canvasAspectRatio) { // Video is wider than canvas view
+        if (videoAspectRatio > canvasAspectRatio) {
           drawHeight = canvas.height;
           drawWidth = drawHeight * videoAspectRatio;
           offsetX = (canvas.width - drawWidth) / 2;
           offsetY = 0;
-        } else { // Video is taller or same aspect ratio
+        } else { 
           drawWidth = canvas.width;
           drawHeight = drawWidth / videoAspectRatio;
           offsetY = (canvas.height - drawHeight) / 2;
@@ -99,22 +104,29 @@ export default function PatientRegistrationPage() {
         context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
         const dataUrl = canvas.toDataURL('image/png');
         setCapturedImage(dataUrl);
+        
+        // Stop the stream after capturing
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
-        setHasCameraPermission(null); // Reset, so user can click "Enable Camera" again if they discard
+        // Set hasCameraPermission to null to allow re-enabling or to show placeholder
+        // Keeping it true might be confusing if the stream is stopped.
+        // Let's set it to null to revert to the "Enable Camera" state if user discards.
+        // For now, we'll keep hasCameraPermission as true if it was true,
+        // but stream is null, so video won't show.
+        // No, best to set to null to allow user to re-initiate.
+        setHasCameraPermission(null); 
       }
     }
   };
 
   const discardPhoto = () => {
     setCapturedImage(null);
-    setHasCameraPermission(null); // Allow re-enabling camera
+    setHasCameraPermission(null); 
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
     }
   };
-
 
   const waitingList = [
     { id: 1, name: "Alice Wonderland", reason: "Annual Checkup", time: "10:30 AM" },
@@ -145,7 +157,6 @@ export default function PatientRegistrationPage() {
             </CardHeader>
             <CardContent className="space-y-8">
               
-              {/* Photo Capture Section */}
               <Card className="border-dashed border-2 hover:border-primary transition-colors">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -154,14 +165,14 @@ export default function PatientRegistrationPage() {
                   <CardDescription>Capture a clear photo of the patient. Aim for a passport-style image.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center gap-4">
-                  <div className="w-full max-w-xs h-auto aspect-[3/4] bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                  <div className="w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden">
                     {!capturedImage && hasCameraPermission && stream && (
                       <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
                     )}
                     {capturedImage && (
-                      <Image src={capturedImage} alt="Captured patient photo" width={300} height={400} className="object-contain rounded-md" />
+                      <Image src={capturedImage} alt="Captured patient photo" width={300} height={385} className="w-full h-full object-contain rounded-md" />
                     )}
-                    {!capturedImage && (!hasCameraPermission || !stream) && (
+                    {!capturedImage && (!stream || hasCameraPermission === false) && ( // Show placeholder if no stream or permission denied
                       <UserCircle className="w-24 h-24 text-muted-foreground" />
                     )}
                   </div>
@@ -194,13 +205,12 @@ export default function PatientRegistrationPage() {
                       </Button>
                     )}
                   </div>
-                   {!(hasCameraPermission && stream) && !capturedImage && hasCameraPermission === null && (
+                   {hasCameraPermission === null && !stream && !capturedImage &&(
                      <p className="text-xs text-muted-foreground">Click "Enable Camera" to start.</p>
                    )}
                 </CardContent>
               </Card>
 
-              {/* Personal Information */}
               <div className="space-y-4">
                 <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -252,7 +262,6 @@ export default function PatientRegistrationPage() {
                 </div>
               </div>
 
-              {/* Contact Information */}
               <div className="space-y-4">
                 <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -271,7 +280,6 @@ export default function PatientRegistrationPage() {
                 </div>
               </div>
 
-              {/* Location / Origin */}
               <div className="space-y-4">
                 <h3 className="text-md font-semibold border-b pb-1">Location & Origin</h3>
                 <div className="grid md:grid-cols-3 gap-4">
@@ -290,7 +298,6 @@ export default function PatientRegistrationPage() {
                 </div>
               </div>
               
-              {/* Next of Kin Information */}
               <div className="space-y-4">
                 <h3 className="text-md font-semibold border-b pb-1">Next of Kin</h3>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -310,12 +317,12 @@ export default function PatientRegistrationPage() {
               </div>
              
               <div className="space-y-2">
-                <Label htmlFor="reasonForVisit">Reason for Visit / Chief Complaint</Label>
-                <Textarea id="reasonForVisit" placeholder="Describe the primary reason for the visit" />
+                <Label htmlFor="reasonForVisit">Reason for Visit / Chief Complaint (for new registrations)</Label>
+                <Textarea id="reasonForVisit" placeholder="Describe the primary reason for the visit if known at registration" />
               </div>
             </CardContent>
             <CardFooter className="border-t px-6 py-4">
-              <Button>Register Patient</Button>
+              <Button onClick={() => toast({ title: "Patient Registered", description: "Patient details saved (mock)"})}>Register Patient</Button>
             </CardFooter>
           </Card>
 
