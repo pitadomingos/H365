@@ -26,8 +26,11 @@ export default function PatientRegistrationPage() {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [currentDate, setCurrentDate] = useState('');
+  const hospitalName = "HealthFlow Central Hospital"; // Static for now
 
   useEffect(() => {
+    setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -79,23 +82,28 @@ export default function PatientRegistrationPage() {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       
-      const targetWidth = 300;
-      const targetHeight = 385; 
+      const targetWidth = 240; // Matching the display container
+      const targetHeight = 308; // Matching the display container
       canvas.width = targetWidth;
       canvas.height = targetHeight;
 
       const context = canvas.getContext('2d');
       if (context) {
+        // Calculate aspect ratios
         const videoAspectRatio = video.videoWidth / video.videoHeight;
         const canvasAspectRatio = canvas.width / canvas.height;
+        
         let drawWidth, drawHeight, offsetX, offsetY;
 
-        if (videoAspectRatio > canvasAspectRatio) { 
+        // Fit video to canvas while maintaining aspect ratio and covering canvas
+        if (videoAspectRatio > canvasAspectRatio) {
+            // Video is wider than canvas: fit height, crop width
             drawHeight = canvas.height;
             drawWidth = drawHeight * videoAspectRatio;
             offsetX = (canvas.width - drawWidth) / 2;
             offsetY = 0;
-        } else { 
+        } else {
+            // Video is taller than canvas (or same aspect ratio): fit width, crop height
             drawWidth = canvas.width;
             drawHeight = drawWidth / videoAspectRatio;
             offsetX = 0;
@@ -152,68 +160,27 @@ export default function PatientRegistrationPage() {
               <CardDescription>Please fill in the patient's information accurately. This form is for hospital reception use.</CardDescription>
             </CardHeader>
             <CardContent className="py-6">
-              <div className="space-y-8"> {/* Outer container for spacing rows */}
-                {/* Row 1: Camera and Personal Info */}
-                <div className="grid lg:grid-cols-3 gap-x-6 gap-y-8">
-                  {/* Photo Section (Left Column) */}
+              <div className="space-y-8">
+                {/* Row 1: Camera Visual and Personal Info */}
+                <div className="grid lg:grid-cols-3 gap-x-6 gap-y-4"> {/* Reduced gap-y for closer rows */}
+                  {/* Photo Visual Section (Left Column) */}
                   <div className="lg:col-span-1">
-                    <Card className="border-dashed border-2 hover:border-primary transition-colors h-full">
-                      <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Camera className="h-5 w-5" /> Patient Photo
-                        </CardTitle>
-                        <CardDescription>Capture a clear photo. Aim for a passport-style image.</CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex flex-col items-center gap-4">
-                        <div className="w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden">
-                          {!capturedImage && hasCameraPermission && stream && (
-                            <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                          )}
-                          {capturedImage && (
-                            <Image src={capturedImage} alt="Captured patient photo" width={240} height={308} className="w-full h-full object-contain rounded-md" />
-                          )}
-                          {!capturedImage && (!stream || hasCameraPermission === false) && ( 
-                            <UserCircle className="w-24 h-24 text-muted-foreground" />
-                          )}
-                        </div>
-                        <canvas ref={canvasRef} className="hidden"></canvas>
-                        
-                        {hasCameraPermission === false && (
-                           <Alert variant="destructive" className="w-full max-w-xs">
-                              <AlertTitle>Camera Access Denied</AlertTitle>
-                              <AlertDescription>
-                                Please allow camera access in your browser settings and try again.
-                                 <Button onClick={enableCamera} variant="link" className="p-0 h-auto ml-1">Retry</Button>
-                              </AlertDescription>
-                          </Alert>
-                        )}
-
-                        <div className="flex gap-2">
-                          {!stream && !capturedImage && (
-                            <Button onClick={enableCamera} variant="outline">
-                              <Camera className="mr-2 h-4 w-4" /> Enable Camera
-                            </Button>
-                          )}
-                          {stream && hasCameraPermission && !capturedImage && (
-                            <Button onClick={capturePhoto}>
-                              <Camera className="mr-2 h-4 w-4" /> Capture Photo
-                            </Button>
-                          )}
-                          {capturedImage && (
-                            <Button onClick={discardPhoto} variant="destructive" className="flex items-center">
-                              <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
-                            </Button>
-                          )}
-                        </div>
-                         {hasCameraPermission === null && !stream && !capturedImage &&(
-                           <p className="text-xs text-muted-foreground">Click "Enable Camera" to start.</p>
-                         )}
-                      </CardContent>
-                    </Card>
+                    <div className="w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden border border-dashed border-primary/50">
+                      {!capturedImage && hasCameraPermission && stream && (
+                        <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                      )}
+                      {capturedImage && (
+                        <Image src={capturedImage} alt="Captured patient photo" width={240} height={308} className="w-full h-full object-contain rounded-md" />
+                      )}
+                      {!capturedImage && (!stream || hasCameraPermission === false) && ( 
+                        <UserCircle className="w-24 h-24 text-muted-foreground" />
+                      )}
+                    </div>
+                    <canvas ref={canvasRef} className="hidden"></canvas>
                   </div>
 
                   {/* Personal Information Section (Right Column of Row 1) */}
-                  <div className="lg:col-span-2 space-y-4"> {/* Reduced space-y-6 to space-y-4 to match inner elements */}
+                  <div className="lg:col-span-2 space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -265,8 +232,51 @@ export default function PatientRegistrationPage() {
                   </div>
                 </div>
 
-                {/* Row 2: Remaining Information Sections (spanning full width) */}
-                <div className="space-y-6">
+                {/* Row 2: Camera Controls (aligned below Personal Info) */}
+                <div className="grid lg:grid-cols-3 gap-x-6">
+                    <div className="lg:col-span-1"></div> {/* Empty spacer for alignment with camera visual */}
+                    <div className="lg:col-span-2 space-y-4">
+                        <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
+                          <Camera className="h-5 w-5" /> Patient Photo Capture
+                        </h3>
+                        <p className="text-sm text-muted-foreground">Capture a clear photo. Aim for a passport-style image.</p>
+                        
+                        {hasCameraPermission === false && (
+                           <Alert variant="destructive" className="w-full">
+                              <AlertTitle>Camera Access Denied</AlertTitle>
+                              <AlertDescription>
+                                Please allow camera access in your browser settings and try again.
+                                 <Button onClick={enableCamera} variant="link" className="p-0 h-auto ml-1">Retry</Button>
+                              </AlertDescription>
+                          </Alert>
+                        )}
+
+                        <div className="flex gap-2">
+                          {!stream && !capturedImage && (
+                            <Button onClick={enableCamera} variant="outline">
+                              <Camera className="mr-2 h-4 w-4" /> Enable Camera
+                            </Button>
+                          )}
+                          {stream && hasCameraPermission && !capturedImage && (
+                            <Button onClick={capturePhoto}>
+                              <Camera className="mr-2 h-4 w-4" /> Capture Photo
+                            </Button>
+                          )}
+                          {capturedImage && (
+                            <Button onClick={discardPhoto} variant="destructive" className="flex items-center">
+                              <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
+                            </Button>
+                          )}
+                        </div>
+                         {hasCameraPermission === null && !stream && !capturedImage &&(
+                           <p className="text-xs text-muted-foreground">Click "Enable Camera" to start.</p>
+                         )}
+                    </div>
+                </div>
+
+
+                {/* Row 3: Remaining Information Sections */}
+                <div className="space-y-6 pt-4"> {/* Added pt-4 for spacing */}
                   <div className="space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -335,11 +345,13 @@ export default function PatientRegistrationPage() {
 
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ListChecks className="h-6 w-6 text-primary" />
+              <CardTitle className="flex items-center gap-2 text-base"> {/* Adjusted title size */}
+                <ListChecks className="h-5 w-5 text-primary" />
                 Today's Waiting List
               </CardTitle>
-              <CardDescription>Patients currently waiting for consultation.</CardDescription>
+              <CardDescription className="text-xs">
+                {currentDate} at {hospitalName}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {waitingList.length > 0 ? (
@@ -375,3 +387,6 @@ export default function PatientRegistrationPage() {
     </AppShell>
   );
 }
+
+
+    
