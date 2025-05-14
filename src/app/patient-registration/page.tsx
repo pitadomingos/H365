@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, ListChecks, UserPlus, CalendarIcon, Camera, UserCircle, Trash2, ArrowRightCircle } from "lucide-react";
+import { Users, ListChecks, UserPlus, CalendarIcon, Camera, UserCircle, Trash2, ArrowRightCircle, MapPin, Activity } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -86,34 +86,28 @@ export default function PatientRegistrationPage() {
 
       const context = canvas.getContext('2d');
       if (context) {
+        // Calculate cropping to center the video feed if aspect ratios differ
         const videoAspectRatio = video.videoWidth / video.videoHeight;
         const canvasAspectRatio = canvas.width / canvas.height;
         let drawWidth, drawHeight, offsetX, offsetY;
 
-        if (videoAspectRatio > canvasAspectRatio) {
-          drawHeight = canvas.height;
-          drawWidth = drawHeight * videoAspectRatio;
-          offsetX = (canvas.width - drawWidth) / 2;
-          offsetY = 0;
-        } else { 
-          drawWidth = canvas.width;
-          drawHeight = drawWidth / videoAspectRatio;
-          offsetY = (canvas.height - drawHeight) / 2;
-          offsetX = 0;
+        if (videoAspectRatio > canvasAspectRatio) { // Video is wider than canvas
+            drawHeight = canvas.height;
+            drawWidth = drawHeight * videoAspectRatio;
+            offsetX = (canvas.width - drawWidth) / 2;
+            offsetY = 0;
+        } else { // Video is taller than or same aspect ratio as canvas
+            drawWidth = canvas.width;
+            drawHeight = drawWidth / videoAspectRatio;
+            offsetX = 0;
+            offsetY = (canvas.height - drawHeight) / 2;
         }
         context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
         const dataUrl = canvas.toDataURL('image/png');
         setCapturedImage(dataUrl);
         
-        // Stop the stream after capturing
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
-        // Set hasCameraPermission to null to allow re-enabling or to show placeholder
-        // Keeping it true might be confusing if the stream is stopped.
-        // Let's set it to null to revert to the "Enable Camera" state if user discards.
-        // For now, we'll keep hasCameraPermission as true if it was true,
-        // but stream is null, so video won't show.
-        // No, best to set to null to allow user to re-initiate.
         setHasCameraPermission(null); 
       }
     }
@@ -129,9 +123,12 @@ export default function PatientRegistrationPage() {
   };
 
   const waitingList = [
-    { id: 1, name: "Alice Wonderland", reason: "Annual Checkup", time: "10:30 AM" },
-    { id: 2, name: "Bob The Builder", reason: "Flu Symptoms", time: "10:45 AM" },
-    { id: 3, name: "Charlie Brown", reason: "Follow-up", time: "11:00 AM" },
+    { id: 1, name: "Alice Wonderland", time: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor" },
+    { id: 2, name: "Bob The Builder", time: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A" },
+    { id: 3, name: "Charlie Brown", time: "11:00 AM", location: "Laboratory", status: "Awaiting Results" },
+    { id: 4, name: "Diana Prince", time: "11:15 AM", location: "Pharmacy", status: "Collecting Medication" },
+    { id: 5, name: "Edward Scissorhands", time: "11:30 AM", location: "Specialized Dentist", status: "Procedure Complete" },
+    { id: 6, name: "Fiona Gallagher", time: "11:45 AM", location: "Outpatient", status: "Dispatched to Homecare" },
   ];
 
   return (
@@ -155,170 +152,177 @@ export default function PatientRegistrationPage() {
               <CardTitle>New Patient Details</CardTitle>
               <CardDescription>Please fill in the patient's information accurately. This form is for hospital reception use.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-8">
-              
-              <Card className="border-dashed border-2 hover:border-primary transition-colors">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Camera className="h-5 w-5" /> Patient Photo
-                  </CardTitle>
-                  <CardDescription>Capture a clear photo of the patient. Aim for a passport-style image.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center gap-4">
-                  <div className="w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden">
-                    {!capturedImage && hasCameraPermission && stream && (
-                      <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                    )}
-                    {capturedImage && (
-                      <Image src={capturedImage} alt="Captured patient photo" width={300} height={385} className="w-full h-full object-contain rounded-md" />
-                    )}
-                    {!capturedImage && (!stream || hasCameraPermission === false) && ( // Show placeholder if no stream or permission denied
-                      <UserCircle className="w-24 h-24 text-muted-foreground" />
-                    )}
+            <CardContent className="py-6">
+              <div className="grid lg:grid-cols-3 gap-x-6 gap-y-8">
+                {/* Photo Section (Left Column) */}
+                <div className="lg:col-span-1">
+                  <Card className="border-dashed border-2 hover:border-primary transition-colors h-full">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Camera className="h-5 w-5" /> Patient Photo
+                      </CardTitle>
+                      <CardDescription>Capture a clear photo of the patient. Aim for a passport-style image.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col items-center gap-4">
+                      <div className="w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                        {!capturedImage && hasCameraPermission && stream && (
+                          <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                        )}
+                        {capturedImage && (
+                          <Image src={capturedImage} alt="Captured patient photo" width={240} height={308} className="w-full h-full object-contain rounded-md" />
+                        )}
+                        {!capturedImage && (!stream || hasCameraPermission === false) && ( 
+                          <UserCircle className="w-24 h-24 text-muted-foreground" />
+                        )}
+                      </div>
+                      <canvas ref={canvasRef} className="hidden"></canvas>
+                      
+                      {hasCameraPermission === false && (
+                         <Alert variant="destructive" className="w-full max-w-xs">
+                            <AlertTitle>Camera Access Denied</AlertTitle>
+                            <AlertDescription>
+                              Please allow camera access in your browser settings and try again.
+                               <Button onClick={enableCamera} variant="link" className="p-0 h-auto ml-1">Retry</Button>
+                            </AlertDescription>
+                        </Alert>
+                      )}
+
+                      <div className="flex gap-2">
+                        {!stream && !capturedImage && (
+                          <Button onClick={enableCamera} variant="outline">
+                            <Camera className="mr-2 h-4 w-4" /> Enable Camera
+                          </Button>
+                        )}
+                        {stream && hasCameraPermission && !capturedImage && (
+                          <Button onClick={capturePhoto}>
+                            <Camera className="mr-2 h-4 w-4" /> Capture Photo
+                          </Button>
+                        )}
+                        {capturedImage && (
+                          <Button onClick={discardPhoto} variant="destructive" className="flex items-center">
+                            <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
+                          </Button>
+                        )}
+                      </div>
+                       {hasCameraPermission === null && !stream && !capturedImage &&(
+                         <p className="text-xs text-muted-foreground">Click "Enable Camera" to start.</p>
+                       )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Patient Information Sections (Right Column) */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="space-y-4">
+                    <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nationalId">National ID Number <span className="text-destructive">*</span></Label>
+                        <Input id="nationalId" placeholder="e.g., 1234567890" required />
+                        <p className="text-xs text-muted-foreground">Patient's National ID must be unique.</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fullName">Full Name <span className="text-destructive">*</span></Label>
+                        <Input id="fullName" placeholder="e.g., John Michael Doe" required />
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="dob">Date of Birth <span className="text-destructive">*</span></Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !dateOfBirth && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dateOfBirth ? format(dateOfBirth, "PPP") : <span>Pick a date</span>}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar mode="single" selected={dateOfBirth} onSelect={setDateOfBirth} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gender">Gender <span className="text-destructive">*</span></Label>
+                        <Select required>
+                          <SelectTrigger id="gender">
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                            <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
-                  <canvas ref={canvasRef} className="hidden"></canvas>
+
+                  <div className="space-y-4">
+                    <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="contactNumber">Phone/Cell Number <span className="text-destructive">*</span></Label>
+                        <Input id="contactNumber" type="tel" placeholder="e.g., (555) 123-4567" required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input id="email" type="email" placeholder="e.g., john.doe@example.com" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Full Address <span className="text-destructive">*</span></Label>
+                      <Textarea id="address" placeholder="e.g., 123 Main St, Anytown, Province, Postal Code" required />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-md font-semibold border-b pb-1">Location & Origin</h3>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="district">District <span className="text-destructive">*</span></Label>
+                        <Input id="district" placeholder="e.g., Central District" required/>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="province">Province <span className="text-destructive">*</span></Label>
+                        <Input id="province" placeholder="e.g., Capital Province" required/>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="homeHospital">Home Hospital / Clinic</Label>
+                        <Input id="homeHospital" placeholder="e.g., City General Hospital" />
+                      </div>
+                    </div>
+                  </div>
                   
-                  {hasCameraPermission === false && (
-                     <Alert variant="destructive" className="w-full max-w-xs">
-                        <AlertTitle>Camera Access Denied</AlertTitle>
-                        <AlertDescription>
-                          Please allow camera access in your browser settings and try again.
-                           <Button onClick={enableCamera} variant="link" className="p-0 h-auto ml-1">Retry</Button>
-                        </AlertDescription>
-                    </Alert>
-                  )}
-
-                  <div className="flex gap-2">
-                    {!stream && !capturedImage && (
-                      <Button onClick={enableCamera} variant="outline">
-                        <Camera className="mr-2 h-4 w-4" /> Enable Camera
-                      </Button>
-                    )}
-                    {stream && hasCameraPermission && !capturedImage && (
-                      <Button onClick={capturePhoto}>
-                        <Camera className="mr-2 h-4 w-4" /> Capture Photo
-                      </Button>
-                    )}
-                    {capturedImage && (
-                      <Button onClick={discardPhoto} variant="destructive" className="flex items-center">
-                        <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
-                      </Button>
-                    )}
+                  <div className="space-y-4">
+                    <h3 className="text-md font-semibold border-b pb-1">Next of Kin</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                       <div className="space-y-2">
+                        <Label htmlFor="nextOfKinName">Full Name <span className="text-destructive">*</span></Label>
+                        <Input id="nextOfKinName" placeholder="e.g., Jane Doe (Spouse)" required/>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="nextOfKinNumber">Contact Number <span className="text-destructive">*</span></Label>
+                        <Input id="nextOfKinNumber" type="tel" placeholder="e.g., (555) 987-6543" required/>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nextOfKinAddress">Address <span className="text-destructive">*</span></Label>
+                      <Textarea id="nextOfKinAddress" placeholder="e.g., 456 Oak Ln, Anytown" required/>
+                    </div>
                   </div>
-                   {hasCameraPermission === null && !stream && !capturedImage &&(
-                     <p className="text-xs text-muted-foreground">Click "Enable Camera" to start.</p>
-                   )}
-                </CardContent>
-              </Card>
-
-              <div className="space-y-4">
-                <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
-                <div className="grid md:grid-cols-2 gap-4">
+                 
                   <div className="space-y-2">
-                    <Label htmlFor="nationalId">National ID Number <span className="text-destructive">*</span></Label>
-                    <Input id="nationalId" placeholder="e.g., 1234567890" required />
-                    <p className="text-xs text-muted-foreground">Patient's National ID must be unique.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name <span className="text-destructive">*</span></Label>
-                    <Input id="fullName" placeholder="e.g., John Michael Doe" required />
+                    <Label htmlFor="reasonForVisit">Reason for Visit / Chief Complaint (for new registrations)</Label>
+                    <Textarea id="reasonForVisit" placeholder="Describe the primary reason for the visit if known at registration" />
                   </div>
                 </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="dob">Date of Birth <span className="text-destructive">*</span></Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !dateOfBirth && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dateOfBirth ? format(dateOfBirth, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={dateOfBirth} onSelect={setDateOfBirth} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="gender">Gender <span className="text-destructive">*</span></Label>
-                    <Select required>
-                      <SelectTrigger id="gender">
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                        <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="contactNumber">Phone/Cell Number <span className="text-destructive">*</span></Label>
-                    <Input id="contactNumber" type="tel" placeholder="e.g., (555) 123-4567" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" type="email" placeholder="e.g., john.doe@example.com" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Full Address <span className="text-destructive">*</span></Label>
-                  <Textarea id="address" placeholder="e.g., 123 Main St, Anytown, Province, Postal Code" required />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-md font-semibold border-b pb-1">Location & Origin</h3>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="district">District <span className="text-destructive">*</span></Label>
-                    <Input id="district" placeholder="e.g., Central District" required/>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="province">Province <span className="text-destructive">*</span></Label>
-                    <Input id="province" placeholder="e.g., Capital Province" required/>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="homeHospital">Home Hospital / Clinic</Label>
-                    <Input id="homeHospital" placeholder="e.g., City General Hospital" />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-md font-semibold border-b pb-1">Next of Kin</h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                   <div className="space-y-2">
-                    <Label htmlFor="nextOfKinName">Full Name <span className="text-destructive">*</span></Label>
-                    <Input id="nextOfKinName" placeholder="e.g., Jane Doe (Spouse)" required/>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="nextOfKinNumber">Contact Number <span className="text-destructive">*</span></Label>
-                    <Input id="nextOfKinNumber" type="tel" placeholder="e.g., (555) 987-6543" required/>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="nextOfKinAddress">Address <span className="text-destructive">*</span></Label>
-                  <Textarea id="nextOfKinAddress" placeholder="e.g., 456 Oak Ln, Anytown" required/>
-                </div>
-              </div>
-             
-              <div className="space-y-2">
-                <Label htmlFor="reasonForVisit">Reason for Visit / Chief Complaint (for new registrations)</Label>
-                <Textarea id="reasonForVisit" placeholder="Describe the primary reason for the visit if known at registration" />
               </div>
             </CardContent>
             <CardFooter className="border-t px-6 py-4">
@@ -336,14 +340,21 @@ export default function PatientRegistrationPage() {
             </CardHeader>
             <CardContent>
               {waitingList.length > 0 ? (
-                <ul className="space-y-4">
+                <ul className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                   {waitingList.map((patient) => (
                     <li key={patient.id} className="p-3 border rounded-md shadow-sm bg-background hover:bg-muted/50">
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-start mb-1">
                         <p className="font-semibold">{patient.name}</p>
-                        <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">{patient.time}</span>
+                        <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full whitespace-nowrap">{patient.time}</span>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">{patient.reason}</p>
+                      <p className="text-sm text-muted-foreground flex items-center">
+                        <MapPin className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                        Location: {patient.location}
+                      </p>
+                      <p className="text-sm text-muted-foreground flex items-center mt-0.5">
+                        <Activity className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                        Status: {patient.status}
+                      </p>
                     </li>
                   ))}
                 </ul>
