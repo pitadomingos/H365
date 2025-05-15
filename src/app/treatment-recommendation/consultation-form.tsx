@@ -38,7 +38,7 @@ const FormSchema = z.object({
   doctorComments: z.string().optional(),
 }).refine(data => data.symptoms || data.labResultsSummary || data.imagingDataSummary, {
     message: "At least one of symptoms, lab results summary, or imaging data summary must be provided for AI recommendation.",
-    path: ["symptoms"],
+    path: ["symptoms"], // This error will point to the symptoms field if the condition fails
 });
 
 type FormValues = z.infer<typeof FormSchema>;
@@ -47,6 +47,7 @@ interface PatientData {
   nationalId: string;
   fullName: string;
   age: number;
+  gender: string;
   address: string;
   homeClinic: string;
   photoUrl: string;
@@ -125,20 +126,33 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     setPatientData(null);
     setRecommendation(null);
     setError(null);
+    form.reset({ // Reset relevant form fields but keep search ID
+        nationalIdSearch: nationalId,
+        bodyTemperature: "",
+        weight: "",
+        height: "",
+        symptoms: "",
+        labResultsSummary: "",
+        imagingDataSummary: "",
+        doctorComments: "",
+    });
+    setBmi(null);
     
     await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
     if (nationalId === "123456789" || nationalId === "987654321") {
-      setPatientData({
+      const fetchedPatientData: PatientData = {
         nationalId: nationalId,
         fullName: nationalId === "123456789" ? "Demo Patient One" : "Jane Sample Doe",
         age: nationalId === "123456789" ? 34 : 45,
+        gender: nationalId === "123456789" ? "Male" : "Female",
         address: "123 Health St, Wellness City",
         homeClinic: "City General Hospital",
         photoUrl: "https://placehold.co/120x120.png",
         allergies: nationalId === "123456789" ? ["Penicillin", "Dust Mites"] : ["None Reported"],
         chronicConditions: nationalId === "123456789" ? ["Asthma"] : ["Hypertension", "Type 2 Diabetes"],
-      });
-      toast({ title: "Patient Found", description: "Patient details loaded." });
+      };
+      setPatientData(fetchedPatientData);
+      toast({ title: "Patient Found", description: `${fetchedPatientData.fullName}'s details loaded.` });
     } else {
       toast({ variant: "destructive", title: "Not Found", description: "Patient with this National ID not found." });
     }
@@ -153,16 +167,40 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     setError(null);
     setRecommendation(null);
     startAiTransition(async () => {
+      const visitHistoryString = mockVisitHistory.slice(0, 5).map(
+        visit => `Date: ${visit.date}, Dept: ${visit.department}, Doctor: ${visit.doctor}, Reason: ${visit.reason}`
+      ).join('\n');
+
+      const comprehensiveSymptoms = `
+Patient Name: ${patientData.fullName}
+Patient Age: ${patientData.age}
+Patient Gender: ${patientData.gender}
+
+Vitals:
+Body Temperature: ${data.bodyTemperature || 'N/A'}°C
+Weight: ${data.weight || 'N/A'}kg
+Height: ${data.height || 'N/A'}cm
+BMI: ${bmi || 'N/A'}
+
+Chief Complaint/Symptoms:
+${data.symptoms || "Not specified."}
+
+Recent Visit History (Last 5):
+${visitHistoryString || "No recent visit history available."}
+`;
+
       const aiInput: TreatmentRecommendationInput = {
-        symptoms: `Patient: ${patientData.fullName}, Age: ${patientData.age}. Vitals: Temp ${data.bodyTemperature || 'N/A'}°C, Weight ${data.weight || 'N/A'}kg, Height ${data.height || 'N/A'}cm, BMI ${bmi || 'N/A'}. Symptoms: ${data.symptoms || "Not specified."}`,
+        symptoms: comprehensiveSymptoms,
         labResults: data.labResultsSummary || "Not provided",
         imagingData: data.imagingDataSummary || "Not provided",
       };
       const result = await getRecommendationAction(aiInput);
       if ('error' in result) {
         setError(result.error);
+        toast({ variant: "destructive", title: "AI Error", description: result.error });
       } else {
         setRecommendation(result);
+        toast({ title: "AI Recommendation Received", description: "Review the suggestions below." });
       }
     });
   };
@@ -207,12 +245,13 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
             {patientData && (
               <div className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-4 items-start mt-4 p-4 border rounded-md bg-muted/30">
                 <Image src={patientData.photoUrl} alt="Patient Photo" width={120} height={120} className="rounded-md border" data-ai-hint="patient photo" />
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 text-sm">
                   <h3 className="text-xl font-semibold">{patientData.fullName}</h3>
-                  <p className="text-sm"><strong>National ID:</strong> {patientData.nationalId}</p>
-                  <p className="text-sm"><strong>Age:</strong> {patientData.age}</p>
-                  <p className="text-sm"><strong>Address:</strong> {patientData.address}</p>
-                  <p className="text-sm"><strong>Home Clinic:</strong> {patientData.homeClinic}</p>
+                  <p><strong>National ID:</strong> {patientData.nationalId}</p>
+                  <p><strong>Age:</strong> {patientData.age}</p>
+                  <p><strong>Gender:</strong> {patientData.gender}</p>
+                  <p><strong>Address:</strong> {patientData.address}</p>
+                  <p><strong>Home Clinic:</strong> {patientData.homeClinic}</p>
                 </div>
               </div>
             )}
@@ -297,7 +336,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
           </Card>
         </form>
 
-        {error && (
+        {error && !recommendation && ( // Show general AI error only if no recommendation is displayed
           <Alert variant="destructive" className="mt-6">
             <AlertTitle>AI Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
@@ -305,65 +344,73 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
         )}
 
         {recommendation && patientData && (
-          <Card className="mt-6 shadow-md">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <Sparkles className="h-6 w-6 text-primary" /> AI Generated Insights for {patientData.fullName}
-              </CardTitle>
-              <CardDescription>Please review carefully and apply clinical judgment.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Stethoscope className="h-5 w-5" />Potential Diagnoses</h3>
-                <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.diagnosis || "No specific diagnosis provided."}</p>
-              </div>
-              <Separator />
-              <div>
-                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Pill className="h-5 w-5" />Draft Prescription</h3>
-                <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.prescription || "No specific prescription provided."}</p>
-              </div>
-              <Separator />
-              <div>
-                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><FileText className="h-5 w-5" />Treatment Recommendations</h3>
-                <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.recommendations || "No specific recommendations provided."}</p>
-              </div>
-              <Separator />
-              <div className="space-y-1">
-                <Label htmlFor="doctorComments" className="flex items-center"><Edit3 className="mr-1.5 h-4 w-4 text-primary"/>Doctor's Comments / Adjustments</Label>
-                <Textarea
-                  id="doctorComments"
-                  placeholder="Add any comments, adjustments, or final decisions here..."
-                  {...form.register('doctorComments')}
-                  className="min-h-[100px]"
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex-col items-stretch gap-2 md:flex-row md:justify-between">
-              <Button variant="secondary" onClick={() => { toast({title: "Comments Saved (Mock)"})}}>Save Comments</Button>
-              
-              <Dialog open={isOutcomeModalOpen} onOpenChange={setIsOutcomeModalOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="default" disabled={!patientData}>
-                    <Send className="mr-2 h-4 w-4" /> Finish Consultation & Select Outcome
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Consultation Outcome for {patientData?.fullName}</DialogTitle>
-                    <DialogDescription>Select the appropriate next step for the patient.</DialogDescription>
-                  </DialogHeader>
-                  <div className="grid grid-cols-2 gap-3 py-4">
-                    <Button variant="outline" onClick={() => handleOutcome("Send Home")}><Home className="mr-2 h-4 w-4"/>Send Home</Button>
-                    <Button variant="outline" onClick={() => handleOutcome("Send to Pharmacy")}><ArrowRightToLine className="mr-2 h-4 w-4"/>Send to Pharmacy</Button>
-                    <Button variant="outline" onClick={() => handleOutcome("Send to Inpatient (Ward)")}><BedDouble className="mr-2 h-4 w-4"/>Send to Inpatient</Button>
-                    <Button variant="outline" onClick={() => handleOutcome("Refer to Specialist")}><Users2 className="mr-2 h-4 w-4"/>Refer to Specialist</Button>
-                    <Button variant="destructive" onClick={() => handleOutcome("Deceased")}><Skull className="mr-2 h-4 w-4"/>Deceased</Button>
-                    <Button variant="ghost" onClick={() => setIsOutcomeModalOpen(false)} className="col-span-2"><XCircle className="mr-2 h-4 w-4"/>Cancel</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </CardFooter>
-          </Card>
+          <div className="space-y-6 mt-6">
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Sparkles className="h-6 w-6 text-primary" /> AI Generated Insights for {patientData.fullName}
+                </CardTitle>
+                <CardDescription>Please review carefully and apply clinical judgment.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Stethoscope className="h-5 w-5" />Potential Diagnoses</h3>
+                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.diagnosis || "No specific diagnosis provided."}</p>
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Pill className="h-5 w-5" />Draft Prescription</h3>
+                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.prescription || "No specific prescription provided."}</p>
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><FileText className="h-5 w-5" />Treatment Recommendations</h3>
+                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.recommendations || "No specific recommendations provided."}</p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="shadow-sm">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Edit3 className="mr-1.5 h-5 w-5 text-primary"/>Doctor's Comments / Adjustments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Textarea
+                        id="doctorComments"
+                        placeholder="Add any comments, adjustments, or final decisions here..."
+                        {...form.register('doctorComments')}
+                        className="min-h-[100px]"
+                        />
+                </CardContent>
+                <CardFooter>
+                     <Button variant="secondary" onClick={() => toast({title: "Comments Saved (Mock)"})}>Save Comments</Button>
+                </CardFooter>
+            </Card>
+
+            <div className="flex justify-end mt-6">
+                <Dialog open={isOutcomeModalOpen} onOpenChange={setIsOutcomeModalOpen}>
+                    <DialogTrigger asChild>
+                    <Button variant="default" disabled={!patientData} size="lg">
+                        <Send className="mr-2 h-4 w-4" /> Finish Consultation & Select Outcome
+                    </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Consultation Outcome for {patientData?.fullName}</DialogTitle>
+                        <DialogDescription>Select the appropriate next step for the patient.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-3 py-4">
+                        <Button variant="outline" onClick={() => handleOutcome("Send Home")}><Home className="mr-2 h-4 w-4"/>Send Home</Button>
+                        <Button variant="outline" onClick={() => handleOutcome("Send to Pharmacy")}><ArrowRightToLine className="mr-2 h-4 w-4"/>Send to Pharmacy</Button>
+                        <Button variant="outline" onClick={() => handleOutcome("Send to Inpatient (Ward)")}><BedDouble className="mr-2 h-4 w-4"/>Send to Inpatient</Button>
+                        <Button variant="outline" onClick={() => handleOutcome("Refer to Specialist")}><Users2 className="mr-2 h-4 w-4"/>Refer to Specialist</Button>
+                        <Button variant="destructive" onClick={() => handleOutcome("Deceased")}><Skull className="mr-2 h-4 w-4"/>Deceased</Button>
+                        <Button variant="ghost" onClick={() => setIsOutcomeModalOpen(false)} className="col-span-2"><XCircle className="mr-2 h-4 w-4"/>Cancel</Button>
+                    </div>
+                    </DialogContent>
+                </Dialog>
+            </div>
+          </div>
         )}
       </div>
 
@@ -379,6 +426,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
             <CardContent className="space-y-3 text-sm">
               <div><strong>Name:</strong> {patientData.fullName}</div>
               <div><strong>Age:</strong> {patientData.age}</div>
+              <div><strong>Gender:</strong> {patientData.gender}</div>
               <div><strong>National ID:</strong> {patientData.nationalId}</div>
               <Separator />
               <div>
@@ -436,3 +484,4 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
   );
 }
 
+    
