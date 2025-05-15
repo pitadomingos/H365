@@ -134,6 +134,18 @@ export default function TechnicalOverviewPage() {
                 <li>Planned features: Outbreak monitoring, case management, contact tracing.</li>
               </ul>
             </section>
+            <section>
+              <h4 className="font-semibold">3.14. Campaigns (Planned)</h4>
+              <ul>
+                <li>Planned features: Management of health campaigns (e.g., vaccination, awareness), resource tracking, and outcome reporting.</li>
+              </ul>
+            </section>
+            <section>
+              <h4 className="font-semibold">3.15. Reporting (Planned)</h4>
+              <ul>
+                <li>Planned features: Comprehensive reporting module for all hospital activities, supporting various timeframes (daily, weekly, monthly, quarterly, yearly) and levels (local, district, provincial, national).</li>
+              </ul>
+            </section>
           </CardContent>
         </Card>
 
@@ -163,7 +175,8 @@ export default function TechnicalOverviewPage() {
               <li>Backend Development (Database, APIs, Auth).</li>
               <li>Real-time Data Synchronization.</li>
               <li>HL7/FHIR Integration.</li>
-              <li>Advanced Reporting & Analytics.</li>
+              <li>Advanced Reporting & Analytics (development of the Reporting module).</li>
+              <li>Health Campaign Management (development of the Campaigns module).</li>
               <li>Security & Compliance.</li>
               <li>User Roles & Permissions.</li>
               <li>Offline Capabilities.</li>
