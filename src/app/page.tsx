@@ -66,7 +66,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {summaryCards.slice(0,4).map((item) => ( // Show first 4 main cards
+          {summaryCards.slice(0,4).map((item) => ( 
             <Card key={t(item.titleKey)} className="shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{t(item.titleKey)}</CardTitle>
@@ -86,7 +86,7 @@ export default function DashboardPage() {
         </div>
         
         <div className="grid gap-4 md:grid-cols-3">
-         {summaryCards.slice(4).map((item) => ( // Show remaining stat cards
+         {summaryCards.slice(4).map((item) => ( 
             <Card key={t(item.titleKey)} className="shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{t(item.titleKey)}</CardTitle>
@@ -140,7 +140,12 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-3">
               {quickActions.map((action) => (
-                <Button key={action.href} asChild className="w-full justify-start text-left" variant={action.href === "/treatment-recommendation" ? "default" : "secondary"}>
+                <Button 
+                  key={action.href} 
+                  asChild 
+                  className="w-full justify-start text-left" 
+                  variant={action.href === "/treatment-recommendation" ? "default" : "secondary"}
+                >
                   <Link href={action.href}>
                     <action.icon className="mr-2 h-4 w-4" />
                     {t(action.labelKey)}
