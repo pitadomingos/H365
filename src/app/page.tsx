@@ -2,21 +2,28 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, Users, CalendarCheck, DollarSign } from "lucide-react";
+import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby } from "lucide-react"; // Added BedDouble, Siren, Briefcase, Microscope, Baby
 import Link from "next/link";
-import { getTranslator, type Locale } from '@/lib/i18n'; // New import
+import { getTranslator, type Locale } from '@/lib/i18n';
 
 export default function DashboardPage() {
-  // For demonstration, we'll use the default locale ('en').
-  // In a real app, the locale would be determined dynamically (e.g., from URL params).
   const currentLocale: Locale = 'en'; 
   const t = getTranslator(currentLocale);
 
   const summaryCards = [
     { titleKey: "dashboard.card.appointments.title", value: "12", icon: CalendarCheck, color: "text-sky-500", descriptionKey: "dashboard.card.appointments.description", link: "/appointments" },
     { titleKey: "dashboard.card.newPatients.title", value: "5", icon: Users, color: "text-emerald-500", descriptionKey: "dashboard.card.newPatients.description", link: "/patient-registration" },
-    { titleKey: "dashboard.card.labResults.title", value: "8", icon: Activity, color: "text-amber-500", descriptionKey: "dashboard.card.labResults.description", link: "#" },
-    { titleKey: "dashboard.card.revenue.title", value: "$12,500", icon: DollarSign, color: "text-purple-500", descriptionKey: "dashboard.card.revenue.description", link: "#" },
+    { titleKey: "dashboard.card.wardOccupancy.title", value: "75%", icon: BedDouble, color: "text-indigo-500", descriptionKey: "dashboard.card.wardOccupancy.description", link: "/ward-management" },
+    { titleKey: "dashboard.card.erStatus.title", value: "12 Active", icon: Siren, color: "text-red-500", descriptionKey: "dashboard.card.erStatus.description", link: "/emergency-room" },
+  ];
+
+  const quickActions = [
+    { labelKey: "dashboard.quickActions.registerPatient", href: "/patient-registration", icon: Users },
+    { labelKey: "dashboard.quickActions.scheduleAppointment", href: "/appointments", icon: CalendarCheck },
+    { labelKey: "dashboard.quickActions.getAiRecommendation", href: "/treatment-recommendation", icon: Briefcase },
+    { labelKey: "dashboard.quickActions.manageWards", href: "/ward-management", icon: BedDouble },
+    { labelKey: "dashboard.quickActions.labDashboard", href: "/laboratory-management", icon: Microscope },
+    { labelKey: "dashboard.quickActions.maternityRecords", href: "/maternity-care", icon: Baby },
   ];
 
   return (
@@ -60,11 +67,11 @@ export default function DashboardPage() {
                   {user: "Reception", action: "registered new patient: Bob Williams.", time: "15 min ago"},
                   {user: "Lab", action: "uploaded results for patient ID #7890.", time: "1 hour ago"},
                   {user: "Nurse Eva", action: "scheduled follow-up for Mike Brown.", time: "3 hours ago"},
+                  {user: "Ward A", action: "discharged patient: Charlie Davis.", time: "5 hours ago"},
                 ].map((activity, index) => (
                   <li key={index} className="flex items-start text-sm">
                     <Activity className="h-4 w-4 mr-3 mt-1 shrink-0 text-primary" />
                     <div>
-                      {/* Note: Dynamic activity text like this would also need a more complex i18n approach */}
                       <span className="font-medium">{activity.user}</span> {activity.action}
                       <p className="text-xs text-muted-foreground">{activity.time}</p>
                     </div>
@@ -79,17 +86,15 @@ export default function DashboardPage() {
               <CardTitle>{t('dashboard.quickActions.title')}</CardTitle>
               <CardDescription>{t('dashboard.quickActions.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-              <Button asChild className="w-full">
-                <Link href="/patient-registration">{t('dashboard.quickActions.registerPatient')}</Link>
-              </Button>
-              <Button asChild variant="secondary" className="w-full">
-                 <Link href="/appointments">{t('dashboard.quickActions.scheduleAppointment')}</Link>
-              </Button>
-              <Button asChild variant="secondary" className="w-full">
-                <Link href="/treatment-recommendation">{t('dashboard.quickActions.getAiRecommendation')}</Link>
-              </Button>
-              <Button variant="outline" className="w-full" disabled>{t('dashboard.quickActions.viewReports')}</Button>
+            <CardContent className="grid grid-cols-2 gap-3">
+              {quickActions.map((action) => (
+                <Button key={action.href} asChild className="w-full justify-start text-left" variant={action.href === "/treatment-recommendation" ? "default" : "secondary"}>
+                  <Link href={action.href}>
+                    <action.icon className="mr-2 h-4 w-4" />
+                    {t(action.labelKey)}
+                  </Link>
+                </Button>
+              ))}
             </CardContent>
           </Card>
         </div>
@@ -97,3 +102,4 @@ export default function DashboardPage() {
     </AppShell>
   );
 }
+
