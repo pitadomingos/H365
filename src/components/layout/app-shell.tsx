@@ -56,7 +56,7 @@ function AppShellInternal({ children, pathname }: { children: React.ReactNode, p
 
   return (
     <>
-      <Sidebar>
+      <Sidebar collapsible="icon"> {/* Explicitly set collapsible to "icon" */}
         <SidebarHeader className="p-4">
           <div className="flex items-center justify-between w-full">
             <Link href="/" className="flex items-center gap-2">
