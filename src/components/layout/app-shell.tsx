@@ -53,6 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 // Create an internal component to use the hook, as SidebarProvider is at the top level of AppShell's return
 function AppShellInternal({ children, pathname }: { children: React.ReactNode, pathname: string }) {
   const { toggleSidebar, isMobile } = useSidebar();
+  const currentYear = new Date().getFullYear();
 
   return (
     <>
@@ -156,6 +157,10 @@ function AppShellInternal({ children, pathname }: { children: React.ReactNode, p
         <main className="flex-1 overflow-auto p-4 sm:p-6 bg-muted/40 dark:bg-transparent">
           {children}
         </main>
+        <footer className="border-t bg-background p-4 text-center text-xs text-muted-foreground">
+          <p>&copy; {currentYear} H365. All rights reserved.</p>
+          <p>Version 0.1.0 (Prototype)</p>
+        </footer>
       </SidebarInset>
     </>
   );
