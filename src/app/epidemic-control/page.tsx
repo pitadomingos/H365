@@ -16,14 +16,26 @@ export default function EpidemicControlPage() {
         </div>
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle>Outbreak Monitoring & Response</CardTitle>
+            <CardTitle>Outbreak Monitoring & Response Dashboard</CardTitle>
             <CardDescription>Tools for managing and responding to epidemics or public health crises.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">Feature under development. This section will include features for tracking infectious diseases, managing patient isolation, resource allocation for epidemic response, public health reporting, and vaccination campaign management.</p>
+            <p className="text-muted-foreground">Feature under development. This section will provide tools for proactive public health surveillance and rapid response to outbreaks.</p>
+            <h3 className="mt-4 font-semibold text-lg">Potential Features:</h3>
+            <ul className="list-disc list-inside text-muted-foreground space-y-1 mt-2 text-sm">
+              <li>Real-time outbreak tracking dashboard (case counts, geographical distribution, trends).</li>
+              <li>Suspected/Confirmed case registration and management.</li>
+              <li>Contact tracing logging and monitoring tools.</li>
+              <li>Resource management for epidemic response (PPE, test kits, vaccines).</li>
+              <li>Automated public health reporting and data export.</li>
+              <li>Vaccination campaign coordination and tracking.</li>
+              <li>Alerts & communication module for staff and/or public.</li>
+              <li>Protocol and guideline repository for epidemic response.</li>
+            </ul>
           </CardContent>
         </Card>
       </div>
     </AppShell>
   );
 }
+

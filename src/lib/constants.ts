@@ -19,7 +19,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/ward-management', label: 'Ward Management', icon: BedDouble },
   { href: '/specializations', label: 'Specializations', icon: Star },
   { href: '/emergency-room', label: 'Emergency Room', icon: Siren, disabled: false },
-  { href: '/epidemic-control', label: 'Epidemic Control', icon: Biohazard, disabled: true },
+  { href: '/epidemic-control', label: 'Epidemic Control', icon: Biohazard, disabled: false },
 ];
 
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
