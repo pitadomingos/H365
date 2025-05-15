@@ -4,10 +4,10 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon } from "lucide-react";
+import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { getTranslator, type Locale } from '@/lib/i18n';
-import { PieChart, Pie, Cell, Legend as RechartsLegend, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Legend as RechartsLegend, Tooltip as RechartsTooltip, ResponsiveContainer, Bar, BarChart, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 export default function DashboardPage() {
@@ -39,10 +39,21 @@ export default function DashboardPage() {
     { name: t('dashboard.charts.entryPoints.epidemic'), value: 25, fill: "hsl(var(--chart-3))" },
   ];
 
+  const dailyAttendanceData = [
+    { day: "Mon", patients: 120, fill: "hsl(var(--chart-4))" },
+    { day: "Tue", patients: 155, fill: "hsl(var(--chart-4))" },
+    { day: "Wed", patients: 130, fill: "hsl(var(--chart-4))" },
+    { day: "Thu", patients: 160, fill: "hsl(var(--chart-4))" },
+    { day: "Fri", patients: 140, fill: "hsl(var(--chart-4))" },
+    { day: "Sat", patients: 90, fill: "hsl(var(--chart-4))" },
+    { day: "Sun", patients: 75, fill: "hsl(var(--chart-4))" },
+  ];
+
   const chartConfig = {
     outpatient: { label: t('dashboard.charts.entryPoints.outpatient'), color: "hsl(var(--chart-1))" },
     emergency: { label: t('dashboard.charts.entryPoints.emergency'), color: "hsl(var(--chart-2))" },
     epidemic: { label: t('dashboard.charts.entryPoints.epidemic'), color: "hsl(var(--chart-3))" },
+    patients: { label: t('dashboard.charts.dailyAttendance.patients'), color: "hsl(var(--chart-4))" },
   } satisfies ChartConfig;
 
 
@@ -140,48 +151,86 @@ export default function DashboardPage() {
           </Card>
         </div>
         
-        <Card className="shadow-sm">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <PieChartIcon className="h-6 w-6 text-primary" /> {t('dashboard.charts.entryPoints.title')}
-                </CardTitle>
-                <CardDescription>{t('dashboard.charts.entryPoints.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px] flex items-center justify-center">
-                <ChartContainer config={chartConfig} className="w-full max-w-md aspect-square">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart accessibilityLayer>
-                        <RechartsTooltip content={<ChartTooltipContent nameKey="name" />} />
-                        <Pie
-                            data={patientEntryPointsData}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                        >
-                            {patientEntryPointsData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                        </Pie>
-                        <RechartsLegend content={({ payload }) => {
-                            return (
-                            <div className="flex items-center justify-center gap-3 mt-4">
-                                {payload?.map((entry: any) => (
-                                <div key={`item-${entry.value}`} className="flex items-center space-x-1">
-                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                    <span className="text-xs text-muted-foreground">{entry.payload.name}</span>
-                                </div>
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            <Card className="shadow-sm">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <PieChartIcon className="h-6 w-6 text-primary" /> {t('dashboard.charts.entryPoints.title')}
+                    </CardTitle>
+                    <CardDescription>{t('dashboard.charts.entryPoints.description')}</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px] flex items-center justify-center">
+                    <ChartContainer config={chartConfig} className="w-full max-w-md aspect-square">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart accessibilityLayer>
+                            <RechartsTooltip content={<ChartTooltipContent nameKey="name" />} />
+                            <Pie
+                                data={patientEntryPointsData}
+                                dataKey="value"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={80}
+                                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                            >
+                                {patientEntryPointsData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} />
                                 ))}
-                            </div>
-                            )
-                        }} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </ChartContainer>
-            </CardContent>
-        </Card>
+                            </Pie>
+                            <RechartsLegend content={({ payload }) => {
+                                return (
+                                <div className="flex items-center justify-center gap-3 mt-4">
+                                    {payload?.map((entry: any) => (
+                                    <div key={`item-${entry.value}`} className="flex items-center space-x-1">
+                                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                                        <span className="text-xs text-muted-foreground">{entry.payload.name}</span>
+                                    </div>
+                                    ))}
+                                </div>
+                                )
+                            }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </ChartContainer>
+                </CardContent>
+            </Card>
+             <Card className="shadow-sm">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <BarChart3 className="h-6 w-6 text-primary" /> {t('dashboard.charts.dailyAttendance.title')}
+                    </CardTitle>
+                    <CardDescription>{t('dashboard.charts.dailyAttendance.description')}</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[300px]">
+                    <ChartContainer config={chartConfig} className="w-full h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={dailyAttendanceData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="day" fontSize={12} tickLine={false} axisLine={false} />
+                                <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                                <RechartsTooltip
+                                    cursor={false}
+                                    content={<ChartTooltipContent indicator="dot" hideLabel />}
+                                />
+                                <RechartsLegend
+                                    content={({ payload }) => (
+                                        <div className="flex items-center justify-center gap-2 mt-2">
+                                        {payload?.map((entry: any) => (
+                                            <div key={`item-${entry.value}`} className="flex items-center space-x-1">
+                                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                                            <span className="text-xs text-muted-foreground">{entry.value}</span>
+                                            </div>
+                                        ))}
+                                        </div>
+                                    )}
+                                    />
+                                <Bar dataKey="patients" name={t('dashboard.charts.dailyAttendance.patients')} radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </ChartContainer>
+                </CardContent>
+            </Card>
+        </div>
 
       </div>
     </AppShell>

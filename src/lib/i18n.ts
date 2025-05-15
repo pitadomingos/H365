@@ -40,6 +40,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'dashboard.charts.entryPoints.outpatient': "Outpatient",
     'dashboard.charts.entryPoints.emergency': "Emergency",
     'dashboard.charts.entryPoints.epidemic': "Epidemic Alert",
+    'dashboard.charts.dailyAttendance.title': "Daily Patient Attendance (Last 7 Days)",
+    'dashboard.charts.dailyAttendance.description': "Trend of patients attended at this facility.",
+    'dashboard.charts.dailyAttendance.patients': "Patients",
   },
   pt: {
     'dashboard.welcomeMessage': 'Bem-vindo à H365',
@@ -75,6 +78,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'dashboard.charts.entryPoints.outpatient': "Ambulatório",
     'dashboard.charts.entryPoints.emergency': "Emergência",
     'dashboard.charts.entryPoints.epidemic': "Alerta Epidêmico",
+    'dashboard.charts.dailyAttendance.title': "Atendimento Diário de Pacientes (Últimos 7 Dias)",
+    'dashboard.charts.dailyAttendance.description': "Tendência de pacientes atendidos nesta unidade.",
+    'dashboard.charts.dailyAttendance.patients': "Pacientes",
   },
   it: {
     'dashboard.welcomeMessage': 'Benvenuto in H365',
@@ -110,6 +116,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'dashboard.charts.entryPoints.outpatient': "Ambulatorio",
     'dashboard.charts.entryPoints.emergency': "Pronto Soccorso",
     'dashboard.charts.entryPoints.epidemic': "Allerta Epidemica",
+    'dashboard.charts.dailyAttendance.title': "Affluenza Giornaliera Pazienti (Ultimi 7 Giorni)",
+    'dashboard.charts.dailyAttendance.description': "Andamento dei pazienti visitati in questa struttura.",
+    'dashboard.charts.dailyAttendance.patients': "Pazienti",
   },
   es: {
     'dashboard.welcomeMessage': 'Bienvenido a H365',
@@ -145,6 +154,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'dashboard.charts.entryPoints.outpatient': "Ambulatorio",
     'dashboard.charts.entryPoints.emergency': "Urgencias",
     'dashboard.charts.entryPoints.epidemic': "Alerta Epidémica",
+    'dashboard.charts.dailyAttendance.title': "Asistencia Diaria de Pacientes (Últimos 7 Días)",
+    'dashboard.charts.dailyAttendance.description': "Tendencia de pacientes atendidos en esta instalación.",
+    'dashboard.charts.dailyAttendance.patients': "Pacientes",
   },
 };
 
