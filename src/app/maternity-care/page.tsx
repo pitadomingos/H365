@@ -29,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -51,6 +52,7 @@ interface MaternityPatient {
   nationalId: string;
   fullName: string;
   age: number;
+  gender: "Male" | "Female" | "Other"; // Added gender
   photoUrl: string;
   edd: string; // Estimated Due Date
   gestationalAge: string;
@@ -70,6 +72,7 @@ const mockPatients: MaternityPatient[] = [
     nationalId: "112233445",
     fullName: "Aisha Sharma",
     age: 28,
+    gender: "Female",
     photoUrl: "https://placehold.co/100x100.png",
     edd: "2024-12-15",
     gestationalAge: "20w 5d",
@@ -90,6 +93,7 @@ const mockPatients: MaternityPatient[] = [
     nationalId: "556677889",
     fullName: "Maria Rodriguez",
     age: 32,
+    gender: "Female",
     photoUrl: "https://placehold.co/100x100.png",
     edd: "2025-02-20",
     gestationalAge: "10w 2d",
@@ -122,6 +126,12 @@ export default function MaternityCarePage() {
   const [selectedPatient, setSelectedPatient] = useState<MaternityPatient | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
+    if (gender === "Male") return "male avatar";
+    if (gender === "Female") return "female avatar";
+    return "patient avatar";
+  };
+
   const handleSearch = () => {
     if (!searchNationalId) {
       toast({ variant: "destructive", title: "Error", description: "Please enter a National ID." });
@@ -144,12 +154,10 @@ export default function MaternityCarePage() {
 
   const handleSubmitLabOrder = () => {
     toast({title: "Lab Order Submitted (Mock)", description:`Lab tests ordered for ${selectedPatient?.fullName}.`});
-    // Here you would typically close the dialog and potentially clear selected checkboxes
   }
 
   const handleSubmitImagingOrder = () => {
      toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${selectedPatient?.fullName}.`});
-    // Here you would typically close the dialog
   }
 
 
@@ -191,17 +199,17 @@ export default function MaternityCarePage() {
             <div className="lg:col-span-1 space-y-6 lg:sticky lg:top-[calc(theme(spacing.16)_+_theme(spacing.6))]">
               <Card className="shadow-sm">
                 <CardHeader className="flex flex-row items-start gap-4 space-y-0">
-                    <Image 
-                        src={selectedPatient.photoUrl} 
-                        alt={selectedPatient.fullName} 
-                        width={80} 
-                        height={80} 
+                    <Image
+                        src={selectedPatient.photoUrl}
+                        alt={selectedPatient.fullName}
+                        width={80}
+                        height={80}
                         className="rounded-md border"
-                        data-ai-hint="patient photo" 
+                        data-ai-hint={getAvatarHint(selectedPatient.gender)}
                     />
                     <div className="flex-1">
                         <CardTitle>{selectedPatient.fullName}</CardTitle>
-                        <CardDescription>ID: {selectedPatient.nationalId} | Age: {selectedPatient.age}</CardDescription>
+                        <CardDescription>ID: {selectedPatient.nationalId} | Age: {selectedPatient.age} | Gender: {selectedPatient.gender}</CardDescription>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
@@ -322,7 +330,7 @@ export default function MaternityCarePage() {
                           </div>
                         </div>
                         <DialogFooter>
-                          <Button type="button" variant="outline" onClick={() => { /* Close dialog */ }}>Cancel</Button>
+                          <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                           <Button type="submit" onClick={handleSubmitLabOrder}>Submit Lab Order</Button>
                         </DialogFooter>
                       </DialogContent>
@@ -364,7 +372,7 @@ export default function MaternityCarePage() {
                           </div>
                         </div>
                         <DialogFooter>
-                           <Button type="button" variant="outline" onClick={() => { /* Close dialog */ }}>Cancel</Button>
+                           <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                           <Button type="submit" onClick={handleSubmitImagingOrder}>Submit Imaging Order</Button>
                         </DialogFooter>
                       </DialogContent>
@@ -391,4 +399,3 @@ export default function MaternityCarePage() {
     </AppShell>
   );
 }
-    

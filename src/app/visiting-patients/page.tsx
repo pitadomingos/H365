@@ -23,26 +23,24 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 
-// Patient data structure (for searched patient)
 interface Patient {
   id: string;
   nationalId: string;
   fullName: string;
   dob: string;
-  gender: string;
+  gender: "Male" | "Female" | "Other";
 }
 
-// Updated Waiting list item data structure to match registration page
 interface WaitingListItem {
   id: string | number;
   patientName: string;
   photoUrl: string;
   timeAdded: string;
-  location: string; 
-  status: string;   
+  location: string;
+  status: string;
+  gender?: "Male" | "Female" | "Other";
 }
 
-// Chart data
 const visitChartData = [
   { department: "Outpatient", visits: 12, fill: "var(--color-outpatient)" },
   { department: "Lab", visits: 8, fill: "var(--color-lab)" },
@@ -84,19 +82,18 @@ export default function VisitingPatientsPage() {
   const [patientNotFound, setPatientNotFound] = useState(false);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
 
-  const [department, setDepartment] = useState(""); 
-  const [reasonForVisit, setReasonForVisit] = useState(""); 
+  const [department, setDepartment] = useState("");
+  const [reasonForVisit, setReasonForVisit] = useState("");
   const [assignedDoctor, setAssignedDoctor] = useState("");
 
   const [currentDate, setCurrentDate] = useState('');
   const hospitalName = "HealthFlow Central Hospital";
 
-  // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalNationalId, setModalNationalId] = useState("");
   const [modalFullName, setModalFullName] = useState("");
   const [modalDob, setModalDob] = useState<Date | undefined>();
-  const [modalGender, setModalGender] = useState("");
+  const [modalGender, setModalGender] = useState<Patient["gender"] | "">("");
 
 
   useEffect(() => {
@@ -104,13 +101,18 @@ export default function VisitingPatientsPage() {
   }, []);
 
   const initialWaitingList: WaitingListItem[] = [
-    { id: "WL001", patientName: "Alice Wonderland", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
-    { id: "WL002", patientName: "Bob The Builder", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
-    { id: "WL003", patientName: "Charlie Brown", timeAdded: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
-    { id: "WL004", patientName: "Diana Prince", timeAdded: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
+    { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
+    { id: "WL002", patientName: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
+    { id: "WL003", patientName: "Charlie Brown", gender: "Male", timeAdded: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
+    { id: "WL004", patientName: "Diana Prince", gender: "Female", timeAdded: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
   ];
   const [waitingList, setWaitingList] = useState<WaitingListItem[]>(initialWaitingList);
 
+  const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
+    if (gender === "Male") return "male avatar";
+    if (gender === "Female") return "female avatar";
+    return "patient avatar";
+  };
 
   const handleSearchPatient = () => {
     if (!searchNationalId.trim()) {
@@ -156,17 +158,18 @@ export default function VisitingPatientsPage() {
         return;
     }
     const newWaitingListItem: WaitingListItem = {
-        id: `WL${Math.random().toString(36).substring(2, 7)}`, 
+        id: `WL${Math.random().toString(36).substring(2, 7)}`,
         patientName: searchedPatient.fullName,
-        photoUrl: `https://placehold.co/40x40.png?text=${searchedPatient.fullName.substring(0,2)}`, 
+        photoUrl: `https://placehold.co/40x40.png`,
         location: department,
         status: reasonForVisit,
-        timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        gender: searchedPatient.gender,
     };
     setWaitingList(prev => [newWaitingListItem, ...prev]);
-    
+
     toast({ title: "Patient Added", description: `${newWaitingListItem.patientName} added to waiting list for ${department}.`});
-    
+
     setSearchedPatient(null);
     setSearchNationalId("");
     setDepartment("");
@@ -184,15 +187,14 @@ export default function VisitingPatientsPage() {
       title: "Patient Registered (Mock)",
       description: `${modalFullName} has been registered. You can now search for them.`,
     });
-    setSearchNationalId(modalNationalId); // Pre-fill search bar
-    setIsModalOpen(false); // Close modal
+    setSearchNationalId(modalNationalId);
+    setIsModalOpen(false);
 
-    // Clear modal form fields
     setModalNationalId("");
     setModalFullName("");
     setModalDob(undefined);
     setModalGender("");
-    setPatientNotFound(false); // Reset patient not found state
+    setPatientNotFound(false);
   };
 
 
@@ -280,14 +282,14 @@ export default function VisitingPatientsPage() {
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="modalGender" className="text-right">Gender <span className="text-destructive">*</span></Label>
-                            <Select value={modalGender} onValueChange={setModalGender}>
+                            <Select value={modalGender} onValueChange={(value) => setModalGender(value as Patient["gender"])}>
                               <SelectTrigger className="col-span-3">
                                 <SelectValue placeholder="Select gender" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="male">Male</SelectItem>
-                                <SelectItem value="female">Female</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
+                                <SelectItem value="Male">Male</SelectItem>
+                                <SelectItem value="Female">Female</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -364,10 +366,10 @@ export default function VisitingPatientsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Clock className="h-5 w-5 text-primary" />
-                Today's Waiting List
+                Today's Waiting List - {currentDate} at {hospitalName}
               </CardTitle>
               <CardDescription className="text-xs">
-                {currentDate} at {hospitalName}
+                 Patients currently waiting for service.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -381,7 +383,7 @@ export default function VisitingPatientsPage() {
                           width={40}
                           height={40}
                           className="rounded-full mt-1"
-                          data-ai-hint="patient avatar"
+                          data-ai-hint={getAvatarHint(patient.gender)}
                       />
                       <div className="flex-1">
                           <div className="flex justify-between items-start mb-1">
@@ -485,6 +487,3 @@ export default function VisitingPatientsPage() {
     </AppShell>
   );
 }
-
-
-    

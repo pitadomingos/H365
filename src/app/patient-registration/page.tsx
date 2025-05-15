@@ -19,6 +19,16 @@ import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+interface WaitingListItem {
+  id: number | string;
+  name: string;
+  time: string;
+  location: string;
+  status: string;
+  photoUrl: string;
+  gender?: "Male" | "Female" | "Other";
+}
+
 export default function PatientRegistrationPage() {
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -27,7 +37,7 @@ export default function PatientRegistrationPage() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [currentDate, setCurrentDate] = useState('');
-  const hospitalName = "HealthFlow Central Hospital"; 
+  const hospitalName = "HealthFlow Central Hospital";
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -82,9 +92,9 @@ export default function PatientRegistrationPage() {
     if (videoRef.current && canvasRef.current && stream) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      
-      const targetWidth = 240; 
-      const targetHeight = 308; 
+
+      const targetWidth = 240;
+      const targetHeight = 308;
       canvas.width = targetWidth;
       canvas.height = targetHeight;
 
@@ -92,44 +102,44 @@ export default function PatientRegistrationPage() {
       if (context) {
         const videoAspectRatio = video.videoWidth / video.videoHeight;
         const canvasAspectRatio = canvas.width / canvas.height;
-        
+
         let drawWidth, drawHeight, offsetX, offsetY;
 
         if (videoAspectRatio > canvasAspectRatio) {
-            drawHeight = canvas.height;
-            drawWidth = drawHeight * videoAspectRatio;
-            offsetX = (canvas.width - drawWidth) / 2;
-            offsetY = 0;
+          drawHeight = canvas.height;
+          drawWidth = drawHeight * videoAspectRatio;
+          offsetX = (canvas.width - drawWidth) / 2;
+          offsetY = 0;
         } else {
-            drawWidth = canvas.width;
-            drawHeight = drawWidth / videoAspectRatio;
-            offsetX = 0;
-            offsetY = (canvas.height - drawHeight) / 2;
+          drawWidth = canvas.width;
+          drawHeight = drawWidth / videoAspectRatio;
+          offsetX = 0;
+          offsetY = (canvas.height - drawHeight) / 2;
         }
         context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
         const dataUrl = canvas.toDataURL('image/png');
         setCapturedImage(dataUrl);
-        
+
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
-        setHasCameraPermission(null); 
+        setHasCameraPermission(null);
       }
     }
   };
 
   const discardPhoto = () => {
     setCapturedImage(null);
-    setHasCameraPermission(null); 
+    setHasCameraPermission(null);
     if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        setStream(null);
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
     }
   };
 
   const downloadCSVTemplate = () => {
     const headers = [
-      "NationalID", "FullName", "DateOfBirth (YYYY-MM-DD)", "Gender", 
-      "PhoneNumber", "EmailAddress", "FullAddress", "District", "Province", 
+      "NationalID", "FullName", "DateOfBirth (YYYY-MM-DD)", "Gender",
+      "PhoneNumber", "EmailAddress", "FullAddress", "District", "Province",
       "HomeHospital", "NextOfKinName", "NextOfKinNumber", "NextOfKinAddress"
     ];
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
@@ -157,7 +167,7 @@ export default function PatientRegistrationPage() {
         title: "File Upload (Mock)",
         description: `${selectedFile.name} would be processed. This is a mock action.`,
       });
-      setSelectedFile(null); 
+      setSelectedFile(null);
       const fileInput = document.getElementById('bulkPatientFile') as HTMLInputElement;
       if (fileInput) fileInput.value = "";
 
@@ -170,14 +180,20 @@ export default function PatientRegistrationPage() {
     }
   };
 
-  const waitingList = [
-    { id: 1, name: "Alice Wonderland", time: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
-    { id: 2, name: "Bob The Builder", time: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
-    { id: 3, name: "Charlie Brown", time: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
-    { id: 4, name: "Diana Prince", time: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
-    { id: 5, name: "Edward Scissorhands", time: "11:30 AM", location: "Specialized Dentist", status: "Procedure Complete", photoUrl: "https://placehold.co/40x40.png" },
-    { id: 6, name: "Fiona Gallagher", time: "11:45 AM", location: "Outpatient", status: "Dispatched to Homecare", photoUrl: "https://placehold.co/40x40.png" },
+  const waitingList: WaitingListItem[] = [
+    { id: 1, name: "Alice Wonderland", gender: "Female", time: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
+    { id: 2, name: "Bob The Builder", gender: "Male", time: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
+    { id: 3, name: "Charlie Brown", gender: "Male", time: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
+    { id: 4, name: "Diana Prince", gender: "Female", time: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
+    { id: 5, name: "Edward Scissorhands", gender: "Male", time: "11:30 AM", location: "Specialized Dentist", status: "Procedure Complete", photoUrl: "https://placehold.co/40x40.png" },
+    { id: 6, name: "Fiona Gallagher", gender: "Female", time: "11:45 AM", location: "Outpatient", status: "Dispatched to Homecare", photoUrl: "https://placehold.co/40x40.png" },
   ];
+
+  const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
+    if (gender === "Male") return "male avatar";
+    if (gender === "Female") return "female avatar";
+    return "patient avatar";
+  };
 
   return (
     <AppShell>
@@ -213,7 +229,7 @@ export default function PatientRegistrationPage() {
                       {capturedImage && (
                         <Image src={capturedImage} alt="Captured patient photo" width={240} height={308} className="w-full h-full object-contain rounded-md" data-ai-hint="patient photo"/>
                       )}
-                      {!capturedImage && (!stream || hasCameraPermission === false) && ( 
+                      {!capturedImage && (!stream || hasCameraPermission === false) && (
                         <UserCircle className="w-24 h-24 text-muted-foreground" />
                       )}
                     </div>
@@ -262,9 +278,9 @@ export default function PatientRegistrationPage() {
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="male">Male</SelectItem>
-                            <SelectItem value="female">Female</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
+                            <SelectItem value="Male">Male</SelectItem>
+                            <SelectItem value="Female">Female</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
                             <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
                           </SelectContent>
                         </Select>
@@ -276,7 +292,7 @@ export default function PatientRegistrationPage() {
                           <Camera className="h-5 w-5" /> Patient Photo Capture
                         </h3>
                         <p className="text-sm text-muted-foreground">Capture a clear photo. Aim for a passport-style image.</p>
-                        
+
                         {hasCameraPermission === false && (
                            <Alert variant="destructive" className="w-full">
                               <AlertTitle>Camera Access Denied</AlertTitle>
@@ -312,7 +328,7 @@ export default function PatientRegistrationPage() {
                 </div>
 
                 {/* Row 2: Remaining Information Sections (Contact, Location, Next of Kin, Bulk Upload) - Spans full width below the first row */}
-                <div className="space-y-6 pt-4"> 
+                <div className="space-y-6 pt-4">
                   <div className="space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -348,7 +364,7 @@ export default function PatientRegistrationPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">Next of Kin</h3>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -366,7 +382,7 @@ export default function PatientRegistrationPage() {
                       <Textarea id="nextOfKinAddress" placeholder="e.g., 456 Oak Ln, Anytown" required/>
                     </div>
                   </div>
-                 
+
                   {/* Bulk Patient Registration Section - Integrated here */}
                   <div className="space-y-4 pt-4 border-t">
                      <h3 className="text-md font-semibold flex items-center gap-2 pt-2">
@@ -378,14 +394,14 @@ export default function PatientRegistrationPage() {
                     <Button onClick={downloadCSVTemplate} variant="outline" className="w-full md:w-auto">
                       <Download className="mr-2 h-4 w-4" /> Download CSV Template
                     </Button>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="bulkPatientFile">Upload File</Label>
-                      <Input 
-                        id="bulkPatientFile" 
-                        type="file" 
+                      <Input
+                        id="bulkPatientFile"
+                        type="file"
                         accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-                        onChange={handleFileChange} 
+                        onChange={handleFileChange}
                       />
                       {selectedFile && <p className="text-xs text-muted-foreground">Selected: {selectedFile.name}</p>}
                     </div>
@@ -411,10 +427,10 @@ export default function PatientRegistrationPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <ListChecks className="h-5 w-5 text-primary" />
-                  Today's Waiting List
+                  Today's Waiting List - {currentDate} at {hospitalName}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {currentDate} at {hospitalName}
+                  Patients currently waiting for service.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -422,13 +438,13 @@ export default function PatientRegistrationPage() {
                   <ul className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                     {waitingList.map((patient) => (
                       <li key={patient.id} className="p-3 border rounded-md shadow-sm bg-background hover:bg-muted/50 flex items-start gap-3">
-                        <Image 
-                            src={patient.photoUrl} 
-                            alt={patient.name} 
-                            width={40} 
-                            height={40} 
+                        <Image
+                            src={patient.photoUrl}
+                            alt={patient.name}
+                            width={40}
+                            height={40}
                             className="rounded-full mt-1"
-                            data-ai-hint="patient avatar" 
+                            data-ai-hint={getAvatarHint(patient.gender)}
                         />
                         <div className="flex-1">
                             <div className="flex justify-between items-start mb-1">

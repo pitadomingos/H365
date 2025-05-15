@@ -3,20 +3,39 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star, ListChecks, Bell, Users, Briefcase } from "lucide-react";
 import { SpecialistConsultationForm } from "./specialist-consultation-form";
-import { getTreatmentRecommendationAction } from "../treatment-recommendation/actions"; // Reusing the same AI action
+import { getTreatmentRecommendationAction } from "../treatment-recommendation/actions";
 import Image from "next/image";
 
-// Mock data - In a real app, this would come from state management or API
-const mockReferralList = [
-  { id: "REF001", patientName: "Edward Scissorhands", referringDoctor: "Dr. Primary", reason: "Cardiac evaluation", timeReferred: "09:00 AM", specialty: "Cardiology", photoUrl: "https://placehold.co/32x32.png" },
-  { id: "REF002", patientName: "Fiona Gallagher", referringDoctor: "Dr. GP", reason: "Persistent Headaches", timeReferred: "09:30 AM", specialty: "Neurology", photoUrl: "https://placehold.co/32x32.png" },
+interface MockListItem {
+  id: string;
+  patientName: string;
+  referringDoctor?: string; // For referral list
+  reason?: string; // For referral list
+  specialty?: string; // For referral list
+  timeReferred?: string; // For referral list
+  message?: string; // For notifications
+  time?: string; // For notifications
+  read?: boolean; // For notifications
+  photoUrl: string;
+  gender?: "Male" | "Female" | "Other";
+}
+
+
+const mockReferralList: MockListItem[] = [
+  { id: "REF001", patientName: "Edward Scissorhands", gender: "Male", referringDoctor: "Dr. Primary", reason: "Cardiac evaluation", timeReferred: "09:00 AM", specialty: "Cardiology", photoUrl: "https://placehold.co/32x32.png" },
+  { id: "REF002", patientName: "Fiona Gallagher", gender: "Female", referringDoctor: "Dr. GP", reason: "Persistent Headaches", timeReferred: "09:30 AM", specialty: "Neurology", photoUrl: "https://placehold.co/32x32.png" },
 ];
 
-const mockSpecialistNotifications = [
-  { id: "SNOTIF001", patientName: "Edward Scissorhands", message: "Previous ECG results uploaded.", time: "10 mins ago", read: false },
-  { id: "SNOTIF002", patientName: "Fiona Gallagher", message: "MRI scheduled for tomorrow.", time: "25 mins ago", read: true },
+const mockSpecialistNotifications: MockListItem[] = [
+  { id: "SNOTIF001", patientName: "Edward Scissorhands", gender: "Male", message: "Previous ECG results uploaded.", time: "10 mins ago", read: false, photoUrl: "https://placehold.co/32x32.png" },
+  { id: "SNOTIF002", patientName: "Fiona Gallagher", gender: "Female", message: "MRI scheduled for tomorrow.", time: "25 mins ago", read: true, photoUrl: "https://placehold.co/32x32.png" },
 ];
 
+const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
+  if (gender === "Male") return "male avatar";
+  if (gender === "Female") return "female avatar";
+  return "patient avatar";
+};
 
 export default async function SpecializationsPage() {
   return (
@@ -42,7 +61,7 @@ export default async function SpecializationsPage() {
                           width={32}
                           height={32}
                           className="rounded-full"
-                          data-ai-hint="patient avatar"
+                          data-ai-hint={getAvatarHint(patient.gender)}
                       />
                       <div className="flex-1">
                         <p className="font-semibold text-sm">{patient.patientName}</p>
@@ -72,11 +91,21 @@ export default async function SpecializationsPage() {
               {mockSpecialistNotifications.length > 0 ? (
                 <ul className="space-y-2.5">
                   {mockSpecialistNotifications.map((notif) => (
-                     <li key={notif.id} className={`p-2.5 border rounded-md text-xs ${notif.read ? 'bg-muted/40' : 'bg-accent/20 dark:bg-accent/10 border-accent/50'}`}>
-                        <p className={`${notif.read ? 'text-muted-foreground' : 'font-medium'}`}>
-                           <strong>{notif.patientName}:</strong> {notif.message}
-                        </p>
-                        <p className={`text-xs ${notif.read ? 'text-muted-foreground/80' : 'text-muted-foreground' } mt-0.5`}>{notif.time}</p>
+                     <li key={notif.id} className={`p-2.5 border rounded-md text-xs ${notif.read ? 'bg-muted/40' : 'bg-accent/20 dark:bg-accent/10 border-accent/50'} flex items-start gap-2`}>
+                        <Image
+                          src={notif.photoUrl}
+                          alt={notif.patientName}
+                          width={24}
+                          height={24}
+                          className="rounded-full mt-0.5"
+                          data-ai-hint={getAvatarHint(notif.gender)}
+                        />
+                        <div className="flex-1">
+                            <p className={`${notif.read ? 'text-muted-foreground' : 'font-medium'}`}>
+                              <strong>{notif.patientName}:</strong> {notif.message}
+                            </p>
+                            <p className={`text-xs ${notif.read ? 'text-muted-foreground/80' : 'text-muted-foreground' } mt-0.5`}>{notif.time}</p>
+                        </div>
                       </li>
                   ))}
                 </ul>

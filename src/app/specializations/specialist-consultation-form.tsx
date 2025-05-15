@@ -27,7 +27,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
 
@@ -52,7 +52,7 @@ interface PatientData {
   nationalId: string;
   fullName: string;
   age: number;
-  gender: string;
+  gender: "Male" | "Female" | "Other";
   address: string;
   homeClinic: string;
   photoUrl: string;
@@ -134,6 +134,12 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
       setBmi(null);
     }
   }, [weightKg, heightCm]);
+
+  const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
+    if (gender === "Male") return "male avatar";
+    if (gender === "Female") return "female avatar";
+    return "patient avatar";
+  };
 
   const handlePatientSearch = async () => {
     const nationalId = form.getValues("nationalIdSearch");
@@ -301,7 +307,14 @@ ${visitHistoryString || "No recent visit history available."}
             {patientData && (
               <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-4 items-start">
-                    <Image src={patientData.photoUrl} alt="Patient Photo" width={120} height={120} className="rounded-md border" data-ai-hint="patient photo" />
+                    <Image
+                      src={patientData.photoUrl}
+                      alt="Patient Photo"
+                      width={120}
+                      height={120}
+                      className="rounded-md border"
+                      data-ai-hint={getAvatarHint(patientData.gender)}
+                    />
                     <div className="space-y-1.5 text-sm">
                     <h3 className="text-xl font-semibold">{patientData.fullName}</h3>
                     <p><strong>National ID:</strong> {patientData.nationalId}</p>
@@ -637,4 +650,3 @@ ${visitHistoryString || "No recent visit history available."}
     </div>
   );
 }
-
