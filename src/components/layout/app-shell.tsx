@@ -4,7 +4,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Stethoscope, Menu } from "lucide-react";
+import { Stethoscope, Menu } from "lucide-react"; // Added Menu icon
 
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS, BOTTOM_NAV_ITEMS } from "@/lib/constants";
@@ -21,6 +21,7 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
+  useSidebar, // Import useSidebar
 } from "@/components/ui/sidebar"; 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -36,15 +37,44 @@ import {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  // Get sidebar context here if SidebarProvider wraps AppShell, or pass down if AppShell wraps SidebarProvider.
+  // Assuming AppShell is inside SidebarProvider, so useSidebar can be called here.
 
   return (
     <SidebarProvider defaultOpen>
+      <AppShellInternal pathname={pathname}>
+        {children}
+      </AppShellInternal>
+    </SidebarProvider>
+  );
+}
+
+
+// Create an internal component to use the hook, as SidebarProvider is at the top level of AppShell's return
+function AppShellInternal({ children, pathname }: { children: React.ReactNode, pathname: string }) {
+  const { toggleSidebar, isMobile } = useSidebar();
+
+  return (
+    <>
       <Sidebar>
         <SidebarHeader className="p-4">
-          <Link href="/" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-            <Stethoscope className="h-7 w-7 text-primary" />
-            <h1 className="text-xl font-semibold group-data-[collapsible=icon]:hidden">H365</h1>
-          </Link>
+          <div className="flex items-center justify-between w-full">
+            <Link href="/" className="flex items-center gap-2">
+              <Stethoscope className="h-7 w-7 text-primary" />
+              <h1 className="text-xl font-semibold group-data-[collapsible=icon]:hidden">H365</h1>
+            </Link>
+            {!isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+                className="h-7 w-7 group-data-[collapsible=icon]:hidden" // Hide when sidebar is icon-only
+                aria-label="Toggle sidebar"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            )}
+          </div>
         </SidebarHeader>
         <SidebarContent className="flex-1 p-2">
           <SidebarMenu>
@@ -89,7 +119,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
-          <SidebarTrigger className="md:hidden" />
+          <SidebarTrigger className="md:hidden" /> {/* This is the standard mobile toggle */}
           <div className="flex-1">
             {/* Breadcrumbs or page title can go here */}
           </div>
@@ -127,6 +157,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </SidebarInset>
-    </SidebarProvider>
+    </>
   );
 }
