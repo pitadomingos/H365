@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Baby, Search, CalendarPlus, FileText, ShieldAlert, Microscope, Ultrasound } from "lucide-react";
+import { Baby, Search, CalendarPlus, FileText, ShieldAlert, Microscope, ScanSearch } from "lucide-react"; // Changed Ultrasound to ScanSearch
 import {
   Table,
   TableBody,
@@ -249,7 +249,7 @@ export default function MaternityCarePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-1">
-                        <Label className="flex items-center gap-1.5"><Ultrasound className="h-4 w-4 text-primary"/> Latest Ultrasound Summary (Mock)</Label>
+                        <Label className="flex items-center gap-1.5"><ScanSearch className="h-4 w-4 text-primary"/> Latest Ultrasound Summary (Mock)</Label> {/* Changed Ultrasound to ScanSearch */}
                         <Textarea readOnly defaultValue="Anomaly scan at 20w 2d: Normal fetal anatomy. Placenta posterior, clear of os. AFI normal. EFW: 350g. Next scan: Growth scan at 32w." className="text-sm bg-muted/50"/>
                     </div>
                      <div className="space-y-1">
@@ -282,3 +282,6 @@ export default function MaternityCarePage() {
     </AppShell>
   );
 }
+
+
+    
