@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, UsersRound, CalendarDays, Pill, FlaskConical, Bell, Settings, LogOut, Users, ClipboardEdit } from 'lucide-react'; // Changed MapPin to Pill, Added Users, ClipboardEdit
+import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard } from 'lucide-react';
 
 export type NavItem = {
   href: string;
@@ -15,7 +15,11 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/visiting-patients', label: 'Visiting Patients', icon: Users },
   { href: '/appointments', label: 'Appointments', icon: CalendarDays },
   { href: '/pharmacy-locator', label: 'Drug Dispensing', icon: Pill },
-  { href: '/treatment-recommendation', label: 'Consultation Room', icon: ClipboardEdit }, // Updated Label and Icon
+  { href: '/treatment-recommendation', label: 'Consultation Room', icon: ClipboardEdit },
+  { href: '/ward-management', label: 'Ward Management', icon: BedDouble, disabled: true },
+  { href: '/specializations', label: 'Specializations', icon: Star, disabled: true },
+  { href: '/emergency-room', label: 'Emergency Room', icon: Siren, disabled: true },
+  { href: '/epidemic-control', label: 'Epidemic Control', icon: Biohazard, disabled: true },
 ];
 
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
