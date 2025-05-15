@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Combine, Sigma, Edit3, Send, CheckCircle, XCircle, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, Briefcase } from "lucide-react";
+import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Sigma, Edit3, Send, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, Briefcase, FlaskConical, RadioTower } from "lucide-react";
 import type { TreatmentRecommendationInput, TreatmentRecommendationOutput } from '@/ai/flows/treatment-recommendation';
 import { Separator } from '@/components/ui/separator';
 import { toast } from "@/hooks/use-toast";
@@ -24,9 +24,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from "@/components/ui/checkbox";
 
 
 const FormSchema = z.object({
@@ -34,11 +36,11 @@ const FormSchema = z.object({
   bodyTemperature: z.string().optional(),
   weight: z.string().optional(),
   height: z.string().optional(),
-  symptoms: z.string().min(1, "Symptoms are required for AI recommendation.").optional(), // Specialist might focus on specific symptoms
+  symptoms: z.string().min(1, "Symptoms are required for AI recommendation.").optional(), 
   labResultsSummary: z.string().optional(),
   imagingDataSummary: z.string().optional(),
-  specialistComments: z.string().optional(), // Renamed from doctorComments
-  currentSpecialty: z.string().optional(), // Added field
+  specialistComments: z.string().optional(), 
+  currentSpecialty: z.string().optional(), 
 }).refine(data => data.symptoms || data.labResultsSummary || data.imagingDataSummary, {
     message: "At least one of symptoms, lab results summary, or imaging data summary must be provided for AI recommendation.",
     path: ["symptoms"], 
@@ -56,11 +58,10 @@ interface PatientData {
   photoUrl: string;
   allergies: string[];
   chronicConditions: string[];
-  // Specialist-specific fields
   referringDoctor?: string;
   referringDepartment?: string;
   reasonForReferral?: string;
-  assignedSpecialty?: string; // The specialty this consultation is for
+  assignedSpecialty?: string; 
 }
 
 interface VisitHistoryItem {
@@ -75,6 +76,17 @@ const mockVisitHistory: VisitHistoryItem[] = [
   { id: "v1", date: "2024-05-10", department: "Outpatient", doctor: "Dr. Smith", reason: "Annual Checkup" },
   { id: "v2", date: "2024-03-22", department: "Emergency", doctor: "Dr. Jones", reason: "Minor Laceration, Referred to Ortho" },
   { id: "v3", date: "2023-11-05", department: "Cardiology", doctor: "Dr. Eve", reason: "Follow-up: Post MI" },
+];
+
+const generalLabTests = [
+  { id: "cbc", label: "Complete Blood Count (CBC)" },
+  { id: "bmp", label: "Basic Metabolic Panel (BMP)" },
+  { id: "cmp", label: "Comprehensive Metabolic Panel (CMP)" },
+  { id: "lipid", label: "Lipid Panel" },
+  { id: "ua", label: "Urinalysis (U/A)" },
+  { id: "tsh", label: "Thyroid Stimulating Hormone (TSH)" },
+  { id: "crp", label: "C-Reactive Protein (CRP)" },
+  { id: "esr", label: "Erythrocyte Sedimentation Rate (ESR)" },
 ];
 
 
@@ -103,7 +115,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
       labResultsSummary: "",
       imagingDataSummary: "",
       specialistComments: "",
-      currentSpecialty: "Cardiology", // Default or could be passed as prop
+      currentSpecialty: "Cardiology", 
     },
   });
 
@@ -206,7 +218,7 @@ ${visitHistoryString || "No recent visit history available."}
 `;
 
       const aiInput: TreatmentRecommendationInput = {
-        symptoms: comprehensiveSymptoms, // Includes specialist context
+        symptoms: comprehensiveSymptoms, 
         labResults: data.labResultsSummary || "Not provided",
         imagingData: data.imagingDataSummary || "Not provided",
       };
@@ -230,6 +242,14 @@ ${visitHistoryString || "No recent visit history available."}
     setRecommendation(null);
     setError(null);
     setBmi(null);
+  };
+
+  const handleSubmitLabOrder = () => {
+    toast({title: "Lab Order Submitted (Mock)", description:`Lab tests ordered for ${patientData?.fullName} by Specialist.`});
+  };
+
+  const handleSubmitImagingOrder = () => {
+     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName} by Specialist.`});
   };
 
   return (
@@ -430,6 +450,92 @@ ${visitHistoryString || "No recent visit history available."}
                 </CardFooter>
             </Card>
 
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Diagnostic Orders for Specialist</CardTitle>
+                <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col sm:flex-row gap-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full sm:w-auto" disabled={!patientData}>
+                      <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Order Lab Tests for {patientData?.fullName}</DialogTitle>
+                      <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                      <Label className="text-base font-semibold">Common Lab Tests:</Label>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {generalLabTests.map((test) => (
+                          <div key={test.id} className="flex items-center space-x-2">
+                            <Checkbox id={`specialist-test-${test.id}`} />
+                            <Label htmlFor={`specialist-test-${test.id}`} className="text-sm font-normal">
+                              {test.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                      <Separator className="my-2" />
+                      <div className="space-y-2">
+                        <Label htmlFor="specialistLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
+                        <Textarea id="specialistLabClinicalNotes" placeholder="e.g., Specialist screening, follow-up..." />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                      <Button type="submit" onClick={handleSubmitLabOrder}>Submit Lab Order</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full sm:w-auto" disabled={!patientData}>
+                      <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Order Imaging Study for {patientData?.fullName}</DialogTitle>
+                      <DialogDescription>Select imaging type, specify details, and add clinical notes.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="specialistImagingType">Imaging Type</Label>
+                        <Select>
+                          <SelectTrigger id="specialistImagingType">
+                            <SelectValue placeholder="Select imaging type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ultrasound">Ultrasound</SelectItem>
+                            <SelectItem value="xray">X-Ray</SelectItem>
+                            <SelectItem value="mri">MRI</SelectItem>
+                            <SelectItem value="ctscan">CT Scan</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="specialistImagingRegionDetails">Region / Details of Study</Label>
+                        <Textarea id="specialistImagingRegionDetails" placeholder="e.g., Echocardiogram, MRI Knee, CT Angio..." />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="specialistImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
+                        <Textarea id="specialistImagingClinicalNotes" placeholder="e.g., Assess cardiac function, rule out ligament tear..." />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                      <Button type="submit" onClick={handleSubmitImagingOrder}>Submit Imaging Order</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+
             <div className="flex justify-end mt-6">
                 <Dialog open={isOutcomeModalOpen} onOpenChange={setIsOutcomeModalOpen}>
                     <DialogTrigger asChild>
@@ -448,7 +554,7 @@ ${visitHistoryString || "No recent visit history available."}
                         <Button variant="outline" onClick={() => handleOutcome("Admit to Ward")}><BedDouble className="mr-2 h-4 w-4"/>Admit to Ward</Button>
                         <Button variant="outline" onClick={() => handleOutcome("Refer to Sub-specialist")}><Users2 className="mr-2 h-4 w-4"/>Refer Sub-specialist</Button>
                         <Button variant="outline" onClick={() => handleOutcome("Discharge from Specialist Care")}><Home className="mr-2 h-4 w-4"/>Discharge Specialist Care</Button>
-                        <Button variant="ghost" onClick={() => setIsOutcomeModalOpen(false)} className="col-span-2"><XCircle className="mr-2 h-4 w-4"/>Cancel</Button>
+                        <DialogClose asChild><Button variant="ghost" className="col-span-2">Cancel</Button></DialogClose>
                     </div>
                     </DialogContent>
                 </Dialog>
@@ -529,3 +635,4 @@ ${visitHistoryString || "No recent visit history available."}
     </div>
   );
 }
+

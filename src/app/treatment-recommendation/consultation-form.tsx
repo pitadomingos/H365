@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Combine, Sigma, Edit3, Send, CheckCircle, XCircle, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock } from "lucide-react";
+import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Sigma, Edit3, Send, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, FlaskConical, RadioTower } from "lucide-react";
 import type { TreatmentRecommendationInput, TreatmentRecommendationOutput } from '@/ai/flows/treatment-recommendation';
 import { Separator } from '@/components/ui/separator';
 import { toast } from "@/hooks/use-toast";
@@ -26,6 +26,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const FormSchema = z.object({
   nationalIdSearch: z.string().optional(),
@@ -38,7 +40,7 @@ const FormSchema = z.object({
   doctorComments: z.string().optional(),
 }).refine(data => data.symptoms || data.labResultsSummary || data.imagingDataSummary, {
     message: "At least one of symptoms, lab results summary, or imaging data summary must be provided for AI recommendation.",
-    path: ["symptoms"], // This error will point to the symptoms field if the condition fails
+    path: ["symptoms"], 
 });
 
 type FormValues = z.infer<typeof FormSchema>;
@@ -71,6 +73,16 @@ const mockVisitHistory: VisitHistoryItem[] = [
   { id: "v5", date: "2023-01-30", department: "Outpatient", doctor: "Dr. Smith", reason: "Flu Symptoms" },
 ];
 
+const generalLabTests = [
+  { id: "cbc", label: "Complete Blood Count (CBC)" },
+  { id: "bmp", label: "Basic Metabolic Panel (BMP)" },
+  { id: "cmp", label: "Comprehensive Metabolic Panel (CMP)" },
+  { id: "lipid", label: "Lipid Panel" },
+  { id: "ua", label: "Urinalysis (U/A)" },
+  { id: "tsh", label: "Thyroid Stimulating Hormone (TSH)" },
+  { id: "crp", label: "C-Reactive Protein (CRP)" },
+  { id: "esr", label: "Erythrocyte Sedimentation Rate (ESR)" },
+];
 
 interface ConsultationFormProps {
   getRecommendationAction: (input: TreatmentRecommendationInput) => Promise<TreatmentRecommendationOutput | { error: string }>;
@@ -100,7 +112,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     },
   });
 
-  const { watch, setValue } = form;
+  const { watch } = form; // Removed setValue as it's not used directly here for these new dialogs
   const weightKg = watch('weight');
   const heightCm = watch('height');
 
@@ -126,7 +138,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     setPatientData(null);
     setRecommendation(null);
     setError(null);
-    form.reset({ // Reset relevant form fields but keep search ID
+    form.reset({ 
         nationalIdSearch: nationalId,
         bodyTemperature: "",
         weight: "",
@@ -138,7 +150,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     });
     setBmi(null);
     
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
     if (nationalId === "123456789" || nationalId === "987654321") {
       const fetchedPatientData: PatientData = {
         nationalId: nationalId,
@@ -211,7 +223,6 @@ ${visitHistoryString || "No recent visit history available."}
     if (outcome === "Send to Pharmacy" && patientData && recommendation?.prescription) {
         console.log(`Prescription for ${patientData.fullName} to be sent to pharmacy: ${recommendation.prescription}`);
     }
-    // Reset form and patient data
     form.reset();
     setPatientData(null);
     setRecommendation(null);
@@ -219,9 +230,18 @@ ${visitHistoryString || "No recent visit history available."}
     setBmi(null);
   };
 
+  const handleSubmitLabOrder = () => {
+    toast({title: "Lab Order Submitted (Mock)", description:`Lab tests ordered for ${patientData?.fullName}.`});
+    // Close dialog logic typically handled by DialogClose or managing open state
+  };
+
+  const handleSubmitImagingOrder = () => {
+     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName}.`});
+     // Close dialog logic
+  };
+
   return (
     <div className="grid lg:grid-cols-3 gap-6 items-start">
-      {/* Main Form Content Area (Spans 2 columns on lg screens) */}
       <div className="lg:col-span-2 space-y-6">
         <Card className="shadow-sm">
           <CardHeader>
@@ -248,8 +268,7 @@ ${visitHistoryString || "No recent visit history available."}
                 <div className="space-y-1.5 text-sm">
                   <h3 className="text-xl font-semibold">{patientData.fullName}</h3>
                   <p><strong>National ID:</strong> {patientData.nationalId}</p>
-                  <p><strong>Age:</strong> {patientData.age}</p>
-                  <p><strong>Gender:</strong> {patientData.gender}</p>
+                  <p><strong>Age:</strong> {patientData.age} | <strong>Gender:</strong> {patientData.gender}</p>
                   <p><strong>Address:</strong> {patientData.address}</p>
                   <p><strong>Home Clinic:</strong> {patientData.homeClinic}</p>
                 </div>
@@ -336,7 +355,7 @@ ${visitHistoryString || "No recent visit history available."}
           </Card>
         </form>
 
-        {error && !recommendation && ( // Show general AI error only if no recommendation is displayed
+        {error && !recommendation && ( 
           <Alert variant="destructive" className="mt-6">
             <AlertTitle>AI Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
@@ -387,6 +406,93 @@ ${visitHistoryString || "No recent visit history available."}
                 </CardFooter>
             </Card>
 
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Diagnostic Orders</CardTitle>
+                <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col sm:flex-row gap-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full sm:w-auto" disabled={!patientData}>
+                      <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Order Lab Tests for {patientData?.fullName}</DialogTitle>
+                      <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                      <Label className="text-base font-semibold">Common Lab Tests:</Label>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {generalLabTests.map((test) => (
+                          <div key={test.id} className="flex items-center space-x-2">
+                            <Checkbox id={`consult-test-${test.id}`} />
+                            <Label htmlFor={`consult-test-${test.id}`} className="text-sm font-normal">
+                              {test.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                      <Separator className="my-2" />
+                      <div className="space-y-2">
+                        <Label htmlFor="consultLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
+                        <Textarea id="consultLabClinicalNotes" placeholder="e.g., Routine screening, specific concerns..." />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                      <Button type="submit" onClick={handleSubmitLabOrder}>Submit Lab Order</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full sm:w-auto" disabled={!patientData}>
+                      <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Order Imaging Study for {patientData?.fullName}</DialogTitle>
+                      <DialogDescription>Select imaging type, specify details, and add clinical notes.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="consultImagingType">Imaging Type</Label>
+                        <Select>
+                          <SelectTrigger id="consultImagingType">
+                            <SelectValue placeholder="Select imaging type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ultrasound">Ultrasound</SelectItem>
+                            <SelectItem value="xray">X-Ray</SelectItem>
+                            <SelectItem value="mri">MRI</SelectItem>
+                            <SelectItem value="ctscan">CT Scan</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="consultImagingRegionDetails">Region / Details of Study</Label>
+                        <Textarea id="consultImagingRegionDetails" placeholder="e.g., Abdominal Ultrasound, Chest X-ray PA view, MRI Brain..." />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="consultImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
+                        <Textarea id="consultImagingClinicalNotes" placeholder="e.g., Rule out appendicitis, check for pneumonia..." />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                      <Button type="submit" onClick={handleSubmitImagingOrder}>Submit Imaging Order</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+
+
             <div className="flex justify-end mt-6">
                 <Dialog open={isOutcomeModalOpen} onOpenChange={setIsOutcomeModalOpen}>
                     <DialogTrigger asChild>
@@ -405,7 +511,7 @@ ${visitHistoryString || "No recent visit history available."}
                         <Button variant="outline" onClick={() => handleOutcome("Send to Inpatient (Ward)")}><BedDouble className="mr-2 h-4 w-4"/>Send to Inpatient</Button>
                         <Button variant="outline" onClick={() => handleOutcome("Refer to Specialist")}><Users2 className="mr-2 h-4 w-4"/>Refer to Specialist</Button>
                         <Button variant="destructive" onClick={() => handleOutcome("Deceased")}><Skull className="mr-2 h-4 w-4"/>Deceased</Button>
-                        <Button variant="ghost" onClick={() => setIsOutcomeModalOpen(false)} className="col-span-2"><XCircle className="mr-2 h-4 w-4"/>Cancel</Button>
+                        <DialogClose asChild><Button variant="ghost" className="col-span-2">Cancel</Button></DialogClose>
                     </div>
                     </DialogContent>
                 </Dialog>
@@ -414,7 +520,6 @@ ${visitHistoryString || "No recent visit history available."}
         )}
       </div>
 
-      {/* Right Panel: Patient History & Dashboard (Spans 1 column on lg screens) */}
       {patientData && (
         <div className="lg:col-span-1 space-y-6 lg:sticky lg:top-[calc(theme(spacing.16)_+_theme(spacing.6))]">
           <Card className="shadow-sm">
@@ -425,8 +530,7 @@ ${visitHistoryString || "No recent visit history available."}
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div><strong>Name:</strong> {patientData.fullName}</div>
-              <div><strong>Age:</strong> {patientData.age}</div>
-              <div><strong>Gender:</strong> {patientData.gender}</div>
+              <div><strong>Age:</strong> {patientData.age} | <strong>Gender:</strong> {patientData.gender}</div>
               <div><strong>National ID:</strong> {patientData.nationalId}</div>
               <Separator />
               <div>
@@ -483,5 +587,4 @@ ${visitHistoryString || "No recent visit history available."}
     </div>
   );
 }
-
     
