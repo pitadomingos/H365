@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard } from 'lucide-react';
+import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby } from 'lucide-react';
 
 export type NavItem = {
   href: string;
@@ -18,6 +18,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/treatment-recommendation', label: 'Consultation Room', icon: ClipboardEdit },
   { href: '/ward-management', label: 'Ward Management', icon: BedDouble },
   { href: '/specializations', label: 'Specializations', icon: Star },
+  { href: '/maternity-care', label: 'Maternity Care', icon: Baby },
   { href: '/emergency-room', label: 'Emergency Room', icon: Siren, disabled: false },
   { href: '/epidemic-control', label: 'Epidemic Control', icon: Biohazard, disabled: false },
 ];
@@ -27,4 +28,3 @@ export const BOTTOM_NAV_ITEMS: NavItem[] = [
     { href: '/settings', label: 'Settings', icon: Settings, disabled: true },
     { href: '/logout', label: 'Logout', icon: LogOut, disabled: true },
 ];
-
