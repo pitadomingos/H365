@@ -1,20 +1,27 @@
 
+"use client"; // Required for charts and client-side interactions
+
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby } from "lucide-react"; // Added BedDouble, Siren, Briefcase, Microscope, Baby
+import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon } from "lucide-react";
 import Link from "next/link";
 import { getTranslator, type Locale } from '@/lib/i18n';
+import { PieChart, Pie, Cell, Legend as RechartsLegend, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
 export default function DashboardPage() {
   const currentLocale: Locale = 'en'; 
   const t = getTranslator(currentLocale);
 
   const summaryCards = [
+    { titleKey: "dashboard.card.totalPatients.title", value: "156", icon: TrendingUp, color: "text-green-500", descriptionKey: "dashboard.card.totalPatients.description", link: "#" },
     { titleKey: "dashboard.card.appointments.title", value: "12", icon: CalendarCheck, color: "text-sky-500", descriptionKey: "dashboard.card.appointments.description", link: "/appointments" },
-    { titleKey: "dashboard.card.newPatients.title", value: "5", icon: Users, color: "text-emerald-500", descriptionKey: "dashboard.card.newPatients.description", link: "/patient-registration" },
     { titleKey: "dashboard.card.wardOccupancy.title", value: "75%", icon: BedDouble, color: "text-indigo-500", descriptionKey: "dashboard.card.wardOccupancy.description", link: "/ward-management" },
     { titleKey: "dashboard.card.erStatus.title", value: "12 Active", icon: Siren, color: "text-red-500", descriptionKey: "dashboard.card.erStatus.description", link: "/emergency-room" },
+    { titleKey: "dashboard.card.newPatients.title", value: "5", icon: Users, color: "text-emerald-500", descriptionKey: "dashboard.card.newPatients.description", link: "/patient-registration" },
+    { titleKey: "dashboard.card.commonCondition.title", value: "Flu", icon: HeartPulse, color: "text-orange-500", descriptionKey: "dashboard.card.commonCondition.description", link: "#" },
+    { titleKey: "dashboard.card.prescribedDrug.title", value: "Paracetamol", icon: PillIcon, color: "text-purple-500", descriptionKey: "dashboard.card.prescribedDrug.description", link: "#" },
   ];
 
   const quickActions = [
@@ -26,6 +33,19 @@ export default function DashboardPage() {
     { labelKey: "dashboard.quickActions.maternityRecords", href: "/maternity-care", icon: Baby },
   ];
 
+  const patientEntryPointsData = [
+    { name: t('dashboard.charts.entryPoints.outpatient'), value: 400, fill: "hsl(var(--chart-1))" },
+    { name: t('dashboard.charts.entryPoints.emergency'), value: 150, fill: "hsl(var(--chart-2))" },
+    { name: t('dashboard.charts.entryPoints.epidemic'), value: 25, fill: "hsl(var(--chart-3))" },
+  ];
+
+  const chartConfig = {
+    outpatient: { label: t('dashboard.charts.entryPoints.outpatient'), color: "hsl(var(--chart-1))" },
+    emergency: { label: t('dashboard.charts.entryPoints.emergency'), color: "hsl(var(--chart-2))" },
+    epidemic: { label: t('dashboard.charts.entryPoints.epidemic'), color: "hsl(var(--chart-3))" },
+  } satisfies ChartConfig;
+
+
   return (
     <AppShell>
       <div className="flex flex-col gap-6">
@@ -34,8 +54,8 @@ export default function DashboardPage() {
           <p className="text-muted-foreground">{t('dashboard.tagline')}</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {summaryCards.map((item) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {summaryCards.slice(0,4).map((item) => ( // Show first 4 main cards
             <Card key={t(item.titleKey)} className="shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{t(item.titleKey)}</CardTitle>
@@ -53,6 +73,27 @@ export default function DashboardPage() {
             </Card>
           ))}
         </div>
+        
+        <div className="grid gap-4 md:grid-cols-3">
+         {summaryCards.slice(4).map((item) => ( // Show remaining stat cards
+            <Card key={t(item.titleKey)} className="shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t(item.titleKey)}</CardTitle>
+                <item.icon className={`h-5 w-5 ${item.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{item.value}</div>
+                <p className="text-xs text-muted-foreground pt-1">{t(item.descriptionKey)}</p>
+                 {item.link !== "#" && (
+                  <Button variant="link" asChild className="px-0 pt-2 h-auto text-sm">
+                    <Link href={item.link}>{t('dashboard.card.viewDetails')}</Link>
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="shadow-sm">
@@ -98,6 +139,50 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+        
+        <Card className="shadow-sm">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <PieChartIcon className="h-6 w-6 text-primary" /> {t('dashboard.charts.entryPoints.title')}
+                </CardTitle>
+                <CardDescription>{t('dashboard.charts.entryPoints.description')}</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px] flex items-center justify-center">
+                <ChartContainer config={chartConfig} className="w-full max-w-md aspect-square">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart accessibilityLayer>
+                        <RechartsTooltip content={<ChartTooltipContent nameKey="name" />} />
+                        <Pie
+                            data={patientEntryPointsData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        >
+                            {patientEntryPointsData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                        </Pie>
+                        <RechartsLegend content={({ payload }) => {
+                            return (
+                            <div className="flex items-center justify-center gap-3 mt-4">
+                                {payload?.map((entry: any) => (
+                                <div key={`item-${entry.value}`} className="flex items-center space-x-1">
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                                    <span className="text-xs text-muted-foreground">{entry.payload.name}</span>
+                                </div>
+                                ))}
+                            </div>
+                            )
+                        }} />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </ChartContainer>
+            </CardContent>
+        </Card>
+
       </div>
     </AppShell>
   );
