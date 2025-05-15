@@ -126,7 +126,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     setRecommendation(null);
     setError(null);
     
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
     if (nationalId === "123456789" || nationalId === "987654321") {
       setPatientData({
         nationalId: nationalId,
@@ -173,6 +173,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     if (outcome === "Send to Pharmacy" && patientData && recommendation?.prescription) {
         console.log(`Prescription for ${patientData.fullName} to be sent to pharmacy: ${recommendation.prescription}`);
     }
+    // Reset form and patient data
     form.reset();
     setPatientData(null);
     setRecommendation(null);
@@ -187,13 +188,13 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Patient Information</CardTitle>
-            <CardDescription>Search for patient by National ID to load their details.</CardDescription>
+            <CardDescription>Search for patient by National ID (e.g., 123456789 or 987654321 for demo).</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2">
               <Input
                 id="nationalIdSearch"
-                placeholder="Enter National ID (123456789 or 987654321 for demo)"
+                placeholder="Enter National ID"
                 {...form.register('nationalIdSearch')}
                 className="max-w-xs"
               />
@@ -410,7 +411,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
             <CardContent className="max-h-[400px] overflow-y-auto">
               {mockVisitHistory.length > 0 ? (
                 <ul className="space-y-4">
-                  {mockVisitHistory.slice(0, 5).map((visit) => ( // Displaying only last 5 for brevity
+                  {mockVisitHistory.slice(0, 5).map((visit) => (
                     <li key={visit.id} className="p-3 border rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
                       <div className="flex justify-between items-center mb-1">
                         <p className="text-sm font-semibold flex items-center gap-1.5"><FileClock className="h-4 w-4" />{visit.date}</p>
@@ -434,3 +435,4 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     </div>
   );
 }
+
