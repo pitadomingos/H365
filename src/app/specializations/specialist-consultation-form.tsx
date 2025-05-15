@@ -36,14 +36,14 @@ const FormSchema = z.object({
   bodyTemperature: z.string().optional(),
   weight: z.string().optional(),
   height: z.string().optional(),
-  symptoms: z.string().min(1, "Symptoms are required for AI recommendation.").optional(), 
+  symptoms: z.string().min(1, "Symptoms are required for AI recommendation.").optional(),
   labResultsSummary: z.string().optional(),
   imagingDataSummary: z.string().optional(),
-  specialistComments: z.string().optional(), 
-  currentSpecialty: z.string().optional(), 
+  specialistComments: z.string().optional(),
+  currentSpecialty: z.string().optional(),
 }).refine(data => data.symptoms || data.labResultsSummary || data.imagingDataSummary, {
     message: "At least one of symptoms, lab results summary, or imaging data summary must be provided for AI recommendation.",
-    path: ["symptoms"], 
+    path: ["symptoms"],
 });
 
 type FormValues = z.infer<typeof FormSchema>;
@@ -61,7 +61,7 @@ interface PatientData {
   referringDoctor?: string;
   referringDepartment?: string;
   reasonForReferral?: string;
-  assignedSpecialty?: string; 
+  assignedSpecialty?: string;
 }
 
 interface VisitHistoryItem {
@@ -115,7 +115,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
       labResultsSummary: "",
       imagingDataSummary: "",
       specialistComments: "",
-      currentSpecialty: "Cardiology", 
+      currentSpecialty: "Cardiology",
     },
   });
 
@@ -127,7 +127,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
     const w = parseFloat(weightKg || '0');
     const h = parseFloat(heightCm || '0');
     if (w > 0 && h > 0) {
-      const hM = h / 100; 
+      const hM = h / 100;
       const calculatedBmi = w / (hM * hM);
       setBmi(calculatedBmi.toFixed(2));
     } else {
@@ -145,7 +145,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
     setPatientData(null);
     setRecommendation(null);
     setError(null);
-    form.reset({ 
+    form.reset({
         nationalIdSearch: nationalId,
         bodyTemperature: "",
         weight: "",
@@ -157,8 +157,8 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
         currentSpecialty: form.getValues("currentSpecialty"),
     });
     setBmi(null);
-    
-    await new Promise(resolve => setTimeout(resolve, 1000)); 
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
     if (nationalId === "123456789" || nationalId === "987654321") {
       const fetchedPatientData: PatientData = {
         nationalId: nationalId,
@@ -193,7 +193,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
     startAiTransition(async () => {
       const visitHistoryString = mockVisitHistory.slice(0, 5).map(
         visit => `Date: ${visit.date}, Dept: ${visit.department}, Doctor: ${visit.doctor}, Reason: ${visit.reason}`
-      ).join('\n');
+      ).join('\\n');
 
       const comprehensiveSymptoms = `
 Patient Name: ${patientData.fullName}
@@ -218,7 +218,7 @@ ${visitHistoryString || "No recent visit history available."}
 `;
 
       const aiInput: TreatmentRecommendationInput = {
-        symptoms: comprehensiveSymptoms, 
+        symptoms: comprehensiveSymptoms,
         labResults: data.labResultsSummary || "Not provided",
         imagingData: data.imagingDataSummary || "Not provided",
       };
@@ -232,11 +232,11 @@ ${visitHistoryString || "No recent visit history available."}
       }
     });
   };
-  
+
   const handleOutcome = (outcome: string) => {
     setIsOutcomeModalOpen(false);
     toast({ title: "Specialist Consultation Finished", description: `Outcome: ${outcome}. Action (mock): ${outcome} process initiated for ${patientData?.fullName}.` });
-    
+
     form.reset();
     setPatientData(null);
     setRecommendation(null);
@@ -264,8 +264,8 @@ ${visitHistoryString || "No recent visit history available."}
             <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                     <Label htmlFor="currentSpecialty">Consulting Specialty</Label>
-                    <Select 
-                        defaultValue={form.getValues("currentSpecialty")} 
+                    <Select
+                        defaultValue={form.getValues("currentSpecialty")}
                         onValueChange={(value) => setValue("currentSpecialty", value)}
                     >
                         <SelectTrigger id="currentSpecialty">
@@ -296,7 +296,7 @@ ${visitHistoryString || "No recent visit history available."}
                     </div>
                 </div>
             </div>
-            
+
 
             {patientData && (
               <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-3">
@@ -399,58 +399,8 @@ ${visitHistoryString || "No recent visit history available."}
           </Card>
         </form>
 
-        {error && !recommendation && (
-          <Alert variant="destructive" className="mt-6">
-            <AlertTitle>AI Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {recommendation && patientData && (
-          <div className="space-y-6 mt-6">
-            <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Sparkles className="h-6 w-6 text-primary" /> AI Generated Insights for {patientData.fullName} ({patientData.assignedSpecialty})
-                </CardTitle>
-                <CardDescription>Please review carefully and apply clinical judgment.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Stethoscope className="h-5 w-5" />Potential Diagnoses</h3>
-                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.diagnosis || "No specific diagnosis provided."}</p>
-                </div>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Pill className="h-5 w-5" />Draft Prescription</h3>
-                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.prescription || "No specific prescription provided."}</p>
-                </div>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><FileText className="h-5 w-5" />Treatment Recommendations</h3>
-                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.recommendations || "No specific recommendations provided."}</p>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="shadow-sm">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Edit3 className="mr-1.5 h-5 w-5 text-primary"/>Specialist's Notes & Plan</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Textarea
-                        id="specialistComments"
-                        placeholder="Add specialist findings, final diagnosis, treatment plan, and any adjustments..."
-                        {...form.register('specialistComments')}
-                        className="min-h-[100px]"
-                        />
-                </CardContent>
-                <CardFooter>
-                     <Button variant="secondary" onClick={() => toast({title: "Notes Saved (Mock)"})}>Save Notes & Plan</Button>
-                </CardFooter>
-            </Card>
-
-            <Card className="shadow-sm">
+        {patientData && (
+            <Card className="shadow-sm mt-6">
               <CardHeader>
                 <CardTitle>Diagnostic Orders for Specialist</CardTitle>
                 <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
@@ -534,6 +484,58 @@ ${visitHistoryString || "No recent visit history available."}
                   </DialogContent>
                 </Dialog>
               </CardContent>
+            </Card>
+        )}
+
+        {error && !recommendation && (
+          <Alert variant="destructive" className="mt-6">
+            <AlertTitle>AI Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {recommendation && patientData && (
+          <div className="space-y-6 mt-6">
+            <Card className="shadow-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Sparkles className="h-6 w-6 text-primary" /> AI Generated Insights for {patientData.fullName} ({patientData.assignedSpecialty})
+                </CardTitle>
+                <CardDescription>Please review carefully and apply clinical judgment.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Stethoscope className="h-5 w-5" />Potential Diagnoses</h3>
+                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.diagnosis || "No specific diagnosis provided."}</p>
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Pill className="h-5 w-5" />Draft Prescription</h3>
+                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.prescription || "No specific prescription provided."}</p>
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><FileText className="h-5 w-5" />Treatment Recommendations</h3>
+                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.recommendations || "No specific recommendations provided."}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Edit3 className="mr-1.5 h-5 w-5 text-primary"/>Specialist's Notes & Plan</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Textarea
+                        id="specialistComments"
+                        placeholder="Add specialist findings, final diagnosis, treatment plan, and any adjustments..."
+                        {...form.register('specialistComments')}
+                        className="min-h-[100px]"
+                        />
+                </CardContent>
+                <CardFooter>
+                     <Button variant="secondary" onClick={() => toast({title: "Notes Saved (Mock)"})}>Save Notes & Plan</Button>
+                </CardFooter>
             </Card>
 
             <div className="flex justify-end mt-6">

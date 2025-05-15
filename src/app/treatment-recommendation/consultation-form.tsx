@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from "@/components/ui/checkbox";
@@ -40,7 +41,7 @@ const FormSchema = z.object({
   doctorComments: z.string().optional(),
 }).refine(data => data.symptoms || data.labResultsSummary || data.imagingDataSummary, {
     message: "At least one of symptoms, lab results summary, or imaging data summary must be provided for AI recommendation.",
-    path: ["symptoms"], 
+    path: ["symptoms"],
 });
 
 type FormValues = z.infer<typeof FormSchema>;
@@ -112,7 +113,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     },
   });
 
-  const { watch } = form; // Removed setValue as it's not used directly here for these new dialogs
+  const { watch } = form;
   const weightKg = watch('weight');
   const heightCm = watch('height');
 
@@ -120,7 +121,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     const w = parseFloat(weightKg || '0');
     const h = parseFloat(heightCm || '0');
     if (w > 0 && h > 0) {
-      const hM = h / 100; 
+      const hM = h / 100;
       const calculatedBmi = w / (hM * hM);
       setBmi(calculatedBmi.toFixed(2));
     } else {
@@ -138,7 +139,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     setPatientData(null);
     setRecommendation(null);
     setError(null);
-    form.reset({ 
+    form.reset({
         nationalIdSearch: nationalId,
         bodyTemperature: "",
         weight: "",
@@ -149,8 +150,8 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
         doctorComments: "",
     });
     setBmi(null);
-    
-    await new Promise(resolve => setTimeout(resolve, 1000)); 
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
     if (nationalId === "123456789" || nationalId === "987654321") {
       const fetchedPatientData: PatientData = {
         nationalId: nationalId,
@@ -181,7 +182,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     startAiTransition(async () => {
       const visitHistoryString = mockVisitHistory.slice(0, 5).map(
         visit => `Date: ${visit.date}, Dept: ${visit.department}, Doctor: ${visit.doctor}, Reason: ${visit.reason}`
-      ).join('\n');
+      ).join('\\n');
 
       const comprehensiveSymptoms = `
 Patient Name: ${patientData.fullName}
@@ -216,7 +217,7 @@ ${visitHistoryString || "No recent visit history available."}
       }
     });
   };
-  
+
   const handleOutcome = (outcome: string) => {
     setIsOutcomeModalOpen(false);
     toast({ title: "Consultation Finished", description: `Outcome: ${outcome}. Action (mock): ${outcome} process initiated for ${patientData?.fullName}.` });
@@ -232,12 +233,10 @@ ${visitHistoryString || "No recent visit history available."}
 
   const handleSubmitLabOrder = () => {
     toast({title: "Lab Order Submitted (Mock)", description:`Lab tests ordered for ${patientData?.fullName}.`});
-    // Close dialog logic typically handled by DialogClose or managing open state
   };
 
   const handleSubmitImagingOrder = () => {
      toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName}.`});
-     // Close dialog logic
   };
 
   return (
@@ -355,7 +354,96 @@ ${visitHistoryString || "No recent visit history available."}
           </Card>
         </form>
 
-        {error && !recommendation && ( 
+        {patientData && (
+          <Card className="shadow-sm mt-6">
+            <CardHeader>
+              <CardTitle>Diagnostic Orders</CardTitle>
+              <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full sm:w-auto" disabled={!patientData}>
+                    <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Order Lab Tests for {patientData?.fullName}</DialogTitle>
+                    <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                    <Label className="text-base font-semibold">Common Lab Tests:</Label>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      {generalLabTests.map((test) => (
+                        <div key={test.id} className="flex items-center space-x-2">
+                          <Checkbox id={`consult-test-${test.id}`} />
+                          <Label htmlFor={`consult-test-${test.id}`} className="text-sm font-normal">
+                            {test.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                    <Separator className="my-2" />
+                    <div className="space-y-2">
+                      <Label htmlFor="consultLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
+                      <Textarea id="consultLabClinicalNotes" placeholder="e.g., Routine screening, specific concerns..." />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                    <Button type="submit" onClick={handleSubmitLabOrder}>Submit Lab Order</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full sm:w-auto" disabled={!patientData}>
+                    <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Order Imaging Study for {patientData?.fullName}</DialogTitle>
+                    <DialogDescription>Select imaging type, specify details, and add clinical notes.</DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="consultImagingType">Imaging Type</Label>
+                      <Select>
+                        <SelectTrigger id="consultImagingType">
+                          <SelectValue placeholder="Select imaging type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ultrasound">Ultrasound</SelectItem>
+                          <SelectItem value="xray">X-Ray</SelectItem>
+                          <SelectItem value="mri">MRI</SelectItem>
+                          <SelectItem value="ctscan">CT Scan</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="consultImagingRegionDetails">Region / Details of Study</Label>
+                      <Textarea id="consultImagingRegionDetails" placeholder="e.g., Abdominal Ultrasound, Chest X-ray PA view, MRI Brain..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="consultImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
+                      <Textarea id="consultImagingClinicalNotes" placeholder="e.g., Rule out appendicitis, check for pneumonia..." />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                    <Button type="submit" onClick={handleSubmitImagingOrder}>Submit Imaging Order</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardContent>
+          </Card>
+        )}
+
+
+        {error && !recommendation && (
           <Alert variant="destructive" className="mt-6">
             <AlertTitle>AI Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
@@ -388,7 +476,7 @@ ${visitHistoryString || "No recent visit history available."}
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card className="shadow-sm">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Edit3 className="mr-1.5 h-5 w-5 text-primary"/>Doctor's Comments / Adjustments</CardTitle>
@@ -405,93 +493,6 @@ ${visitHistoryString || "No recent visit history available."}
                      <Button variant="secondary" onClick={() => toast({title: "Comments Saved (Mock)"})}>Save Comments</Button>
                 </CardFooter>
             </Card>
-
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle>Diagnostic Orders</CardTitle>
-                <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col sm:flex-row gap-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full sm:w-auto" disabled={!patientData}>
-                      <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Order Lab Tests for {patientData?.fullName}</DialogTitle>
-                      <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
-                      <Label className="text-base font-semibold">Common Lab Tests:</Label>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                        {generalLabTests.map((test) => (
-                          <div key={test.id} className="flex items-center space-x-2">
-                            <Checkbox id={`consult-test-${test.id}`} />
-                            <Label htmlFor={`consult-test-${test.id}`} className="text-sm font-normal">
-                              {test.label}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                      <Separator className="my-2" />
-                      <div className="space-y-2">
-                        <Label htmlFor="consultLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
-                        <Textarea id="consultLabClinicalNotes" placeholder="e.g., Routine screening, specific concerns..." />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                      <Button type="submit" onClick={handleSubmitLabOrder}>Submit Lab Order</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full sm:w-auto" disabled={!patientData}>
-                      <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Order Imaging Study for {patientData?.fullName}</DialogTitle>
-                      <DialogDescription>Select imaging type, specify details, and add clinical notes.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="consultImagingType">Imaging Type</Label>
-                        <Select>
-                          <SelectTrigger id="consultImagingType">
-                            <SelectValue placeholder="Select imaging type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ultrasound">Ultrasound</SelectItem>
-                            <SelectItem value="xray">X-Ray</SelectItem>
-                            <SelectItem value="mri">MRI</SelectItem>
-                            <SelectItem value="ctscan">CT Scan</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="consultImagingRegionDetails">Region / Details of Study</Label>
-                        <Textarea id="consultImagingRegionDetails" placeholder="e.g., Abdominal Ultrasound, Chest X-ray PA view, MRI Brain..." />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="consultImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
-                        <Textarea id="consultImagingClinicalNotes" placeholder="e.g., Rule out appendicitis, check for pneumonia..." />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                      <Button type="submit" onClick={handleSubmitImagingOrder}>Submit Imaging Order</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </CardContent>
-            </Card>
-
 
             <div className="flex justify-end mt-6">
                 <Dialog open={isOutcomeModalOpen} onOpenChange={setIsOutcomeModalOpen}>
