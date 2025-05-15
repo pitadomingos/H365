@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Baby, Search, CalendarPlus, FileText, ShieldAlert, Microscope, ScanSearch } from "lucide-react"; // Changed Ultrasound to ScanSearch
+import { Baby, Search, CalendarPlus, FileText, ShieldAlert, Microscope, ScanSearch, FlaskConical, RadioTower } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -21,6 +21,18 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 interface AntenatalVisit {
   id: string;
@@ -94,6 +106,17 @@ const mockPatients: MaternityPatient[] = [
   }
 ];
 
+const labTests = [
+  { id: "cbc", label: "Complete Blood Count (CBC)" },
+  { id: "blood_group_rh", label: "Blood Group & Rh Factor" },
+  { id: "urine_re", label: "Urine Routine & Microscopy (Urine R/E)" },
+  { id: "gtt", label: "Glucose Tolerance Test (GTT)" },
+  { id: "hiv", label: "HIV Screening" },
+  { id: "vdrl", label: "VDRL/RPR (Syphilis Test)" },
+  { id: "hbsag", label: "Hepatitis B Surface Antigen (HBsAg)" },
+  { id: "thyroid", label: "Thyroid Function Tests (TSH, T3, T4)" },
+];
+
 export default function MaternityCarePage() {
   const [searchNationalId, setSearchNationalId] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<MaternityPatient | null>(null);
@@ -118,6 +141,17 @@ export default function MaternityCarePage() {
       setIsLoading(false);
     }, 1000);
   };
+
+  const handleSubmitLabOrder = () => {
+    toast({title: "Lab Order Submitted (Mock)", description:`Lab tests ordered for ${selectedPatient?.fullName}.`});
+    // Here you would typically close the dialog and potentially clear selected checkboxes
+  }
+
+  const handleSubmitImagingOrder = () => {
+     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${selectedPatient?.fullName}.`});
+    // Here you would typically close the dialog
+  }
+
 
   return (
     <AppShell>
@@ -249,7 +283,7 @@ export default function MaternityCarePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-1">
-                        <Label className="flex items-center gap-1.5"><ScanSearch className="h-4 w-4 text-primary"/> Latest Ultrasound Summary (Mock)</Label> {/* Changed Ultrasound to ScanSearch */}
+                        <Label className="flex items-center gap-1.5"><ScanSearch className="h-4 w-4 text-primary"/> Latest Ultrasound Summary (Mock)</Label>
                         <Textarea readOnly defaultValue="Anomaly scan at 20w 2d: Normal fetal anatomy. Placenta posterior, clear of os. AFI normal. EFW: 350g. Next scan: Growth scan at 32w." className="text-sm bg-muted/50"/>
                     </div>
                      <div className="space-y-1">
@@ -258,8 +292,83 @@ export default function MaternityCarePage() {
                     </div>
                 </CardContent>
                  <CardFooter className="gap-2">
-                    <Button variant="outline" onClick={() => toast({title: "Mock Action", description:"Open form to order lab tests."})}>Order Labs</Button>
-                    <Button variant="outline" onClick={() => toast({title: "Mock Action", description:"Open form to order ultrasound."})}>Order Ultrasound</Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" disabled={!selectedPatient}>
+                            <FlaskConical className="mr-2 h-4 w-4"/> Order Labs
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Order Lab Tests for {selectedPatient?.fullName}</DialogTitle>
+                          <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                          <Label className="text-base font-semibold">Common Prenatal Tests:</Label>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                            {labTests.map((test) => (
+                              <div key={test.id} className="flex items-center space-x-2">
+                                <Checkbox id={`test-${test.id}`} />
+                                <Label htmlFor={`test-${test.id}`} className="text-sm font-normal">
+                                  {test.label}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                          <Separator className="my-2"/>
+                          <div className="space-y-2">
+                            <Label htmlFor="labClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
+                            <Textarea id="labClinicalNotes" placeholder="e.g., Routine antenatal screening, specific concerns..." />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button type="button" variant="outline" onClick={() => { /* Close dialog */ }}>Cancel</Button>
+                          <Button type="submit" onClick={handleSubmitLabOrder}>Submit Lab Order</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" disabled={!selectedPatient}>
+                            <RadioTower className="mr-2 h-4 w-4"/> Order Imaging Study
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Order Imaging Study for {selectedPatient?.fullName}</DialogTitle>
+                          <DialogDescription>Select imaging type, specify details, and add clinical notes.</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="imagingType">Imaging Type</Label>
+                            <Select>
+                              <SelectTrigger id="imagingType">
+                                <SelectValue placeholder="Select imaging type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="ultrasound">Ultrasound</SelectItem>
+                                <SelectItem value="xray">X-Ray</SelectItem>
+                                <SelectItem value="mri">MRI</SelectItem>
+                                <SelectItem value="ctscan">CT Scan</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="imagingRegionDetails">Region / Details of Study</Label>
+                            <Textarea id="imagingRegionDetails" placeholder="e.g., Anomaly Scan, Pelvic Ultrasound, Fetal Growth Scan, Chest X-ray PA view, MRI Brain..." />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="imagingClinicalNotes">Clinical Notes / Reason for Study</Label>
+                            <Textarea id="imagingClinicalNotes" placeholder="e.g., Routine 20-week scan, assess fetal well-being, rule out pneumonia..." />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                           <Button type="button" variant="outline" onClick={() => { /* Close dialog */ }}>Cancel</Button>
+                          <Button type="submit" onClick={handleSubmitImagingOrder}>Submit Imaging Order</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                  </CardFooter>
               </Card>
 
@@ -282,6 +391,4 @@ export default function MaternityCarePage() {
     </AppShell>
   );
 }
-
-
     
