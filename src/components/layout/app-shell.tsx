@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -20,7 +21,7 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-} from "@/components/ui/sidebar"; // Assuming this is the path to the provided sidebar components
+} from "@/components/ui/sidebar"; 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -42,7 +43,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarHeader className="p-4">
           <Link href="/" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
             <Stethoscope className="h-7 w-7 text-primary" />
-            <h1 className="text-xl font-semibold group-data-[collapsible=icon]:hidden">HealthFlow</h1>
+            <h1 className="text-xl font-semibold group-data-[collapsible=icon]:hidden">H365</h1>
           </Link>
         </SidebarHeader>
         <SidebarContent className="flex-1 p-2">
@@ -108,7 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">John Doe</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      doctor@healthflow.com
+                      doctor@h365.example.com
                     </p>
                   </div>
                 </DropdownMenuLabel>
