@@ -1,11 +1,11 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { BedDouble, Users, ListFilter, PlusCircle, LogOutIcon, CheckCircle2, AlertTriangle, ArrowRightLeft } from "lucide-react";
+import { BedDouble, Users, ListFilter, PlusCircle, LogOutIcon, CheckCircle2, AlertTriangle, ArrowRightLeft, FileText, Pill, MessageSquare } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -19,7 +19,9 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { Separator } from '@/components/ui/separator';
 
 interface Ward {
   id: string;
@@ -43,6 +45,80 @@ interface Bed {
     patientName?: string;
 }
 
+interface MedicationScheduleItem {
+  medication: string;
+  dosage: string;
+  time: string;
+  status: "Administered" | "Pending" | "Skipped";
+}
+
+interface DoctorNote {
+  date: string;
+  doctor: string;
+  note: string;
+}
+
+interface AdmittedPatientDetails {
+  id: string;
+  name: string;
+  ward: string;
+  bed: string;
+  treatmentPlan: string;
+  medicationSchedule: MedicationScheduleItem[];
+  doctorNotes: DoctorNote[];
+}
+
+const mockAdmittedPatientsDetails: AdmittedPatientDetails[] = [
+  {
+    id: "P101",
+    name: "Patient X",
+    ward: "General Medicine Ward A",
+    bed: "Bed 3",
+    treatmentPlan: "Standard care for pneumonia. IV antibiotics (Ceftriaxone 1g OD), regular nebulization, oxygen support prn. Monitor vitals Q4H. Encourage fluid intake and chest physiotherapy.",
+    medicationSchedule: [
+      { medication: "Ceftriaxone 1g IV", dosage: "1g", time: "08:00 AM", status: "Administered" },
+      { medication: "Paracetamol 500mg PO", dosage: "500mg", time: "08:00 AM", status: "Administered" },
+      { medication: "Salbutamol Neb", dosage: "2.5mg", time: "10:00 AM", status: "Pending" },
+      { medication: "Paracetamol 500mg PO", dosage: "500mg", time: "04:00 PM", status: "Pending" },
+      { medication: "Ceftriaxone 1g IV", dosage: "1g", time: "08:00 PM", status: "Pending" },
+    ],
+    doctorNotes: [
+      { date: "2024-07-28", doctor: "Dr. Smith", note: "Patient responding well to antibiotics. Fever subsided. Continue current plan." },
+      { date: "2024-07-29", doctor: "Dr. House", note: "Reviewed chest X-ray, slight improvement. Monitor O2 saturation closely overnight." },
+    ],
+  },
+  {
+    id: "P102",
+    name: "Patient Y",
+    ward: "Surgical Ward B",
+    bed: "Bed 10",
+    treatmentPlan: "Post-operative care for appendectomy. Pain management (Tramadol 50mg IV SOS), wound care, early mobilization. Monitor for signs of infection.",
+    medicationSchedule: [
+      { medication: "Tramadol 50mg IV", dosage: "50mg", time: "SOS", status: "Pending" },
+      { medication: "Ondansetron 4mg IV", dosage: "4mg", time: "SOS for Nausea", status: "Pending" },
+    ],
+    doctorNotes: [
+      { date: "2024-07-29", doctor: "Dr. Grey", note: "Patient stable post-op. Pain controlled. Encourage ambulation." },
+    ],
+  },
+   {
+    id: "P103",
+    name: "Patient Z (Pediatrics)",
+    ward: "Pediatrics Ward C",
+    bed: "Bed 2",
+    treatmentPlan: "Management of acute gastroenteritis. Oral rehydration solution (ORS) frequently, monitor for dehydration. Probiotics. IV fluids if ORS not tolerated.",
+    medicationSchedule: [
+      { medication: "ORS", dosage: "As tolerated", time: "Ongoing", status: "Administered" },
+      { medication: "Probiotics Sachet", dosage: "1 sachet BID", time: "09:00 AM", status: "Administered" },
+      { medication: "Probiotics Sachet", dosage: "1 sachet BID", time: "06:00 PM", status: "Pending" },
+    ],
+    doctorNotes: [
+      { date: "2024-07-29", doctor: "Dr. Adams", note: "Child tolerating ORS well. Stools still frequent but less watery. Continue monitoring." },
+    ],
+  },
+];
+
+
 export default function WardManagementPage() {
   const [wards, setWards] = useState<Ward[]>([
     { id: "W001", name: "General Medicine Ward A", totalBeds: 20, occupiedBeds: 15 },
@@ -59,34 +135,47 @@ export default function WardManagementPage() {
 
   const [selectedWardForAssignment, setSelectedWardForAssignment] = useState<string | undefined>();
   const [bedsInSelectedWard, setBedsInSelectedWard] = useState<Bed[]>([]);
+  const [selectedAdmittedPatientId, setSelectedAdmittedPatientId] = useState<string | undefined>();
+  const [currentAdmittedPatientDetails, setCurrentAdmittedPatientDetails] = useState<AdmittedPatientDetails | null>(null);
 
-  React.useEffect(() => {
-    // Mock fetching beds for the selected ward
+
+  useEffect(() => {
     if (selectedWardForAssignment) {
-      const mockBeds: Bed[] = Array.from({ length: wards.find(w => w.id === selectedWardForAssignment)?.totalBeds || 0 }).map((_, i) => ({
-        id: `B${selectedWardForAssignment}${i+1}`,
-        bedNumber: `Bed ${i+1}`,
-        status: Math.random() > 0.7 ? "Occupied" : (Math.random() > 0.5 ? "Cleaning" : "Available"),
-        patientName: Math.random() > 0.7 ? `Patient ${String.fromCharCode(65 + i)}` : undefined
-      }));
+      const wardDetails = wards.find(w => w.id === selectedWardForAssignment);
+      const mockBeds: Bed[] = Array.from({ length: wardDetails?.totalBeds || 0 }).map((_, i) => {
+        const isOccupied = i < (wardDetails?.occupiedBeds || 0);
+        return {
+          id: `B${selectedWardForAssignment}${i+1}`,
+          bedNumber: `Bed ${i+1}`,
+          status: isOccupied ? "Occupied" : (Math.random() > 0.8 ? "Cleaning" : "Available"),
+          patientName: isOccupied ? mockAdmittedPatientsDetails.find(p => p.ward === wardDetails?.name && p.bed === `Bed ${i+1}`)?.name || `Occupant ${i+1}` : undefined
+        };
+      });
       setBedsInSelectedWard(mockBeds);
     } else {
       setBedsInSelectedWard([]);
     }
   }, [selectedWardForAssignment, wards]);
 
+  useEffect(() => {
+    if (selectedAdmittedPatientId) {
+      const patientDetails = mockAdmittedPatientsDetails.find(p => p.id === selectedAdmittedPatientId);
+      setCurrentAdmittedPatientDetails(patientDetails || null);
+    } else {
+      setCurrentAdmittedPatientDetails(null);
+    }
+  }, [selectedAdmittedPatientId]);
 
   const handleAssignBed = () => {
-    // Mock action
     toast({ title: "Bed Assigned (Mock)", description: "Patient has been assigned to a bed." });
   };
 
-  const handleDischarge = (patientName: string) => {
-     toast({ title: "Patient Discharged (Mock)", description: `${patientName} has been processed for discharge.` });
+  const handleDischarge = (patientName?: string) => {
+     toast({ title: "Patient Discharged (Mock)", description: `${patientName || "Selected Patient"} has been processed for discharge.` });
   };
   
-  const handleTransfer = (patientName: string) => {
-     toast({ title: "Patient Transfer Initiated (Mock)", description: `Transfer process for ${patientName} has started.` });
+  const handleTransfer = (patientName?: string) => {
+     toast({ title: "Patient Transfer Initiated (Mock)", description: `Transfer process for ${patientName || "Selected Patient"} has started.` });
   };
 
 
@@ -183,7 +272,7 @@ export default function WardManagementPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="selectWard">Target Ward</Label>
-                  <Select onValueChange={setSelectedWardForAssignment}>
+                  <Select value={selectedWardForAssignment} onValueChange={setSelectedWardForAssignment}>
                     <SelectTrigger id="selectWard">
                       <SelectValue placeholder="Select Ward" />
                     </SelectTrigger>
@@ -215,7 +304,7 @@ export default function WardManagementPage() {
                     <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 max-h-40 overflow-y-auto pr-2">
                         {bedsInSelectedWard.map(bed => (
                             <Badge key={bed.id} variant={bed.status === 'Occupied' ? 'destructive' : bed.status === 'Cleaning' ? 'secondary': 'default'} className="text-xs p-1.5 justify-center">
-                                {bed.bedNumber}
+                                {bed.bedNumber} {bed.status === 'Occupied' && bed.patientName ? `(${bed.patientName.split(' ')[0]})` : ''}
                             </Badge>
                         ))}
                     </div>
@@ -229,36 +318,89 @@ export default function WardManagementPage() {
             </CardFooter>
           </Card>
 
-          {/* In-Patient Management (Discharge/Transfer) */}
+          {/* In-Patient Management (Discharge/Transfer & Details) */}
           <Card className="lg:col-span-full xl:col-span-1 shadow-sm">
              <CardHeader>
-                <CardTitle>In-Patient Operations</CardTitle>
-                <CardDescription>Manage currently admitted patients.</CardDescription>
+                <CardTitle>In-Patient Care & Operations</CardTitle>
+                <CardDescription>Manage currently admitted patients and view their care details.</CardDescription>
             </CardHeader>
-            <CardContent>
-                 <div className="space-y-1.5 mb-4">
+            <CardContent className="space-y-6">
+                 <div className="space-y-1.5">
                   <Label htmlFor="selectAdmittedPatient">Select Admitted Patient</Label>
-                  <Select>
+                  <Select onValueChange={setSelectedAdmittedPatientId} value={selectedAdmittedPatientId}>
                     <SelectTrigger id="selectAdmittedPatient">
                       <SelectValue placeholder="Select Patient" />
                     </SelectTrigger>
                     <SelectContent>
-                        {/* Mock admitted patients */}
-                        <SelectItem value="P101">Patient X (Ward A - Bed 3)</SelectItem>
-                        <SelectItem value="P102">Patient Y (Ward B - Bed 10)</SelectItem>
-                        <SelectItem value="P103">Patient Z (Pediatrics - Bed 2)</SelectItem>
+                        {mockAdmittedPatientsDetails.map(p => (
+                           <SelectItem key={p.id} value={p.id}>{p.name} ({p.ward} - {p.bed})</SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                    <Button variant="outline" className="w-full" onClick={() => handleDischarge("Selected Patient")}>
-                        <LogOutIcon className="mr-2 h-4 w-4" /> Discharge Patient
-                    </Button>
-                    <Button variant="outline" className="w-full" onClick={() => handleTransfer("Selected Patient")}>
-                        <ArrowRightLeft className="mr-2 h-4 w-4" /> Transfer Patient
-                    </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-4">Select a patient to see more detailed care options, update records, or manage their stay.</p>
+
+                {currentAdmittedPatientDetails && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <div>
+                      <h4 className="text-md font-semibold mb-2 flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" /> Treatment Plan Summary</h4>
+                      <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md whitespace-pre-wrap">{currentAdmittedPatientDetails.treatmentPlan}</p>
+                    </div>
+
+                    <div>
+                      <h4 className="text-md font-semibold mb-2 flex items-center"><Pill className="mr-2 h-4 w-4 text-primary" /> Medication Schedule</h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">Medication</TableHead>
+                            <TableHead className="text-xs">Time</TableHead>
+                            <TableHead className="text-xs text-right">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {currentAdmittedPatientDetails.medicationSchedule.map((med, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="text-xs font-medium">{med.medication} <span className="text-muted-foreground">({med.dosage})</span></TableCell>
+                              <TableCell className="text-xs">{med.time}</TableCell>
+                              <TableCell className="text-xs text-right">
+                                <Badge variant={med.status === "Administered" ? "default" : med.status === "Pending" ? "secondary" : "outline"} className="text-xs">
+                                  {med.status}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                       <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => toast({title: "Mock Action", description: "Open medication administration log."})}>Log/Update Medications</Button>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-md font-semibold mb-2 flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-primary" /> Doctor's Notes</h4>
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                        {currentAdmittedPatientDetails.doctorNotes.map((note, index) => (
+                          <div key={index} className="text-xs p-2 border rounded-md bg-muted/30">
+                            <p className="font-medium">{note.doctor} - <span className="text-muted-foreground">{new Date(note.date).toLocaleDateString()}</span></p>
+                            <p className="mt-0.5">{note.note}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <Textarea placeholder="Add new note..." className="mt-2 text-xs" rows={2}/>
+                      <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => toast({title: "Mock Action", description: "New doctor's note saved."})}>Add Note</Button>
+                    </div>
+                    
+                    <Separator />
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                        <Button variant="outline" className="w-full" onClick={() => handleDischarge(currentAdmittedPatientDetails.name)}>
+                            <LogOutIcon className="mr-2 h-4 w-4" /> Discharge {currentAdmittedPatientDetails.name.split(' ')[0]}
+                        </Button>
+                        <Button variant="outline" className="w-full" onClick={() => handleTransfer(currentAdmittedPatientDetails.name)}>
+                            <ArrowRightLeft className="mr-2 h-4 w-4" /> Transfer {currentAdmittedPatientDetails.name.split(' ')[0]}
+                        </Button>
+                    </div>
+                  </div>
+                )}
+                {!currentAdmittedPatientDetails && (
+                    <p className="text-xs text-muted-foreground text-center py-4">Select an admitted patient to view their care details and perform operations.</p>
+                )}
             </CardContent>
           </Card>
         </div>
@@ -266,3 +408,5 @@ export default function WardManagementPage() {
     </AppShell>
   );
 }
+
+    
