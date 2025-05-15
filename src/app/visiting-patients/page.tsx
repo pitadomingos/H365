@@ -15,8 +15,8 @@ import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid } from "recharts"
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -42,11 +42,11 @@ interface WaitingListItem {
 }
 
 const visitChartData = [
-  { department: "Outpatient", visits: 12, fill: "var(--color-outpatient)" },
-  { department: "Lab", visits: 8, fill: "var(--color-lab)" },
-  { department: "Pharmacy", visits: 5, fill: "var(--color-pharmacy)" },
-  { department: "Specialist", visits: 3, fill: "var(--color-specialist)" },
-  { department: "Emergency", visits: 2, fill: "var(--color-emergency)" },
+  { department: "Outpatient", visits: 12, fill: "hsl(var(--chart-1))" },
+  { department: "Lab", visits: 8, fill: "hsl(var(--chart-2))" },
+  { department: "Pharmacy", visits: 5, fill: "hsl(var(--chart-3))" },
+  { department: "Specialist", visits: 3, fill: "hsl(var(--chart-4))" },
+  { department: "Emergency", visits: 2, fill: "hsl(var(--chart-5))" },
 ];
 
 const chartConfig = {
@@ -73,7 +73,7 @@ const chartConfig = {
     label: "Emergency",
     color: "hsl(var(--chart-5))",
   },
-} satisfies import("@/components/ui/chart").ChartConfig;
+} satisfies ChartConfig;
 
 
 export default function VisitingPatientsPage() {
@@ -122,6 +122,10 @@ export default function VisitingPatientsPage() {
     setIsLoadingSearch(true);
     setSearchedPatient(null);
     setPatientNotFound(false);
+    // Clear previous visit details
+    setDepartment("");
+    setReasonForVisit("");
+    setAssignedDoctor("");
 
     setTimeout(() => {
       if (searchNationalId === "123456789") {
@@ -158,23 +162,25 @@ export default function VisitingPatientsPage() {
         return;
     }
     const newWaitingListItem: WaitingListItem = {
-        id: `WL${Math.random().toString(36).substring(2, 7)}`,
+        id: `WL${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, // More unique ID
         patientName: searchedPatient.fullName,
-        photoUrl: `https://placehold.co/40x40.png`,
+        photoUrl: `https://placehold.co/40x40.png`, // Generic placeholder
+        gender: searchedPatient.gender, // Store gender for avatar hint
         location: department,
-        status: reasonForVisit,
+        status: reasonForVisit, // Using reasonForVisit as status as per previous structure
         timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        gender: searchedPatient.gender,
     };
     setWaitingList(prev => [newWaitingListItem, ...prev]);
 
-    toast({ title: "Patient Added", description: `${newWaitingListItem.patientName} added to waiting list for ${department}.`});
+    toast({ title: "Patient Added to Visit List", description: `${newWaitingListItem.patientName} recorded for ${department}. They are now in the waiting list.`});
 
+    // Clear fields after adding
     setSearchedPatient(null);
     setSearchNationalId("");
     setDepartment("");
     setReasonForVisit("");
     setAssignedDoctor("");
+    setPatientNotFound(false);
   };
 
   const handleModalRegister = () => {
@@ -185,16 +191,17 @@ export default function VisitingPatientsPage() {
     // Mock registration
     toast({
       title: "Patient Registered (Mock)",
-      description: `${modalFullName} has been registered. You can now search for them.`,
+      description: `${modalFullName} has been registered. You can now search for them using ID: ${modalNationalId}.`,
     });
-    setSearchNationalId(modalNationalId);
+    setSearchNationalId(modalNationalId); // Pre-fill search bar
     setIsModalOpen(false);
+    setPatientNotFound(false); // Patient is "found" after registration for immediate search
 
+    // Clear modal form
     setModalNationalId("");
     setModalFullName("");
     setModalDob(undefined);
     setModalGender("");
-    setPatientNotFound(false);
   };
 
 
@@ -203,7 +210,7 @@ export default function VisitingPatientsPage() {
       <div className="flex flex-col gap-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Users className="h-8 w-8" /> Visiting Patients Management
+            <Users className="h-8 w-8" /> Visiting Patients: Consultation Intake
           </h1>
         </div>
 
@@ -211,7 +218,9 @@ export default function VisitingPatientsPage() {
           <Card className="lg:col-span-2 shadow-sm">
             <CardHeader>
               <CardTitle>Patient Visit Entry</CardTitle>
-              <CardDescription>Search for an existing patient to manage their visit.</CardDescription>
+              <CardDescription>
+                Search for an existing patient or perform a quick registration to record their visit and add them to the waiting list.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 py-6">
               <div>
@@ -246,9 +255,9 @@ export default function VisitingPatientsPage() {
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-[480px]">
                         <DialogHeader>
-                          <DialogTitle>Register New Patient</DialogTitle>
+                          <DialogTitle>Quick Patient Registration</DialogTitle>
                           <DialogDescription>
-                            Quickly register a new patient. For full details, use the main registration page.
+                            Register a new patient. Full details can be added later via the main Patient Registration page.
                           </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
@@ -295,6 +304,9 @@ export default function VisitingPatientsPage() {
                           </div>
                         </div>
                         <DialogFooter>
+                           <DialogClose asChild>
+                            <Button type="button" variant="outline">Cancel</Button>
+                           </DialogClose>
                           <Button onClick={handleModalRegister}>Register Patient</Button>
                         </DialogFooter>
                       </DialogContent>
@@ -313,40 +325,39 @@ export default function VisitingPatientsPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label htmlFor="department">Department / Section <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="department">Department / Section for Visit <span className="text-destructive">*</span></Label>
                       <Select value={department} onValueChange={setDepartment} required>
                         <SelectTrigger id="department">
-                          <SelectValue placeholder="Select department" />
+                          <SelectValue placeholder="Select department/section" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Outpatient">Outpatient</SelectItem>
-                          <SelectItem value="Consultation Room 1">Consultation Room 1</SelectItem>
-                          <SelectItem value="Consultation Room 2">Consultation Room 2</SelectItem>
-                          <SelectItem value="Laboratory">Laboratory</SelectItem>
-                          <SelectItem value="Pharmacy">Pharmacy</SelectItem>
+                          <SelectItem value="Outpatient General Consultation">Outpatient General Consultation</SelectItem>
+                          <SelectItem value="Laboratory (Scheduled Tests)">Laboratory (Scheduled Tests)</SelectItem>
+                          <SelectItem value="Imaging (Scheduled Scan)">Imaging (Scheduled Scan)</SelectItem>
+                          <SelectItem value="Pharmacy (Prescription Refill)">Pharmacy (Prescription Refill)</SelectItem>
                           <SelectItem value="Specialist Consultation">Specialist Consultation</SelectItem>
-                          <SelectItem value="Emergency">Emergency</SelectItem>
-                          <SelectItem value="Diagnostics">Diagnostics (Lab/Imaging)</SelectItem>
-                          <SelectItem value="Scheduled Appointment">Scheduled Appointment</SelectItem>
-                          <SelectItem value="Specialized Dentist">Specialized Dentist</SelectItem>
+                          <SelectItem value="Emergency Triage">Emergency Triage</SelectItem>
+                          <SelectItem value="Maternity Check-up">Maternity Check-up</SelectItem>
+                          <SelectItem value="Dental Clinic">Dental Clinic</SelectItem>
+                           <SelectItem value="Other Appointment">Other Appointment</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="reasonForVisit">Reason for Visit / Status <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="reasonForVisit">Reason for Visit / Chief Complaint <span className="text-destructive">*</span></Label>
                       <Textarea
                         id="reasonForVisit"
-                        placeholder="e.g., Follow-up, New complaint: fever and cough, Scheduled lab tests, Waiting for Doctor, Awaiting Results"
+                        placeholder="e.g., Follow-up, New complaint: fever and cough, Scheduled lab tests, Annual check-up"
                         value={reasonForVisit}
                         onChange={(e) => setReasonForVisit(e.target.value)}
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="assignedDoctor">Assigned Doctor (if applicable)</Label>
+                      <Label htmlFor="assignedDoctor">Assigned Doctor / Service (if pre-assigned)</Label>
                       <Input
                         id="assignedDoctor"
-                        placeholder="e.g., Dr. Smith"
+                        placeholder="e.g., Dr. Smith, Antenatal Clinic"
                         value={assignedDoctor}
                         onChange={(e) => setAssignedDoctor(e.target.value)}
                       />
@@ -369,7 +380,7 @@ export default function VisitingPatientsPage() {
                 Today's Waiting List - {currentDate} at {hospitalName}
               </CardTitle>
               <CardDescription className="text-xs">
-                 Patients currently waiting for service.
+                 Patients processed for consultation or service today.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -392,11 +403,11 @@ export default function VisitingPatientsPage() {
                           </div>
                           <p className="text-xs text-muted-foreground flex items-center">
                           <MapPin className="h-3 w-3 mr-1.5 shrink-0" />
-                          {patient.location}
+                          To: {patient.location}
                           </p>
                           <p className="text-xs text-muted-foreground flex items-center mt-0.5">
                           <Activity className="h-3 w-3 mr-1.5 shrink-0" />
-                          {patient.status}
+                          Reason: {patient.status}
                           </p>
                       </div>
                     </li>
@@ -487,3 +498,4 @@ export default function VisitingPatientsPage() {
     </AppShell>
   );
 }
+
