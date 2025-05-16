@@ -18,6 +18,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useForm, SubmitHandler } from 'react-hook-form'; // Import useForm
+import { zodResolver } from '@hookform/resolvers/zod'; // Import zodResolver
+import { z } from 'zod'; // Import z
 
 interface WaitingListItem {
   id: number | string;
@@ -29,8 +32,46 @@ interface WaitingListItem {
   gender?: "Male" | "Female" | "Other";
 }
 
+// Define Zod schema for the form
+const patientFormSchema = z.object({
+  nationalId: z.string().min(1, "National ID is required."),
+  fullName: z.string().min(1, "Full name is required."),
+  dateOfBirth: z.date().optional(),
+  gender: z.string().min(1, "Gender is required."),
+  contactNumber: z.string().min(1, "Contact number is required."),
+  email: z.string().email("Invalid email address.").optional().or(z.literal('')),
+  address: z.string().min(1, "Address is required."),
+  district: z.string().min(1, "District is required."),
+  province: z.string().min(1, "Province is required."),
+  homeHospital: z.string().optional(),
+  nextOfKinName: z.string().min(1, "Next of kin name is required."),
+  nextOfKinNumber: z.string().min(1, "Next of kin contact is required."),
+  nextOfKinAddress: z.string().min(1, "Next of kin address is required."),
+});
+
+type PatientFormValues = z.infer<typeof patientFormSchema>;
+
+
 export default function PatientRegistrationPage() {
-  const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>();
+  const form = useForm<PatientFormValues>({
+    resolver: zodResolver(patientFormSchema),
+    defaultValues: { // It's good practice to set defaultValues
+      nationalId: "",
+      fullName: "",
+      dateOfBirth: undefined,
+      gender: "",
+      contactNumber: "",
+      email: "",
+      address: "",
+      district: "",
+      province: "",
+      homeHospital: "",
+      nextOfKinName: "",
+      nextOfKinNumber: "",
+      nextOfKinAddress: "",
+    }
+  });
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -50,14 +91,20 @@ export default function PatientRegistrationPage() {
   }, [stream]);
 
   const enableCamera = async () => {
-    if (hasCameraPermission === null || !hasCameraPermission) {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
-          const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
-          setStream(mediaStream);
-          if (videoRef.current) {
-            videoRef.current.srcObject = mediaStream;
-            videoRef.current.play().catch(err => {
+    if (hasCameraPermission === false) { // Reset if previously denied to allow re-prompt
+      setHasCameraPermission(null);
+      setStream(null);
+    }
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        setStream(mediaStream);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play().catch(err => {
               console.error("Error playing video:", err);
               toast({
                 variant: "destructive",
@@ -65,26 +112,37 @@ export default function PatientRegistrationPage() {
                 description: "Could not start the camera preview.",
               });
             });
-          }
-          setHasCameraPermission(true);
-          setCapturedImage(null);
-        } catch (err) {
-          console.error("Error accessing camera:", err);
-          setHasCameraPermission(false);
-          toast({
-            variant: "destructive",
-            title: "Camera Access Denied",
-            description: "Please enable camera permissions in your browser settings.",
-          });
+          };
+        } else {
+            console.error("videoRef.current is not available when setting srcObject");
+            toast({
+                variant: "destructive",
+                title: "Camera Error",
+                description: "Camera preview element not ready. Please try again.",
+            });
+            mediaStream.getTracks().forEach(track => track.stop());
+            setStream(null);
+            setHasCameraPermission(false); 
+            return;
         }
-      } else {
+        setHasCameraPermission(true);
+        setCapturedImage(null);
+      } catch (err) {
+        console.error("Error accessing camera:", err);
         setHasCameraPermission(false);
         toast({
           variant: "destructive",
-          title: "Camera Not Supported",
-          description: "Your browser does not support camera access.",
+          title: "Camera Access Denied",
+          description: "Please enable camera permissions in your browser settings.",
         });
       }
+    } else {
+      setHasCameraPermission(false);
+      toast({
+        variant: "destructive",
+        title: "Camera Not Supported",
+        description: "Your browser does not support camera access.",
+      });
     }
   };
 
@@ -100,36 +158,37 @@ export default function PatientRegistrationPage() {
 
       const context = canvas.getContext('2d');
       if (context) {
+        // Calculate cropping to maintain aspect ratio (center crop)
         const videoAspectRatio = video.videoWidth / video.videoHeight;
-        const canvasAspectRatio = canvas.width / canvas.height;
+        const targetAspectRatio = targetWidth / targetHeight;
+        let sx, sy, sWidth, sHeight;
 
-        let drawWidth, drawHeight, offsetX, offsetY;
-
-        if (videoAspectRatio > canvasAspectRatio) {
-          drawHeight = canvas.height;
-          drawWidth = drawHeight * videoAspectRatio;
-          offsetX = (canvas.width - drawWidth) / 2;
-          offsetY = 0;
-        } else {
-          drawWidth = canvas.width;
-          drawHeight = drawWidth / videoAspectRatio;
-          offsetX = 0;
-          offsetY = (canvas.height - drawHeight) / 2;
+        if (videoAspectRatio > targetAspectRatio) { // Video is wider than target
+            sHeight = video.videoHeight;
+            sWidth = sHeight * targetAspectRatio;
+            sx = (video.videoWidth - sWidth) / 2;
+            sy = 0;
+        } else { // Video is taller than target or same aspect ratio
+            sWidth = video.videoWidth;
+            sHeight = sWidth / targetAspectRatio;
+            sx = 0;
+            sy = (video.videoHeight - sHeight) / 2;
         }
-        context.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
+        context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
         const dataUrl = canvas.toDataURL('image/png');
         setCapturedImage(dataUrl);
 
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
-        setHasCameraPermission(null);
+        // Keep hasCameraPermission as true, just stream is stopped. 
+        // User can enable camera again if they want to retake.
       }
     }
   };
 
   const discardPhoto = () => {
     setCapturedImage(null);
-    setHasCameraPermission(null);
+    // Do not reset hasCameraPermission here, allow user to enable camera again easily
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
@@ -180,6 +239,22 @@ export default function PatientRegistrationPage() {
     }
   };
 
+  const onSubmit: SubmitHandler<PatientFormValues> = (data) => {
+    console.log(data); // Log form data
+    // Add capturedImage to the data if it exists
+    const submissionData = { ...data, photo: capturedImage };
+    console.log("Submitting:", submissionData);
+    toast({ title: "Patient Registered (Mock)", description: `${data.fullName} details saved.` });
+    form.reset(); // Reset form after submission
+    setCapturedImage(null); // Clear captured image
+    if (stream) { // Stop camera stream if active
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+    }
+    setHasCameraPermission(null); // Reset camera permission state
+  };
+
+
   const waitingList: WaitingListItem[] = [
     { id: 1, name: "Alice Wonderland", gender: "Female", time: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
     { id: 2, name: "Bob The Builder", gender: "Male", time: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
@@ -216,210 +291,235 @@ export default function PatientRegistrationPage() {
               <CardTitle>New Patient Details</CardTitle>
               <CardDescription>Please fill in the patient's information accurately. This form is for hospital reception use.</CardDescription>
             </CardHeader>
-            <CardContent className="py-6">
-              <div className="space-y-8">
-                {/* Row 1: Camera Visual and Personal Info Side-by-Side */}
-                <div className="grid lg:grid-cols-3 gap-x-6 gap-y-4">
-                  {/* Photo Visual Section (Left Column) */}
-                  <div className="lg:col-span-1">
-                    <div className="w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden border border-dashed border-primary/50">
-                      {!capturedImage && hasCameraPermission && stream && (
-                        <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                      )}
-                      {capturedImage && (
-                        <Image src={capturedImage} alt="Captured patient photo" width={240} height={308} className="w-full h-full object-contain rounded-md" data-ai-hint="patient photo"/>
-                      )}
-                      {!capturedImage && (!stream || hasCameraPermission === false) && (
-                        <UserCircle className="w-24 h-24 text-muted-foreground" />
-                      )}
-                    </div>
-                    <canvas ref={canvasRef} className="hidden"></canvas>
-                  </div>
-
-                  {/* Personal Information (Right Column of Row 1) */}
-                  <div className="lg:col-span-2 space-y-4">
-                    <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="nationalId">National ID Number <span className="text-destructive">*</span></Label>
-                        <Input id="nationalId" placeholder="e.g., 1234567890" required />
-                        <p className="text-xs text-muted-foreground">Patient's National ID must be unique.</p>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <CardContent className="py-6">
+                <div className="space-y-8">
+                  <div className="grid lg:grid-cols-3 gap-x-6 gap-y-4">
+                    <div className="lg:col-span-1">
+                      <div className="relative w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden border border-dashed border-primary/50">
+                        {capturedImage ? (
+                          <Image src={capturedImage} alt="Captured patient photo" width={240} height={308} className="w-full h-full object-contain rounded-md" data-ai-hint={getAvatarHint(form.watch("gender") as any || "Other")}/>
+                        ) : (
+                          <>
+                            <video
+                              ref={videoRef}
+                              className="w-full h-full object-cover"
+                              autoPlay
+                              muted
+                              playsInline
+                            />
+                            {!(hasCameraPermission && stream) && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                                <UserCircle className="w-24 h-24 text-muted-foreground" />
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="fullName">Full Name <span className="text-destructive">*</span></Label>
-                        <Input id="fullName" placeholder="e.g., John Michael Doe" required />
-                      </div>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="dob">Date of Birth <span className="text-destructive">*</span></Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !dateOfBirth && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {dateOfBirth ? format(dateOfBirth, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" selected={dateOfBirth} onSelect={setDateOfBirth} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="gender">Gender <span className="text-destructive">*</span></Label>
-                        <Select required>
-                          <SelectTrigger id="gender">
-                            <SelectValue placeholder="Select gender" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Male">Male</SelectItem>
-                            <SelectItem value="Female">Female</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                            <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                     {/* Photo Capture Controls - Placed under Personal Info */}
-                    <div className="space-y-4 pt-2">
-                        <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
-                          <Camera className="h-5 w-5" /> Patient Photo Capture
-                        </h3>
-                        <p className="text-sm text-muted-foreground">Capture a clear photo. Aim for a passport-style image.</p>
-
-                        {hasCameraPermission === false && (
-                           <Alert variant="destructive" className="w-full">
+                      <canvas ref={canvasRef} className="hidden"></canvas>
+                      {hasCameraPermission === false && (
+                          <Alert variant="destructive" className="w-full mt-2">
                               <AlertTitle>Camera Access Denied</AlertTitle>
                               <AlertDescription>
-                                Please allow camera access in your browser settings and try again.
-                                 <Button onClick={enableCamera} variant="link" className="p-0 h-auto ml-1">Retry</Button>
+                                Please allow camera access in your browser settings.
+                                <Button onClick={enableCamera} variant="link" className="p-0 h-auto ml-1">Retry</Button>
                               </AlertDescription>
                           </Alert>
-                        )}
+                      )}
+                    </div>
 
-                        <div className="flex gap-2">
-                          {!stream && !capturedImage && (
-                            <Button onClick={enableCamera} variant="outline">
-                              <Camera className="mr-2 h-4 w-4" /> Enable Camera
-                            </Button>
-                          )}
-                          {stream && hasCameraPermission && !capturedImage && (
-                            <Button onClick={capturePhoto}>
-                              <Camera className="mr-2 h-4 w-4" /> Capture Photo
-                            </Button>
-                          )}
-                          {capturedImage && (
-                            <Button onClick={discardPhoto} variant="destructive" className="flex items-center">
-                              <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
-                            </Button>
-                          )}
+                    <div className="lg:col-span-2 space-y-4">
+                      <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="nationalId">National ID Number <span className="text-destructive">*</span></Label>
+                          <Input id="nationalId" placeholder="e.g., 1234567890" {...form.register("nationalId")} />
+                          {form.formState.errors.nationalId && <p className="text-xs text-destructive">{form.formState.errors.nationalId.message}</p>}
+                          <p className="text-xs text-muted-foreground">Patient's National ID must be unique.</p>
                         </div>
-                         {hasCameraPermission === null && !stream && !capturedImage &&(
-                           <p className="text-xs text-muted-foreground">Click "Enable Camera" to start.</p>
-                         )}
+                        <div className="space-y-2">
+                          <Label htmlFor="fullName">Full Name <span className="text-destructive">*</span></Label>
+                          <Input id="fullName" placeholder="e.g., John Michael Doe" {...form.register("fullName")} />
+                           {form.formState.errors.fullName && <p className="text-xs text-destructive">{form.formState.errors.fullName.message}</p>}
+                        </div>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="dob">Date of Birth <span className="text-destructive">*</span></Label>
+                          <Controller
+                            control={form.control}
+                            name="dateOfBirth"
+                            rules={{ required: "Date of birth is required."}}
+                            render={({ field }) => (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                      "w-full justify-start text-left font-normal",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                          />
+                           {form.formState.errors.dateOfBirth && <p className="text-xs text-destructive">{form.formState.errors.dateOfBirth.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="gender">Gender <span className="text-destructive">*</span></Label>
+                          <Controller
+                            control={form.control}
+                            name="gender"
+                            render={({ field }) => (
+                              <Select onValueChange={field.onChange} value={field.value} >
+                                <SelectTrigger id="gender">
+                                  <SelectValue placeholder="Select gender" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Male">Male</SelectItem>
+                                  <SelectItem value="Female">Female</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                  <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
+                          {form.formState.errors.gender && <p className="text-xs text-destructive">{form.formState.errors.gender.message}</p>}
+                        </div>
+                      </div>
+                      <div className="space-y-4 pt-2">
+                          <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
+                            <Camera className="h-5 w-5" /> Patient Photo Capture
+                          </h3>
+                          <p className="text-sm text-muted-foreground">Capture a clear photo. Aim for a passport-style image.</p>
+                          <div className="flex gap-2">
+                            {!stream && !capturedImage && (
+                              <Button type="button" onClick={enableCamera} variant="outline">
+                                <Camera className="mr-2 h-4 w-4" /> Enable Camera
+                              </Button>
+                            )}
+                            {stream && hasCameraPermission && !capturedImage && (
+                              <Button type="button" onClick={capturePhoto}>
+                                <Camera className="mr-2 h-4 w-4" /> Capture Photo
+                              </Button>
+                            )}
+                            {capturedImage && (
+                              <Button type="button" onClick={discardPhoto} variant="destructive" className="flex items-center">
+                                <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
+                              </Button>
+                            )}
+                          </div>
+                           {hasCameraPermission === null && !stream && !capturedImage &&(
+                             <p className="text-xs text-muted-foreground">Click "Enable Camera" to start.</p>
+                           )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6 pt-4">
+                    <div className="space-y-4">
+                      <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="contactNumber">Phone/Cell Number <span className="text-destructive">*</span></Label>
+                          <Input id="contactNumber" type="tel" placeholder="e.g., (555) 123-4567" {...form.register("contactNumber")} />
+                          {form.formState.errors.contactNumber && <p className="text-xs text-destructive">{form.formState.errors.contactNumber.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email Address</Label>
+                          <Input id="email" type="email" placeholder="e.g., john.doe@example.com" {...form.register("email")} />
+                           {form.formState.errors.email && <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="address">Full Address <span className="text-destructive">*</span></Label>
+                        <Textarea id="address" placeholder="e.g., 123 Main St, Anytown, Province, Postal Code" {...form.register("address")} />
+                         {form.formState.errors.address && <p className="text-xs text-destructive">{form.formState.errors.address.message}</p>}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-md font-semibold border-b pb-1">Location & Origin</h3>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="district">District <span className="text-destructive">*</span></Label>
+                          <Input id="district" placeholder="e.g., Central District" {...form.register("district")}/>
+                           {form.formState.errors.district && <p className="text-xs text-destructive">{form.formState.errors.district.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="province">Province <span className="text-destructive">*</span></Label>
+                          <Input id="province" placeholder="e.g., Capital Province" {...form.register("province")}/>
+                          {form.formState.errors.province && <p className="text-xs text-destructive">{form.formState.errors.province.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="homeHospital">Home Hospital / Clinic</Label>
+                          <Input id="homeHospital" placeholder="e.g., City General Hospital" {...form.register("homeHospital")} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-md font-semibold border-b pb-1">Next of Kin</h3>
+                      <div className="grid md:grid-cols-2 gap-4">
+                         <div className="space-y-2">
+                          <Label htmlFor="nextOfKinName">Full Name <span className="text-destructive">*</span></Label>
+                          <Input id="nextOfKinName" placeholder="e.g., Jane Doe (Spouse)" {...form.register("nextOfKinName")}/>
+                           {form.formState.errors.nextOfKinName && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinName.message}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="nextOfKinNumber">Contact Number <span className="text-destructive">*</span></Label>
+                          <Input id="nextOfKinNumber" type="tel" placeholder="e.g., (555) 987-6543" {...form.register("nextOfKinNumber")}/>
+                          {form.formState.errors.nextOfKinNumber && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinNumber.message}</p>}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="nextOfKinAddress">Address <span className="text-destructive">*</span></Label>
+                        <Textarea id="nextOfKinAddress" placeholder="e.g., 456 Oak Ln, Anytown" {...form.register("nextOfKinAddress")}/>
+                         {form.formState.errors.nextOfKinAddress && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinAddress.message}</p>}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4 border-t">
+                       <h3 className="text-md font-semibold flex items-center gap-2 pt-2">
+                          <UploadCloud className="h-6 w-6" /> Bulk Patient Registration
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Upload an Excel or CSV file to register multiple patients at once. Download the template for the correct format.
+                      </p>
+                      <Button type="button" onClick={downloadCSVTemplate} variant="outline" className="w-full md:w-auto">
+                        <Download className="mr-2 h-4 w-4" /> Download CSV Template
+                      </Button>
+                      <div className="space-y-2">
+                        <Label htmlFor="bulkPatientFile">Upload File</Label>
+                        <Input
+                          id="bulkPatientFile"
+                          type="file"
+                          accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                          onChange={handleFileChange}
+                        />
+                        {selectedFile && <p className="text-xs text-muted-foreground">Selected: {selectedFile.name}</p>}
+                      </div>
+                      <Button type="button" onClick={handleFileUpload} className="w-full md:w-auto" disabled={!selectedFile}>
+                        <UploadCloud className="mr-2 h-4 w-4" /> Upload and Process File
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        Note: Photos cannot be uploaded in bulk. They must be added individually after registration.
+                      </p>
                     </div>
                   </div>
                 </div>
-
-                {/* Row 2: Remaining Information Sections (Contact, Location, Next of Kin, Bulk Upload) - Spans full width below the first row */}
-                <div className="space-y-6 pt-4">
-                  <div className="space-y-4">
-                    <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="contactNumber">Phone/Cell Number <span className="text-destructive">*</span></Label>
-                        <Input id="contactNumber" type="tel" placeholder="e.g., (555) 123-4567" required />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email Address</Label>
-                        <Input id="email" type="email" placeholder="e.g., john.doe@example.com" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Full Address <span className="text-destructive">*</span></Label>
-                      <Textarea id="address" placeholder="e.g., 123 Main St, Anytown, Province, Postal Code" required />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-md font-semibold border-b pb-1">Location & Origin</h3>
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="district">District <span className="text-destructive">*</span></Label>
-                        <Input id="district" placeholder="e.g., Central District" required/>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="province">Province <span className="text-destructive">*</span></Label>
-                        <Input id="province" placeholder="e.g., Capital Province" required/>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="homeHospital">Home Hospital / Clinic</Label>
-                        <Input id="homeHospital" placeholder="e.g., City General Hospital" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-md font-semibold border-b pb-1">Next of Kin</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                       <div className="space-y-2">
-                        <Label htmlFor="nextOfKinName">Full Name <span className="text-destructive">*</span></Label>
-                        <Input id="nextOfKinName" placeholder="e.g., Jane Doe (Spouse)" required/>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="nextOfKinNumber">Contact Number <span className="text-destructive">*</span></Label>
-                        <Input id="nextOfKinNumber" type="tel" placeholder="e.g., (555) 987-6543" required/>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="nextOfKinAddress">Address <span className="text-destructive">*</span></Label>
-                      <Textarea id="nextOfKinAddress" placeholder="e.g., 456 Oak Ln, Anytown" required/>
-                    </div>
-                  </div>
-
-                  {/* Bulk Patient Registration Section - Integrated here */}
-                  <div className="space-y-4 pt-4 border-t">
-                     <h3 className="text-md font-semibold flex items-center gap-2 pt-2">
-                        <UploadCloud className="h-6 w-6" /> Bulk Patient Registration
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Upload an Excel or CSV file to register multiple patients at once. Download the template for the correct format.
-                    </p>
-                    <Button onClick={downloadCSVTemplate} variant="outline" className="w-full md:w-auto">
-                      <Download className="mr-2 h-4 w-4" /> Download CSV Template
-                    </Button>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="bulkPatientFile">Upload File</Label>
-                      <Input
-                        id="bulkPatientFile"
-                        type="file"
-                        accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-                        onChange={handleFileChange}
-                      />
-                      {selectedFile && <p className="text-xs text-muted-foreground">Selected: {selectedFile.name}</p>}
-                    </div>
-
-                    <Button onClick={handleFileUpload} className="w-full md:w-auto" disabled={!selectedFile}>
-                      <UploadCloud className="mr-2 h-4 w-4" /> Upload and Process File
-                    </Button>
-                    <p className="text-xs text-muted-foreground">
-                      Note: Photos cannot be uploaded in bulk. They must be added individually after registration.
-                    </p>
-                  </div>
-
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="border-t px-6 py-4">
-              <Button onClick={() => toast({ title: "Patient Registered", description: "Patient details saved (mock)"})}>Register Patient</Button>
-            </CardFooter>
+              </CardContent>
+              <CardFooter className="border-t px-6 py-4">
+                <Button type="submit">Register Patient</Button>
+              </CardFooter>
+            </form>
           </Card>
 
           <div className="lg:col-span-1 space-y-6">
@@ -469,7 +569,7 @@ export default function PatientRegistrationPage() {
                     <p>No patients currently in the waiting list.</p>
                   </div>
                 )}
-                 <Button variant="outline" className="w-full mt-6">Refresh List</Button>
+                 <Button type="button" variant="outline" className="w-full mt-6">Refresh List</Button>
               </CardContent>
             </Card>
 
@@ -493,3 +593,5 @@ export default function PatientRegistrationPage() {
     </AppShell>
   );
 }
+
+    
