@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon } from "lucide-react";
+import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid } from "recharts"
@@ -41,7 +41,7 @@ interface WaitingListItem {
   gender?: "Male" | "Female" | "Other";
 }
 
-const visitChartData = [
+const initialVisitChartData = [
   { department: "Outpatient", visits: 12, fill: "hsl(var(--chart-1))" },
   { department: "Lab", visits: 8, fill: "hsl(var(--chart-2))" },
   { department: "Pharmacy", visits: 5, fill: "hsl(var(--chart-3))" },
@@ -85,6 +85,7 @@ export default function VisitingPatientsPage() {
   const [department, setDepartment] = useState("");
   const [reasonForVisit, setReasonForVisit] = useState("");
   const [assignedDoctor, setAssignedDoctor] = useState("");
+  const [isAddingToWaitingList, setIsAddingToWaitingList] = useState(false);
 
   const [currentDate, setCurrentDate] = useState('');
   const hospitalName = "HealthFlow Central Hospital";
@@ -94,19 +95,48 @@ export default function VisitingPatientsPage() {
   const [modalFullName, setModalFullName] = useState("");
   const [modalDob, setModalDob] = useState<Date | undefined>();
   const [modalGender, setModalGender] = useState<Patient["gender"] | "">("");
+  const [isRegisteringInModal, setIsRegisteringInModal] = useState(false);
 
+  const [waitingList, setWaitingList] = useState<WaitingListItem[]>([]);
+  const [isWaitingListLoading, setIsWaitingListLoading] = useState(true);
+
+  const [visitChartData, setVisitChartData] = useState<any[]>([]);
+  const [analyticsStats, setAnalyticsStats] = useState({
+    avgWaitTime: "0",
+    totalProcessed: "0",
+    peakHour: "N/A"
+  });
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(true);
 
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
-  }, []);
 
-  const initialWaitingList: WaitingListItem[] = [
-    { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
-    { id: "WL002", patientName: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
-    { id: "WL003", patientName: "Charlie Brown", gender: "Male", timeAdded: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
-    { id: "WL004", patientName: "Diana Prince", gender: "Female", timeAdded: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
-  ];
-  const [waitingList, setWaitingList] = useState<WaitingListItem[]>(initialWaitingList);
+    // Simulate fetching waiting list data
+    setIsWaitingListLoading(true);
+    setTimeout(() => {
+      const initialWaitingList: WaitingListItem[] = [
+        { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
+        { id: "WL002", patientName: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
+        { id: "WL003", patientName: "Charlie Brown", gender: "Male", timeAdded: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
+        { id: "WL004", patientName: "Diana Prince", gender: "Female", timeAdded: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
+      ];
+      setWaitingList(initialWaitingList);
+      setIsWaitingListLoading(false);
+    }, 1500);
+
+    // Simulate fetching analytics data
+    setIsAnalyticsLoading(true);
+    setTimeout(() => {
+        setVisitChartData(initialVisitChartData);
+        setAnalyticsStats({
+            avgWaitTime: "25",
+            totalProcessed: (initialWaitingList.length + 15).toString(),
+            peakHour: "11:00 AM"
+        });
+        setIsAnalyticsLoading(false);
+    }, 1800);
+
+  }, []);
 
   const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
     if (gender === "Male") return "male avatar";
@@ -114,7 +144,7 @@ export default function VisitingPatientsPage() {
     return "patient avatar";
   };
 
-  const handleSearchPatient = () => {
+  const handleSearchPatient = async () => {
     if (!searchNationalId.trim()) {
       toast({ variant: "destructive", title: "Missing ID", description: "Please enter a National ID to search." });
       return;
@@ -122,37 +152,39 @@ export default function VisitingPatientsPage() {
     setIsLoadingSearch(true);
     setSearchedPatient(null);
     setPatientNotFound(false);
-    // Clear previous visit details
     setDepartment("");
     setReasonForVisit("");
     setAssignedDoctor("");
 
-    setTimeout(() => {
-      if (searchNationalId === "123456789") {
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Mock API response: /api/v1/patients/search?nationalId={searchNationalId}
+    if (searchNationalId === "123456789") {
+      setSearchedPatient({
+        id: "P001",
+        nationalId: "123456789",
+        fullName: "Demo Patient One",
+        dob: "1990-01-01",
+        gender: "Male",
+      });
+      setPatientNotFound(false);
+    } else if (searchNationalId === "987654321") {
         setSearchedPatient({
-          id: "P001",
-          nationalId: "123456789",
-          fullName: "Demo Patient One",
-          dob: "1990-01-01",
-          gender: "Male",
-        });
-      } else if (searchNationalId === "987654321") {
-         setSearchedPatient({
-          id: "P002",
-          nationalId: "987654321",
-          fullName: "Jane Sample Doe",
-          dob: "1985-05-15",
-          gender: "Female",
-        });
-      }
-      else {
-        setPatientNotFound(true);
-      }
-      setIsLoadingSearch(false);
-    }, 1000);
+        id: "P002",
+        nationalId: "987654321",
+        fullName: "Jane Sample Doe",
+        dob: "1985-05-15",
+        gender: "Female",
+      });
+      setPatientNotFound(false);
+    }
+    else {
+      setPatientNotFound(true);
+    }
+    setIsLoadingSearch(false);
   };
 
-  const handleAddToWaitingList = () => {
+  const handleAddToWaitingList = async () => {
     if (!searchedPatient) {
         toast({ variant: "destructive", title: "No Patient", description: "No patient selected to add to the waiting list." });
         return;
@@ -161,47 +193,54 @@ export default function VisitingPatientsPage() {
         toast({ variant: "destructive", title: "Missing Details", description: "Please select department and provide reason for visit." });
         return;
     }
+    setIsAddingToWaitingList(true);
+    // Simulate API call: POST /api/v1/visits
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     const newWaitingListItem: WaitingListItem = {
-        id: `WL${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, // More unique ID
+        id: `WL${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         patientName: searchedPatient.fullName,
-        photoUrl: `https://placehold.co/40x40.png`, // Generic placeholder
-        gender: searchedPatient.gender, // Store gender for avatar hint
+        photoUrl: `https://placehold.co/40x40.png`,
+        gender: searchedPatient.gender,
         location: department,
-        status: reasonForVisit, // Using reasonForVisit as status as per previous structure
+        status: reasonForVisit,
         timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     setWaitingList(prev => [newWaitingListItem, ...prev]);
 
     toast({ title: "Patient Added to Visit List", description: `${newWaitingListItem.patientName} recorded for ${department}. They are now in the waiting list.`});
 
-    // Clear fields after adding
     setSearchedPatient(null);
     setSearchNationalId("");
     setDepartment("");
     setReasonForVisit("");
     setAssignedDoctor("");
     setPatientNotFound(false);
+    setIsAddingToWaitingList(false);
   };
 
-  const handleModalRegister = () => {
+  const handleModalRegister = async () => {
     if (!modalNationalId || !modalFullName || !modalDob || !modalGender) {
       toast({ variant: "destructive", title: "Missing Fields", description: "Please fill all fields in the modal." });
       return;
     }
-    // Mock registration
+    setIsRegisteringInModal(true);
+    // Simulate API call: POST /api/v1/patients
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     toast({
       title: "Patient Registered (Mock)",
       description: `${modalFullName} has been registered. You can now search for them using ID: ${modalNationalId}.`,
     });
-    setSearchNationalId(modalNationalId); // Pre-fill search bar
+    setSearchNationalId(modalNationalId);
     setIsModalOpen(false);
-    setPatientNotFound(false); // Patient is "found" after registration for immediate search
+    setPatientNotFound(false);
 
-    // Clear modal form
     setModalNationalId("");
     setModalFullName("");
     setModalDob(undefined);
     setModalGender("");
+    setIsRegisteringInModal(false);
   };
 
 
@@ -234,7 +273,8 @@ export default function VisitingPatientsPage() {
                     disabled={isLoadingSearch}
                   />
                   <Button onClick={handleSearchPatient} disabled={isLoadingSearch || !searchNationalId.trim()}>
-                    <Search className="mr-2 h-4 w-4" /> {isLoadingSearch ? "Searching..." : "Search"}
+                    {isLoadingSearch ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                    {isLoadingSearch ? "Searching..." : "Search"}
                   </Button>
                 </div>
               </div>
@@ -305,9 +345,12 @@ export default function VisitingPatientsPage() {
                         </div>
                         <DialogFooter>
                            <DialogClose asChild>
-                            <Button type="button" variant="outline">Cancel</Button>
+                            <Button type="button" variant="outline" disabled={isRegisteringInModal}>Cancel</Button>
                            </DialogClose>
-                          <Button onClick={handleModalRegister}>Register Patient</Button>
+                          <Button onClick={handleModalRegister} disabled={isRegisteringInModal}>
+                            {isRegisteringInModal ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                            {isRegisteringInModal ? "Registering..." : "Register Patient"}
+                            </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
@@ -364,8 +407,9 @@ export default function VisitingPatientsPage() {
                     </div>
                   </CardContent>
                    <CardFooter>
-                    <Button onClick={handleAddToWaitingList} className="w-full" disabled={!department || !reasonForVisit}>
-                      <UserPlus className="mr-2 h-4 w-4" /> Add to Waiting List & Finalize Visit
+                    <Button onClick={handleAddToWaitingList} className="w-full" disabled={!department || !reasonForVisit || isAddingToWaitingList}>
+                      {isAddingToWaitingList ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                      {isAddingToWaitingList ? "Adding..." : "Add to Waiting List & Finalize Visit"}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -384,7 +428,12 @@ export default function VisitingPatientsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {waitingList.length > 0 ? (
+              {isWaitingListLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="ml-2 text-muted-foreground">Loading waiting list...</p>
+                </div>
+                ) : waitingList.length > 0 ? (
                 <ul className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                   {waitingList.map((patient) => (
                     <li key={patient.id} className="p-3 border rounded-md shadow-sm bg-background hover:bg-muted/50 flex items-start gap-3">
@@ -419,7 +468,10 @@ export default function VisitingPatientsPage() {
                   <p className="text-sm">No patients currently in the waiting list.</p>
                 </div>
               )}
-               <Button variant="outline" className="w-full mt-4 text-sm" onClick={() => toast({ title: "List Refreshed", description: "Waiting list updated (mock)." })}>Refresh List</Button>
+               <Button variant="outline" className="w-full mt-4 text-sm" onClick={() => toast({ title: "List Refreshed", description: "Waiting list updated (mock)." })} disabled={isWaitingListLoading}>
+                {isWaitingListLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                Refresh List
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -433,11 +485,18 @@ export default function VisitingPatientsPage() {
             <CardDescription>Overview of today's patient flow and departmental visits.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+          {isAnalyticsLoading ? (
+            <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-2 text-muted-foreground">Loading analytics...</p>
+            </div>
+          ) : (
+            <>
             <div className="grid md:grid-cols-3 gap-4">
               <Card className="shadow-xs">
                 <CardHeader className="pb-2">
                   <CardDescription>Average Wait Time</CardDescription>
-                  <CardTitle className="text-3xl">25 <span className="text-lg font-normal">mins</span></CardTitle>
+                  <CardTitle className="text-3xl">{analyticsStats.avgWaitTime} <span className="text-lg font-normal">mins</span></CardTitle>
                 </CardHeader>
                  <CardContent>
                     <p className="text-xs text-muted-foreground">+2 mins from yesterday</p>
@@ -446,7 +505,7 @@ export default function VisitingPatientsPage() {
               <Card className="shadow-xs">
                 <CardHeader className="pb-2">
                   <CardDescription>Total Patients Processed</CardDescription>
-                  <CardTitle className="text-3xl">{waitingList.length + 15}</CardTitle> {/* Mock data + current list */}
+                  <CardTitle className="text-3xl">{analyticsStats.totalProcessed}</CardTitle>
                 </CardHeader>
                  <CardContent>
                     <p className="text-xs text-muted-foreground">Target: 50 for today</p>
@@ -455,7 +514,7 @@ export default function VisitingPatientsPage() {
                <Card className="shadow-xs">
                 <CardHeader className="pb-2">
                   <CardDescription>Peak Hour</CardDescription>
-                  <CardTitle className="text-3xl">11:00 AM</CardTitle>
+                  <CardTitle className="text-3xl">{analyticsStats.peakHour}</CardTitle>
                 </CardHeader>
                  <CardContent>
                     <p className="text-xs text-muted-foreground">Most patient check-ins</p>
@@ -492,6 +551,8 @@ export default function VisitingPatientsPage() {
                 </ResponsiveContainer>
               </ChartContainer>
             </div>
+            </>
+          )}
           </CardContent>
         </Card>
       </div>
