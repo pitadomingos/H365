@@ -18,9 +18,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useForm, SubmitHandler } from 'react-hook-form'; // Import useForm
-import { zodResolver } from '@hookform/resolvers/zod'; // Import zodResolver
-import { z } from 'zod'; // Import z
+import { useForm, SubmitHandler, Controller } from 'react-hook-form'; // Import Controller
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 interface WaitingListItem {
   id: number | string;
@@ -32,7 +32,6 @@ interface WaitingListItem {
   gender?: "Male" | "Female" | "Other";
 }
 
-// Define Zod schema for the form
 const patientFormSchema = z.object({
   nationalId: z.string().min(1, "National ID is required."),
   fullName: z.string().min(1, "Full name is required."),
@@ -55,7 +54,7 @@ type PatientFormValues = z.infer<typeof patientFormSchema>;
 export default function PatientRegistrationPage() {
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientFormSchema),
-    defaultValues: { // It's good practice to set defaultValues
+    defaultValues: {
       nationalId: "",
       fullName: "",
       dateOfBirth: undefined,
@@ -91,7 +90,7 @@ export default function PatientRegistrationPage() {
   }, [stream]);
 
   const enableCamera = async () => {
-    if (hasCameraPermission === false) { // Reset if previously denied to allow re-prompt
+    if (hasCameraPermission === false) {
       setHasCameraPermission(null);
       setStream(null);
     }
@@ -158,17 +157,16 @@ export default function PatientRegistrationPage() {
 
       const context = canvas.getContext('2d');
       if (context) {
-        // Calculate cropping to maintain aspect ratio (center crop)
         const videoAspectRatio = video.videoWidth / video.videoHeight;
         const targetAspectRatio = targetWidth / targetHeight;
         let sx, sy, sWidth, sHeight;
 
-        if (videoAspectRatio > targetAspectRatio) { // Video is wider than target
+        if (videoAspectRatio > targetAspectRatio) {
             sHeight = video.videoHeight;
             sWidth = sHeight * targetAspectRatio;
             sx = (video.videoWidth - sWidth) / 2;
             sy = 0;
-        } else { // Video is taller than target or same aspect ratio
+        } else {
             sWidth = video.videoWidth;
             sHeight = sWidth / targetAspectRatio;
             sx = 0;
@@ -180,15 +178,12 @@ export default function PatientRegistrationPage() {
 
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
-        // Keep hasCameraPermission as true, just stream is stopped. 
-        // User can enable camera again if they want to retake.
       }
     }
   };
 
   const discardPhoto = () => {
     setCapturedImage(null);
-    // Do not reset hasCameraPermission here, allow user to enable camera again easily
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
@@ -240,18 +235,16 @@ export default function PatientRegistrationPage() {
   };
 
   const onSubmit: SubmitHandler<PatientFormValues> = (data) => {
-    console.log(data); // Log form data
-    // Add capturedImage to the data if it exists
     const submissionData = { ...data, photo: capturedImage };
     console.log("Submitting:", submissionData);
     toast({ title: "Patient Registered (Mock)", description: `${data.fullName} details saved.` });
-    form.reset(); // Reset form after submission
-    setCapturedImage(null); // Clear captured image
-    if (stream) { // Stop camera stream if active
+    form.reset();
+    setCapturedImage(null);
+    if (stream) {
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
     }
-    setHasCameraPermission(null); // Reset camera permission state
+    setHasCameraPermission(null);
   };
 
 
@@ -294,30 +287,34 @@ export default function PatientRegistrationPage() {
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <CardContent className="py-6">
                 <div className="space-y-8">
-                  <div className="grid lg:grid-cols-3 gap-x-6 gap-y-4">
+                  {/* Top Row: Photo Visual on Left, Personal Info on Right */}
+                  <div className="grid lg:grid-cols-3 gap-x-6 gap-y-4 items-start">
+                    {/* Photo Visual Column */}
                     <div className="lg:col-span-1">
                       <div className="relative w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden border border-dashed border-primary/50">
+                        {!capturedImage && (
+                          <video
+                            ref={videoRef}
+                            className="w-full h-full object-cover"
+                            autoPlay
+                            muted
+                            playsInline
+                          />
+                        )}
                         {capturedImage ? (
                           <Image src={capturedImage} alt="Captured patient photo" width={240} height={308} className="w-full h-full object-contain rounded-md" data-ai-hint={getAvatarHint(form.watch("gender") as any || "Other")}/>
                         ) : (
-                          <>
-                            <video
-                              ref={videoRef}
-                              className="w-full h-full object-cover"
-                              autoPlay
-                              muted
-                              playsInline
-                            />
-                            {!(hasCameraPermission && stream) && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                                <UserCircle className="w-24 h-24 text-muted-foreground" />
-                              </div>
+                           <>
+                            { !(hasCameraPermission && stream) && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                                    <UserCircle className="w-24 h-24 text-muted-foreground" />
+                                </div>
                             )}
-                          </>
+                           </>
                         )}
                       </div>
                       <canvas ref={canvasRef} className="hidden"></canvas>
-                      {hasCameraPermission === false && (
+                      {hasCameraPermission === false && !stream && (
                           <Alert variant="destructive" className="w-full mt-2">
                               <AlertTitle>Camera Access Denied</AlertTitle>
                               <AlertDescription>
@@ -328,6 +325,7 @@ export default function PatientRegistrationPage() {
                       )}
                     </div>
 
+                    {/* Personal Info Column */}
                     <div className="lg:col-span-2 space-y-4">
                       <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
                       <div className="grid md:grid-cols-2 gap-4">
@@ -394,35 +392,41 @@ export default function PatientRegistrationPage() {
                           {form.formState.errors.gender && <p className="text-xs text-destructive">{form.formState.errors.gender.message}</p>}
                         </div>
                       </div>
-                      <div className="space-y-4 pt-2">
-                          <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
-                            <Camera className="h-5 w-5" /> Patient Photo Capture
-                          </h3>
-                          <p className="text-sm text-muted-foreground">Capture a clear photo. Aim for a passport-style image.</p>
-                          <div className="flex gap-2">
-                            {!stream && !capturedImage && (
-                              <Button type="button" onClick={enableCamera} variant="outline">
-                                <Camera className="mr-2 h-4 w-4" /> Enable Camera
-                              </Button>
-                            )}
-                            {stream && hasCameraPermission && !capturedImage && (
-                              <Button type="button" onClick={capturePhoto}>
-                                <Camera className="mr-2 h-4 w-4" /> Capture Photo
-                              </Button>
-                            )}
-                            {capturedImage && (
-                              <Button type="button" onClick={discardPhoto} variant="destructive" className="flex items-center">
-                                <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
-                              </Button>
-                            )}
-                          </div>
-                           {hasCameraPermission === null && !stream && !capturedImage &&(
-                             <p className="text-xs text-muted-foreground">Click "Enable Camera" to start.</p>
-                           )}
-                      </div>
                     </div>
                   </div>
 
+                  {/* Photo Capture Controls (Below Personal Info on the right) */}
+                  <div className="grid lg:grid-cols-3 gap-x-6">
+                    <div className="lg:col-span-1"></div> {/* Empty cell for visual alignment */}
+                    <div className="lg:col-span-2 space-y-4 pt-2">
+                        <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
+                        <Camera className="h-5 w-5" /> Patient Photo Capture
+                        </h3>
+                        <p className="text-sm text-muted-foreground">Capture a clear photo. Aim for a passport-style image.</p>
+                        <div className="flex gap-2">
+                        {!stream && !capturedImage && (
+                            <Button type="button" onClick={enableCamera} variant="outline">
+                            <Camera className="mr-2 h-4 w-4" /> Enable Camera
+                            </Button>
+                        )}
+                        {stream && hasCameraPermission && !capturedImage && (
+                            <Button type="button" onClick={capturePhoto}>
+                            <Camera className="mr-2 h-4 w-4" /> Capture Photo
+                            </Button>
+                        )}
+                        {capturedImage && (
+                            <Button type="button" onClick={discardPhoto} variant="destructive" className="flex items-center">
+                            <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
+                            </Button>
+                        )}
+                        </div>
+                        {hasCameraPermission === null && !stream && !capturedImage &&(
+                        <p className="text-xs text-muted-foreground">Click "Enable Camera" to start.</p>
+                        )}
+                    </div>
+                  </div>
+
+                  {/* Remaining Form Sections (Below the Top Row) */}
                   <div className="space-y-6 pt-4">
                     <div className="space-y-4">
                       <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
@@ -593,5 +597,3 @@ export default function PatientRegistrationPage() {
     </AppShell>
   );
 }
-
-    
