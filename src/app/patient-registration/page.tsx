@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useForm, SubmitHandler, Controller } from 'react-hook-form'; // Import Controller
+import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
@@ -35,7 +35,7 @@ interface WaitingListItem {
 const patientFormSchema = z.object({
   nationalId: z.string().min(1, "National ID is required."),
   fullName: z.string().min(1, "Full name is required."),
-  dateOfBirth: z.date().optional(),
+  dateOfBirth: z.date({ required_error: "Date of birth is required."}),
   gender: z.string().min(1, "Gender is required."),
   contactNumber: z.string().min(1, "Contact number is required."),
   email: z.string().email("Invalid email address.").optional().or(z.literal('')),
@@ -43,9 +43,9 @@ const patientFormSchema = z.object({
   district: z.string().min(1, "District is required."),
   province: z.string().min(1, "Province is required."),
   homeHospital: z.string().optional(),
-  nextOfKinName: z.string().min(1, "Next of kin name is required."),
-  nextOfKinNumber: z.string().min(1, "Next of kin contact is required."),
-  nextOfKinAddress: z.string().min(1, "Next of kin address is required."),
+  nextOfKinName: z.string().optional(),
+  nextOfKinNumber: z.string().optional(),
+  nextOfKinAddress: z.string().optional(),
 });
 
 type PatientFormValues = z.infer<typeof patientFormSchema>;
@@ -79,6 +79,8 @@ export default function PatientRegistrationPage() {
   const [currentDate, setCurrentDate] = useState('');
   const hospitalName = "HealthFlow Central Hospital";
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
 
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
@@ -90,9 +92,9 @@ export default function PatientRegistrationPage() {
   }, [stream]);
 
   const enableCamera = async () => {
-    if (hasCameraPermission === false) {
+    if (hasCameraPermission === false) { // Reset if previously denied to allow re-prompt
       setHasCameraPermission(null);
-      setStream(null);
+      setStream(null); 
     }
 
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -102,7 +104,7 @@ export default function PatientRegistrationPage() {
 
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          videoRef.current.onloadedmetadata = () => {
+          videoRef.current.onloadedmetadata = () => { // Wait for metadata to ensure video dimensions are available
             videoRef.current?.play().catch(err => {
               console.error("Error playing video:", err);
               toast({
@@ -119,13 +121,13 @@ export default function PatientRegistrationPage() {
                 title: "Camera Error",
                 description: "Camera preview element not ready. Please try again.",
             });
-            mediaStream.getTracks().forEach(track => track.stop());
-            setStream(null);
-            setHasCameraPermission(false); 
+            mediaStream.getTracks().forEach(track => track.stop()); // Stop stream if ref is not ready
+            setStream(null); // Clear stream state
+            setHasCameraPermission(false); // Set permission to false explicitly
             return;
         }
         setHasCameraPermission(true);
-        setCapturedImage(null);
+        setCapturedImage(null); // Clear any previously captured image
       } catch (err) {
         console.error("Error accessing camera:", err);
         setHasCameraPermission(false);
@@ -145,37 +147,39 @@ export default function PatientRegistrationPage() {
     }
   };
 
+
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current && stream) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
-      const targetWidth = 240;
-      const targetHeight = 308;
+      // Desired passport-like dimensions for the captured image
+      const targetWidth = 240; 
+      const targetHeight = 308; 
       canvas.width = targetWidth;
       canvas.height = targetHeight;
 
       const context = canvas.getContext('2d');
       if (context) {
+        // Calculate cropping settings to achieve the target aspect ratio from the video stream
         const videoAspectRatio = video.videoWidth / video.videoHeight;
         const targetAspectRatio = targetWidth / targetHeight;
-        let sx, sy, sWidth, sHeight;
+        
+        let sx = 0, sy = 0, sWidth = video.videoWidth, sHeight = video.videoHeight;
 
-        if (videoAspectRatio > targetAspectRatio) {
-            sHeight = video.videoHeight;
-            sWidth = sHeight * targetAspectRatio;
+        if (videoAspectRatio > targetAspectRatio) { // Video is wider than target
+            sWidth = video.videoHeight * targetAspectRatio;
             sx = (video.videoWidth - sWidth) / 2;
-            sy = 0;
-        } else {
-            sWidth = video.videoWidth;
-            sHeight = sWidth / targetAspectRatio;
-            sx = 0;
+        } else { // Video is taller than target
+            sHeight = video.videoWidth / targetAspectRatio;
             sy = (video.videoHeight - sHeight) / 2;
         }
+        
         context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
         const dataUrl = canvas.toDataURL('image/png');
         setCapturedImage(dataUrl);
 
+        // Stop camera stream after capturing
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
       }
@@ -184,16 +188,19 @@ export default function PatientRegistrationPage() {
 
   const discardPhoto = () => {
     setCapturedImage(null);
-    if (stream) {
+    if (stream) { // If stream exists, stop it
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
     }
+    // Do not automatically re-enable camera here, let user click "Enable Camera" again if needed
+    // setHasCameraPermission(null); // Optionally reset permission state if you want to re-trigger prompt logic
   };
+
 
   const downloadCSVTemplate = () => {
     const headers = [
       "NationalID", "FullName", "DateOfBirth (YYYY-MM-DD)", "Gender",
-      "PhoneNumber", "EmailAddress", "FullAddress", "District", "Province",
+      "ContactNumber", "EmailAddress", "Address", "District", "Province",
       "HomeHospital", "NextOfKinName", "NextOfKinNumber", "NextOfKinAddress"
     ];
     const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
@@ -217,14 +224,15 @@ export default function PatientRegistrationPage() {
 
   const handleFileUpload = () => {
     if (selectedFile) {
+      // Mock upload processing
       toast({
         title: "File Upload (Mock)",
         description: `${selectedFile.name} would be processed. This is a mock action.`,
       });
+      // Reset file input
       setSelectedFile(null);
       const fileInput = document.getElementById('bulkPatientFile') as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
-
+      if (fileInput) fileInput.value = ""; // Clear the file input
     } else {
       toast({
         variant: "destructive",
@@ -234,17 +242,90 @@ export default function PatientRegistrationPage() {
     }
   };
 
-  const onSubmit: SubmitHandler<PatientFormValues> = (data) => {
-    const submissionData = { ...data, photo: capturedImage };
-    console.log("Submitting:", submissionData);
-    toast({ title: "Patient Registered (Mock)", description: `${data.fullName} details saved.` });
-    form.reset();
-    setCapturedImage(null);
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        setStream(null);
+  const onSubmit: SubmitHandler<PatientFormValues> = async (data) => {
+    setIsSubmitting(true);
+
+    // Photo is mandatory for this form if no image is captured yet.
+    // This check happens before API call.
+    if (!capturedImage) {
+      toast({
+        variant: "destructive",
+        title: "Photo Required",
+        description: "Please capture a patient photo for registration via this form.",
+      });
+      setIsSubmitting(false);
+      return;
     }
-    setHasCameraPermission(null);
+
+    const payload = {
+      ...data,
+      dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, "yyyy-MM-dd") : undefined,
+      photoDataUri: capturedImage, // Will be null if no image captured
+    };
+
+    console.log("Submitting to /api/v1/patients:", payload);
+
+    // Mock API Call
+    try {
+      // const response = await fetch('/api/v1/patients', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify(payload),
+      // });
+
+      // Mocking response
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+      const mockSuccess = Math.random() > 0.1; // 90% success rate for mock
+
+      if (mockSuccess) {
+      // if (response.ok) {
+        // const result = await response.json(); // Real response
+        const mockResult = { // Mocked successful response data
+            message: "Patient registered successfully",
+            patient: {
+                id: `BE${Date.now()}`, // Backend generated ID
+                nationalId: data.nationalId,
+                fullName: data.fullName,
+                // Backend would calculate age based on dateOfBirth
+                // For mock, we'll just acknowledge it would be there
+                age: data.dateOfBirth ? new Date().getFullYear() - data.dateOfBirth.getFullYear() : 'N/A', 
+                gender: data.gender,
+                address: data.address,
+                homeClinic: data.homeHospital || 'N/A'
+            }
+        };
+        toast({ 
+            title: "Patient Registered (Mock API)", 
+            description: `${mockResult.patient.fullName} (ID: ${mockResult.patient.nationalId}) registered. Age: ${mockResult.patient.age}, Gender: ${mockResult.patient.gender}. Address: ${mockResult.patient.address}, Home Clinic: ${mockResult.patient.homeClinic}` 
+        });
+        form.reset();
+        setCapturedImage(null);
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+        }
+        setHasCameraPermission(null); // Reset camera permission to allow re-triggering if needed
+      } else {
+        // const errorResult = await response.json(); // Real error response
+        const mockErrorResult = { error: "Failed to register patient (Mock API Error - e.g. National ID already exists)" };
+        toast({
+          variant: "destructive",
+          title: "Registration Failed (Mock API)",
+          description: mockErrorResult.error,
+        });
+      }
+    } catch (error) {
+      console.error("API submission error:", error);
+      toast({
+        variant: "destructive",
+        title: "Submission Error",
+        description: "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
 
@@ -292,20 +373,20 @@ export default function PatientRegistrationPage() {
                     {/* Photo Visual Column */}
                     <div className="lg:col-span-1">
                       <div className="relative w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden border border-dashed border-primary/50">
-                        {!capturedImage && (
+                        {!capturedImage && ( // Show video only if no image is captured
                           <video
                             ref={videoRef}
-                            className="w-full h-full object-cover"
+                            className={cn("w-full h-full object-cover", !stream && "hidden")} // Hide if stream not active
                             autoPlay
                             muted
-                            playsInline
+                            playsInline // Important for iOS
                           />
                         )}
                         {capturedImage ? (
                           <Image src={capturedImage} alt="Captured patient photo" width={240} height={308} className="w-full h-full object-contain rounded-md" data-ai-hint={getAvatarHint(form.watch("gender") as any || "Other")}/>
                         ) : (
                            <>
-                            { !(hasCameraPermission && stream) && (
+                            { !(hasCameraPermission && stream) && ( // Show placeholder if camera not active or no permission
                                 <div className="absolute inset-0 flex items-center justify-center bg-muted">
                                     <UserCircle className="w-24 h-24 text-muted-foreground" />
                                 </div>
@@ -313,8 +394,8 @@ export default function PatientRegistrationPage() {
                            </>
                         )}
                       </div>
-                      <canvas ref={canvasRef} className="hidden"></canvas>
-                      {hasCameraPermission === false && !stream && (
+                      <canvas ref={canvasRef} className="hidden"></canvas> {/* Canvas for capturing, always hidden */}
+                       {hasCameraPermission === false && !stream && ( // Show error only if permission explicitly denied AND stream is off
                           <Alert variant="destructive" className="w-full mt-2">
                               <AlertTitle>Camera Access Denied</AlertTitle>
                               <AlertDescription>
@@ -347,7 +428,6 @@ export default function PatientRegistrationPage() {
                           <Controller
                             control={form.control}
                             name="dateOfBirth"
-                            rules={{ required: "Date of birth is required."}}
                             render={({ field }) => (
                               <Popover>
                                 <PopoverTrigger asChild>
@@ -392,39 +472,36 @@ export default function PatientRegistrationPage() {
                           {form.formState.errors.gender && <p className="text-xs text-destructive">{form.formState.errors.gender.message}</p>}
                         </div>
                       </div>
+                        {/* Photo Capture Controls - Moved here */}
+                        <div className="pt-2">
+                            <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
+                            <Camera className="h-5 w-5" /> Patient Photo Capture <span className="text-destructive">*</span>
+                            </h3>
+                            <p className="text-sm text-muted-foreground">Capture a clear photo. Aim for a passport-style image. Photo is mandatory for this form.</p>
+                            <div className="flex gap-2 mt-2">
+                            {!stream && !capturedImage && (
+                                <Button type="button" onClick={enableCamera} variant="outline">
+                                <Camera className="mr-2 h-4 w-4" /> Enable Camera
+                                </Button>
+                            )}
+                            {stream && hasCameraPermission && !capturedImage && (
+                                <Button type="button" onClick={capturePhoto}>
+                                <Camera className="mr-2 h-4 w-4" /> Capture Photo
+                                </Button>
+                            )}
+                            {capturedImage && (
+                                <Button type="button" onClick={discardPhoto} variant="destructive" className="flex items-center">
+                                <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
+                                </Button>
+                            )}
+                            </div>
+                            {hasCameraPermission === null && !stream && !capturedImage &&(
+                            <p className="text-xs text-muted-foreground mt-1">Click "Enable Camera" to start.</p>
+                            )}
+                        </div>
                     </div>
                   </div>
 
-                  {/* Photo Capture Controls (Below Personal Info on the right) */}
-                  <div className="grid lg:grid-cols-3 gap-x-6">
-                    <div className="lg:col-span-1"></div> {/* Empty cell for visual alignment */}
-                    <div className="lg:col-span-2 space-y-4 pt-2">
-                        <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
-                        <Camera className="h-5 w-5" /> Patient Photo Capture
-                        </h3>
-                        <p className="text-sm text-muted-foreground">Capture a clear photo. Aim for a passport-style image.</p>
-                        <div className="flex gap-2">
-                        {!stream && !capturedImage && (
-                            <Button type="button" onClick={enableCamera} variant="outline">
-                            <Camera className="mr-2 h-4 w-4" /> Enable Camera
-                            </Button>
-                        )}
-                        {stream && hasCameraPermission && !capturedImage && (
-                            <Button type="button" onClick={capturePhoto}>
-                            <Camera className="mr-2 h-4 w-4" /> Capture Photo
-                            </Button>
-                        )}
-                        {capturedImage && (
-                            <Button type="button" onClick={discardPhoto} variant="destructive" className="flex items-center">
-                            <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
-                            </Button>
-                        )}
-                        </div>
-                        {hasCameraPermission === null && !stream && !capturedImage &&(
-                        <p className="text-xs text-muted-foreground">Click "Enable Camera" to start.</p>
-                        )}
-                    </div>
-                  </div>
 
                   {/* Remaining Form Sections (Below the Top Row) */}
                   <div className="space-y-6 pt-4">
@@ -470,21 +547,21 @@ export default function PatientRegistrationPage() {
                     </div>
 
                     <div className="space-y-4">
-                      <h3 className="text-md font-semibold border-b pb-1">Next of Kin</h3>
+                      <h3 className="text-md font-semibold border-b pb-1">Next of Kin (Optional)</h3>
                       <div className="grid md:grid-cols-2 gap-4">
                          <div className="space-y-2">
-                          <Label htmlFor="nextOfKinName">Full Name <span className="text-destructive">*</span></Label>
+                          <Label htmlFor="nextOfKinName">Full Name</Label>
                           <Input id="nextOfKinName" placeholder="e.g., Jane Doe (Spouse)" {...form.register("nextOfKinName")}/>
                            {form.formState.errors.nextOfKinName && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinName.message}</p>}
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="nextOfKinNumber">Contact Number <span className="text-destructive">*</span></Label>
+                          <Label htmlFor="nextOfKinNumber">Contact Number</Label>
                           <Input id="nextOfKinNumber" type="tel" placeholder="e.g., (555) 987-6543" {...form.register("nextOfKinNumber")}/>
                           {form.formState.errors.nextOfKinNumber && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinNumber.message}</p>}
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="nextOfKinAddress">Address <span className="text-destructive">*</span></Label>
+                        <Label htmlFor="nextOfKinAddress">Address</Label>
                         <Textarea id="nextOfKinAddress" placeholder="e.g., 456 Oak Ln, Anytown" {...form.register("nextOfKinAddress")}/>
                          {form.formState.errors.nextOfKinAddress && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinAddress.message}</p>}
                       </div>
@@ -495,7 +572,7 @@ export default function PatientRegistrationPage() {
                           <UploadCloud className="h-6 w-6" /> Bulk Patient Registration
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        Upload an Excel or CSV file to register multiple patients at once. Download the template for the correct format.
+                        Upload an Excel or CSV file to register multiple patients at once. Download the template for the correct format. Photos must be added individually post-registration.
                       </p>
                       <Button type="button" onClick={downloadCSVTemplate} variant="outline" className="w-full md:w-auto">
                         <Download className="mr-2 h-4 w-4" /> Download CSV Template
@@ -513,15 +590,14 @@ export default function PatientRegistrationPage() {
                       <Button type="button" onClick={handleFileUpload} className="w-full md:w-auto" disabled={!selectedFile}>
                         <UploadCloud className="mr-2 h-4 w-4" /> Upload and Process File
                       </Button>
-                      <p className="text-xs text-muted-foreground">
-                        Note: Photos cannot be uploaded in bulk. They must be added individually after registration.
-                      </p>
                     </div>
                   </div>
                 </div>
               </CardContent>
               <CardFooter className="border-t px-6 py-4">
-                <Button type="submit">Register Patient</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Submitting..." : "Register Patient"}
+                </Button>
               </CardFooter>
             </form>
           </Card>
@@ -597,3 +673,5 @@ export default function PatientRegistrationPage() {
     </AppShell>
   );
 }
+
+    
