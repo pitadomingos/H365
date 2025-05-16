@@ -209,6 +209,8 @@ export default function TechnicalOverviewPage() {
               {renderListItem('techOverview.section5.itemUserRoles', 'techOverview.section5.itemUserRoles.desc')}
               {renderListItem('techOverview.section5.itemOffline', 'techOverview.section5.itemOffline.desc')}
               {renderListItem('techOverview.section5.itemI18nFull', 'techOverview.section5.itemI18nFull.desc')}
+              {renderListItem('techOverview.section5.itemPatientPortal', 'techOverview.section5.itemPatientPortal.desc')}
+              {renderListItem('techOverview.section5.itemMedicationAdherence', 'techOverview.section5.itemMedicationAdherence.desc')}
             </ul>
           </CardContent>
         </Card>
