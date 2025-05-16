@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, ListChecks, UserPlus, CalendarIcon, Camera, UserCircle, Trash2, ArrowRightCircle, MapPin, Activity, UploadCloud, Download, Info } from "lucide-react";
+import { Users, ListChecks, UserPlus, CalendarIcon, Camera, UserCircle, Trash2, ArrowRightCircle, MapPin, Activity, UploadCloud, Download, Info, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -80,19 +80,38 @@ export default function PatientRegistrationPage() {
   const hospitalName = "HealthFlow Central Hospital";
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false); // New state for bulk upload
 
+  const [waitingList, setWaitingList] = useState<WaitingListItem[]>([]);
+  const [isWaitingListLoading, setIsWaitingListLoading] = useState(true);
 
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
+    
+    // Simulate fetching waiting list data
+    setIsWaitingListLoading(true);
+    setTimeout(() => {
+      const initialWaitingList: WaitingListItem[] = [
+        { id: 1, name: "Alice Wonderland", gender: "Female", time: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
+        { id: 2, name: "Bob The Builder", gender: "Male", time: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
+        { id: 3, name: "Charlie Brown", gender: "Male", time: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
+        { id: 4, name: "Diana Prince", gender: "Female", time: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
+        { id: 5, name: "Edward Scissorhands", gender: "Male", time: "11:30 AM", location: "Specialized Dentist", status: "Procedure Complete", photoUrl: "https://placehold.co/40x40.png" },
+        { id: 6, name: "Fiona Gallagher", gender: "Female", time: "11:45 AM", location: "Outpatient", status: "Dispatched to Homecare", photoUrl: "https://placehold.co/40x40.png" },
+      ];
+      setWaitingList(initialWaitingList);
+      setIsWaitingListLoading(false);
+    }, 1500); // Simulate 1.5 second fetch
+
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [stream]);
+  }, [stream]); // stream dependency to handle cleanup
 
   const enableCamera = async () => {
-    if (hasCameraPermission === false) { // Reset if previously denied to allow re-prompt
+    if (hasCameraPermission === false) {
       setHasCameraPermission(null);
       setStream(null); 
     }
@@ -104,7 +123,7 @@ export default function PatientRegistrationPage() {
 
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
-          videoRef.current.onloadedmetadata = () => { // Wait for metadata to ensure video dimensions are available
+          videoRef.current.onloadedmetadata = () => {
             videoRef.current?.play().catch(err => {
               console.error("Error playing video:", err);
               toast({
@@ -121,13 +140,13 @@ export default function PatientRegistrationPage() {
                 title: "Camera Error",
                 description: "Camera preview element not ready. Please try again.",
             });
-            mediaStream.getTracks().forEach(track => track.stop()); // Stop stream if ref is not ready
-            setStream(null); // Clear stream state
-            setHasCameraPermission(false); // Set permission to false explicitly
+            mediaStream.getTracks().forEach(track => track.stop());
+            setStream(null);
+            setHasCameraPermission(false);
             return;
         }
         setHasCameraPermission(true);
-        setCapturedImage(null); // Clear any previously captured image
+        setCapturedImage(null);
       } catch (err) {
         console.error("Error accessing camera:", err);
         setHasCameraPermission(false);
@@ -152,8 +171,6 @@ export default function PatientRegistrationPage() {
     if (videoRef.current && canvasRef.current && stream) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-
-      // Desired passport-like dimensions for the captured image
       const targetWidth = 240; 
       const targetHeight = 308; 
       canvas.width = targetWidth;
@@ -161,16 +178,15 @@ export default function PatientRegistrationPage() {
 
       const context = canvas.getContext('2d');
       if (context) {
-        // Calculate cropping settings to achieve the target aspect ratio from the video stream
         const videoAspectRatio = video.videoWidth / video.videoHeight;
         const targetAspectRatio = targetWidth / targetHeight;
         
         let sx = 0, sy = 0, sWidth = video.videoWidth, sHeight = video.videoHeight;
 
-        if (videoAspectRatio > targetAspectRatio) { // Video is wider than target
+        if (videoAspectRatio > targetAspectRatio) {
             sWidth = video.videoHeight * targetAspectRatio;
             sx = (video.videoWidth - sWidth) / 2;
-        } else { // Video is taller than target
+        } else {
             sHeight = video.videoWidth / targetAspectRatio;
             sy = (video.videoHeight - sHeight) / 2;
         }
@@ -178,8 +194,6 @@ export default function PatientRegistrationPage() {
         context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
         const dataUrl = canvas.toDataURL('image/png');
         setCapturedImage(dataUrl);
-
-        // Stop camera stream after capturing
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
       }
@@ -188,12 +202,10 @@ export default function PatientRegistrationPage() {
 
   const discardPhoto = () => {
     setCapturedImage(null);
-    if (stream) { // If stream exists, stop it
+    if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
     }
-    // Do not automatically re-enable camera here, let user click "Enable Camera" again if needed
-    // setHasCameraPermission(null); // Optionally reset permission state if you want to re-trigger prompt logic
   };
 
 
@@ -222,9 +234,11 @@ export default function PatientRegistrationPage() {
     }
   };
 
-  const handleFileUpload = () => {
+  const handleFileUpload = async () => {
     if (selectedFile) {
+      setIsUploading(true);
       // Mock upload processing
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
       toast({
         title: "File Upload (Mock)",
         description: `${selectedFile.name} would be processed. This is a mock action.`,
@@ -233,6 +247,7 @@ export default function PatientRegistrationPage() {
       setSelectedFile(null);
       const fileInput = document.getElementById('bulkPatientFile') as HTMLInputElement;
       if (fileInput) fileInput.value = ""; // Clear the file input
+      setIsUploading(false);
     } else {
       toast({
         variant: "destructive",
@@ -245,8 +260,6 @@ export default function PatientRegistrationPage() {
   const onSubmit: SubmitHandler<PatientFormValues> = async (data) => {
     setIsSubmitting(true);
 
-    // Photo is mandatory for this form if no image is captured yet.
-    // This check happens before API call.
     if (!capturedImage) {
       toast({
         variant: "destructive",
@@ -260,36 +273,23 @@ export default function PatientRegistrationPage() {
     const payload = {
       ...data,
       dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, "yyyy-MM-dd") : undefined,
-      photoDataUri: capturedImage, // Will be null if no image captured
+      photoDataUri: capturedImage,
     };
 
     console.log("Submitting to /api/v1/patients:", payload);
 
-    // Mock API Call
     try {
-      // const response = await fetch('/api/v1/patients', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify(payload),
-      // });
-
-      // Mocking response
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-      const mockSuccess = Math.random() > 0.1; // 90% success rate for mock
+      // Simulate API Call
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
+      const mockSuccess = Math.random() > 0.1; 
 
       if (mockSuccess) {
-      // if (response.ok) {
-        // const result = await response.json(); // Real response
-        const mockResult = { // Mocked successful response data
+        const mockResult = { 
             message: "Patient registered successfully",
             patient: {
-                id: `BE${Date.now()}`, // Backend generated ID
+                id: `BE${Date.now()}`, 
                 nationalId: data.nationalId,
                 fullName: data.fullName,
-                // Backend would calculate age based on dateOfBirth
-                // For mock, we'll just acknowledge it would be there
                 age: data.dateOfBirth ? new Date().getFullYear() - data.dateOfBirth.getFullYear() : 'N/A', 
                 gender: data.gender,
                 address: data.address,
@@ -306,9 +306,8 @@ export default function PatientRegistrationPage() {
             stream.getTracks().forEach(track => track.stop());
             setStream(null);
         }
-        setHasCameraPermission(null); // Reset camera permission to allow re-triggering if needed
+        setHasCameraPermission(null); 
       } else {
-        // const errorResult = await response.json(); // Real error response
         const mockErrorResult = { error: "Failed to register patient (Mock API Error - e.g. National ID already exists)" };
         toast({
           variant: "destructive",
@@ -327,16 +326,6 @@ export default function PatientRegistrationPage() {
       setIsSubmitting(false);
     }
   };
-
-
-  const waitingList: WaitingListItem[] = [
-    { id: 1, name: "Alice Wonderland", gender: "Female", time: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
-    { id: 2, name: "Bob The Builder", gender: "Male", time: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
-    { id: 3, name: "Charlie Brown", gender: "Male", time: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
-    { id: 4, name: "Diana Prince", gender: "Female", time: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
-    { id: 5, name: "Edward Scissorhands", gender: "Male", time: "11:30 AM", location: "Specialized Dentist", status: "Procedure Complete", photoUrl: "https://placehold.co/40x40.png" },
-    { id: 6, name: "Fiona Gallagher", gender: "Female", time: "11:45 AM", location: "Outpatient", status: "Dispatched to Homecare", photoUrl: "https://placehold.co/40x40.png" },
-  ];
 
   const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
     if (gender === "Male") return "male avatar";
@@ -368,25 +357,23 @@ export default function PatientRegistrationPage() {
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <CardContent className="py-6">
                 <div className="space-y-8">
-                  {/* Top Row: Photo Visual on Left, Personal Info on Right */}
                   <div className="grid lg:grid-cols-3 gap-x-6 gap-y-4 items-start">
-                    {/* Photo Visual Column */}
                     <div className="lg:col-span-1">
                       <div className="relative w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden border border-dashed border-primary/50">
-                        {!capturedImage && ( // Show video only if no image is captured
+                        {!capturedImage && (
                           <video
                             ref={videoRef}
-                            className={cn("w-full h-full object-cover", !stream && "hidden")} // Hide if stream not active
+                            className={cn("w-full h-full object-cover", !stream && "hidden")}
                             autoPlay
                             muted
-                            playsInline // Important for iOS
+                            playsInline
                           />
                         )}
                         {capturedImage ? (
                           <Image src={capturedImage} alt="Captured patient photo" width={240} height={308} className="w-full h-full object-contain rounded-md" data-ai-hint={getAvatarHint(form.watch("gender") as any || "Other")}/>
                         ) : (
                            <>
-                            { !(hasCameraPermission && stream) && ( // Show placeholder if camera not active or no permission
+                            { !(hasCameraPermission && stream) && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-muted">
                                     <UserCircle className="w-24 h-24 text-muted-foreground" />
                                 </div>
@@ -394,8 +381,8 @@ export default function PatientRegistrationPage() {
                            </>
                         )}
                       </div>
-                      <canvas ref={canvasRef} className="hidden"></canvas> {/* Canvas for capturing, always hidden */}
-                       {hasCameraPermission === false && !stream && ( // Show error only if permission explicitly denied AND stream is off
+                      <canvas ref={canvasRef} className="hidden"></canvas>
+                       {hasCameraPermission === false && !stream && (
                           <Alert variant="destructive" className="w-full mt-2">
                               <AlertTitle>Camera Access Denied</AlertTitle>
                               <AlertDescription>
@@ -406,7 +393,6 @@ export default function PatientRegistrationPage() {
                       )}
                     </div>
 
-                    {/* Personal Info Column */}
                     <div className="lg:col-span-2 space-y-4">
                       <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
                       <div className="grid md:grid-cols-2 gap-4">
@@ -472,7 +458,6 @@ export default function PatientRegistrationPage() {
                           {form.formState.errors.gender && <p className="text-xs text-destructive">{form.formState.errors.gender.message}</p>}
                         </div>
                       </div>
-                        {/* Photo Capture Controls - Moved here */}
                         <div className="pt-2">
                             <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
                             <Camera className="h-5 w-5" /> Patient Photo Capture <span className="text-destructive">*</span>
@@ -502,8 +487,6 @@ export default function PatientRegistrationPage() {
                     </div>
                   </div>
 
-
-                  {/* Remaining Form Sections (Below the Top Row) */}
                   <div className="space-y-6 pt-4">
                     <div className="space-y-4">
                       <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
@@ -584,11 +567,13 @@ export default function PatientRegistrationPage() {
                           type="file"
                           accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
                           onChange={handleFileChange}
+                          disabled={isUploading}
                         />
                         {selectedFile && <p className="text-xs text-muted-foreground">Selected: {selectedFile.name}</p>}
                       </div>
-                      <Button type="button" onClick={handleFileUpload} className="w-full md:w-auto" disabled={!selectedFile}>
-                        <UploadCloud className="mr-2 h-4 w-4" /> Upload and Process File
+                      <Button type="button" onClick={handleFileUpload} className="w-full md:w-auto" disabled={!selectedFile || isUploading}>
+                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+                        {isUploading ? "Uploading..." : "Upload and Process File"}
                       </Button>
                     </div>
                   </div>
@@ -596,7 +581,8 @@ export default function PatientRegistrationPage() {
               </CardContent>
               <CardFooter className="border-t px-6 py-4">
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Submitting..." : "Register Patient"}
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {isSubmitting ? "Registering..." : "Register Patient"}
                 </Button>
               </CardFooter>
             </form>
@@ -614,7 +600,12 @@ export default function PatientRegistrationPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {waitingList.length > 0 ? (
+                {isWaitingListLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="ml-2 text-muted-foreground">Loading waiting list...</p>
+                  </div>
+                ) : waitingList.length > 0 ? (
                   <ul className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                     {waitingList.map((patient) => (
                       <li key={patient.id} className="p-3 border rounded-md shadow-sm bg-background hover:bg-muted/50 flex items-start gap-3">
@@ -649,7 +640,10 @@ export default function PatientRegistrationPage() {
                     <p>No patients currently in the waiting list.</p>
                   </div>
                 )}
-                 <Button type="button" variant="outline" className="w-full mt-6">Refresh List</Button>
+                 <Button type="button" variant="outline" className="w-full mt-6" disabled={isWaitingListLoading}>
+                    {isWaitingListLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                    Refresh List
+                 </Button>
               </CardContent>
             </Card>
 
@@ -673,5 +667,6 @@ export default function PatientRegistrationPage() {
     </AppShell>
   );
 }
+    
 
     
