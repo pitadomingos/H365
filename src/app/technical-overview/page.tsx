@@ -1,149 +1,169 @@
 
+"use client"; // Required for state and interactions
+
+import React, { useState } from 'react';
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { getTranslator, type Locale } from '@/lib/i18n';
 
 export default function TechnicalOverviewPage() {
+  const [currentLocale, setCurrentLocale] = useState<Locale>('en');
+  const t = getTranslator(currentLocale);
+
   return (
     <AppShell>
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Info className="h-8 w-8" /> H365 Technical Overview
+            <Info className="h-8 w-8" /> {t('techOverview.pageTitle')}
           </h1>
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="language-toggle" className={currentLocale === 'en' ? 'font-semibold text-primary' : 'text-muted-foreground'}>
+              {t('techOverview.langToggle.en')}
+            </Label>
+            <Switch
+              id="language-toggle"
+              checked={currentLocale === 'pt'}
+              onCheckedChange={(checked) => setCurrentLocale(checked ? 'pt' : 'en')}
+              aria-label="Toggle language between English and Portuguese"
+            />
+            <Label htmlFor="language-toggle" className={currentLocale === 'pt' ? 'font-semibold text-primary' : 'text-muted-foreground'}>
+              {t('techOverview.langToggle.pt')}
+            </Label>
+          </div>
         </div>
 
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl">1. Introduction</CardTitle>
+            <CardTitle className="text-xl">{t('techOverview.section1.title')}</CardTitle>
           </CardHeader>
           <CardContent className="prose prose-sm dark:prose-invert max-w-none">
             <p>
-              H365 is a modern, web-based hospital management system designed to streamline clinical workflows,
-              improve patient care coordination, and provide robust data management capabilities for healthcare facilities.
-              Built with a focus on user experience and scalability, H365 aims to support healthcare professionals
-              in delivering efficient and effective patient care.
+              {t('techOverview.section1.content')}
             </p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl">2. Technology Stack</CardTitle>
+            <CardTitle className="text-xl">{t('techOverview.section2.title')}</CardTitle>
           </CardHeader>
           <CardContent className="prose prose-sm dark:prose-invert max-w-none">
             <ul>
-              <li><strong>Frontend</strong>: Next.js (App Router), React, TypeScript</li>
-              <li><strong>UI Components</strong>: ShadCN UI</li>
-              <li><strong>Styling</strong>: Tailwind CSS</li>
-              <li><strong>Artificial Intelligence (AI) Integration</strong>: Genkit (utilizing Google AI models)</li>
-              <li><strong>State Management</strong>: Primarily React Context and component-level state.</li>
-              <li><strong>Deployment</strong>: (To be determined, typically Vercel, Firebase Hosting, or similar)</li>
+              <li>{t('techOverview.section2.itemFrontend')}</li>
+              <li>{t('techOverview.section2.itemUI')}</li>
+              <li>{t('techOverview.section2.itemStyling')}</li>
+              <li>{t('techOverview.section2.itemAI')}</li>
+              <li>{t('techOverview.section2.itemState')}</li>
+              <li>{t('techOverview.section2.itemDeployment')}</li>
             </ul>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl">3. Core Modules and Key Features</CardTitle>
+            <CardTitle className="text-xl">{t('techOverview.section3.title')}</CardTitle>
           </CardHeader>
           <CardContent className="prose prose-sm dark:prose-invert max-w-none space-y-4">
             <section>
-              <h4 className="font-semibold">3.1. Dashboard</h4>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionDashboard.title')}</h4>
               <ul>
-                <li><strong>Overview</strong>: Centralized hub for key hospital metrics.</li>
-                <li><strong>Summary Cards</strong>: Today's Appointments, Ward Occupancy, ER Status, New Patients, etc.</li>
-                <li><strong>Quick Actions</strong>: Links to common tasks.</li>
-                <li><strong>Visual Analytics</strong>: Patient Entry Points (Pie Chart), Daily Patient Attendance (Bar Chart).</li>
+                <li>{t('techOverview.section3.subsectionDashboard.itemOverview')}</li>
+                <li>{t('techOverview.section3.subsectionDashboard.itemSummaryCards')}</li>
+                <li>{t('techOverview.section3.subsectionDashboard.itemQuickActions')}</li>
+                <li>{t('techOverview.section3.subsectionDashboard.itemVisualAnalytics')}</li>
               </ul>
             </section>
             <section>
-              <h4 className="font-semibold">3.2. Patient Registration</h4>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionPatientReg.title')}</h4>
               <ul>
-                <li><strong>Individual & Bulk Registration</strong>: Comprehensive data entry and CSV upload.</li>
-                <li><strong>Photo Capture</strong>: Integrated webcam functionality.</li>
-              </ul>
-            </section>
-            <section>
-              <h4 className="font-semibold">3.3. Visiting Patients (Consultation Intake)</h4>
-              <ul>
-                <li><strong>Patient Search & Quick Registration Modal</strong>.</li>
-                <li><strong>Visit Entry & Waiting List Integration</strong>.</li>
-              </ul>
-            </section>
-            <section>
-              <h4 className="font-semibold">3.4. Appointments</h4>
-              <ul>
-                <li><strong>Scheduling, List View, Calendar View</strong>.</li>
-                <li><strong>Notifications & Reminders</strong> (mocked).</li>
-              </ul>
-            </section>
-            <section>
-              <h4 className="font-semibold">3.5. Consultation Room (General & AI-Assisted)</h4>
-              <ul>
-                <li><strong>Three-panel layout</strong> with Waiting List, main form, and Patient Summary/History.</li>
-                <li><strong>Vitals, Symptoms, AI-Powered Decision Support</strong> (Diagnosis, Prescription, Recommendations).</li>
-                <li><strong>Diagnostic Orders</strong> (mocked).</li>
-              </ul>
-            </section>
-            <section>
-              <h4 className="font-semibold">3.6. Specializations</h4>
-              <ul>
-                <li>Similar to Consultation Room, tailored for specialists with referral context.</li>
+                <li>{t('techOverview.section3.subsectionPatientReg.itemIndividualBulk')}</li>
+                <li>{t('techOverview.section3.subsectionPatientReg.itemPhotoCapture')}</li>
               </ul>
             </section>
              <section>
-              <h4 className="font-semibold">3.7. Maternity Care</h4>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionVisitingPatients.title')}</h4>
               <ul>
-                <li>Patient search, overview, antenatal visit log, lab/imaging orders.</li>
+                <li>{t('techOverview.section3.subsectionVisitingPatients.itemSearchModal')}</li>
+                <li>{t('techOverview.section3.subsectionVisitingPatients.itemVisitEntry')}</li>
               </ul>
             </section>
             <section>
-              <h4 className="font-semibold">3.8. Ward Management</h4>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionAppointments.title')}</h4>
               <ul>
-                <li>Occupancy overview, admissions, bed assignment, in-patient care details.</li>
+                <li>{t('techOverview.section3.subsectionAppointments.itemSchedulingListCalendar')}</li>
+                <li>{t('techOverview.section3.subsectionAppointments.itemNotifications')}</li>
               </ul>
             </section>
             <section>
-              <h4 className="font-semibold">3.9. Laboratory Management</h4>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionConsultation.title')}</h4>
               <ul>
-                <li>Request processing, results entry, reagent inventory.</li>
+                <li>{t('techOverview.section3.subsectionConsultation.itemLayout')}</li>
+                <li>{t('techOverview.section3.subsectionConsultation.itemVitalsSymptomsAI')}</li>
+                <li>{t('techOverview.section3.subsectionConsultation.itemOrders')}</li>
+              </ul>
+            </section>
+             <section>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionSpecializations.title')}</h4>
+              <ul>
+                <li>{t('techOverview.section3.subsectionSpecializations.itemTailoredConsult')}</li>
+              </ul>
+            </section>
+             <section>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionMaternity.title')}</h4>
+              <ul>
+                <li>{t('techOverview.section3.subsectionMaternity.itemFeatures')}</li>
               </ul>
             </section>
             <section>
-              <h4 className="font-semibold">3.10. Imaging & Radiology Management</h4>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionWard.title')}</h4>
               <ul>
-                <li>Request processing, report entry, equipment status.</li>
+                <li>{t('techOverview.section3.subsectionWard.itemFeatures')}</li>
               </ul>
             </section>
             <section>
-              <h4 className="font-semibold">3.11. Drug Dispensing Pharmacy</h4>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionLab.title')}</h4>
               <ul>
-                <li>Prescription processing, stock levels, daily reports.</li>
+                <li>{t('techOverview.section3.subsectionLab.itemFeatures')}</li>
               </ul>
             </section>
             <section>
-              <h4 className="font-semibold">3.12. Emergency Room (Placeholder)</h4>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionImaging.title')}</h4>
               <ul>
-                <li>Planned features: ER Dashboard, triage, tracking, alerts.</li>
+                <li>{t('techOverview.section3.subsectionImaging.itemFeatures')}</li>
               </ul>
             </section>
             <section>
-              <h4 className="font-semibold">3.13. Epidemic Control & Management (Placeholder)</h4>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionPharmacy.title')}</h4>
               <ul>
-                <li>Planned features: Outbreak monitoring, case management, contact tracing.</li>
+                <li>{t('techOverview.section3.subsectionPharmacy.itemFeatures')}</li>
               </ul>
             </section>
             <section>
-              <h4 className="font-semibold">3.14. Campaigns (Placeholder)</h4>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionER.title')}</h4>
               <ul>
-                <li>Planned features: Management of health campaigns (e.g., vaccination, awareness), resource tracking, and outcome reporting.</li>
+                <li>{t('techOverview.section3.subsectionER.itemFeatures')}</li>
               </ul>
             </section>
             <section>
-              <h4 className="font-semibold">3.15. Reporting (Placeholder)</h4>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionEpidemic.title')}</h4>
               <ul>
-                <li>Planned features: Comprehensive reporting module for all hospital activities, supporting various timeframes (daily, weekly, monthly, quarterly, yearly) and levels (local, district, provincial, national).</li>
+                <li>{t('techOverview.section3.subsectionEpidemic.itemFeatures')}</li>
+              </ul>
+            </section>
+            <section>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionCampaigns.title')}</h4>
+              <ul>
+                <li>{t('techOverview.section3.subsectionCampaigns.itemFeatures')}</li>
+              </ul>
+            </section>
+            <section>
+              <h4 className="font-semibold">{t('techOverview.section3.subsectionReporting.title')}</h4>
+              <ul>
+                <li>{t('techOverview.section3.subsectionReporting.itemFeatures')}</li>
               </ul>
             </section>
           </CardContent>
@@ -151,37 +171,37 @@ export default function TechnicalOverviewPage() {
 
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl">4. UI/UX Style Guidelines</CardTitle>
+            <CardTitle className="text-xl">{t('techOverview.section4.title')}</CardTitle>
           </CardHeader>
           <CardContent className="prose prose-sm dark:prose-invert max-w-none">
             <ul>
-              <li><strong>Primary Color</strong>: Light blue (#ADD8E6).</li>
-              <li><strong>Secondary Colors</strong>: White and light grey.</li>
-              <li><strong>Accent Color</strong>: Teal (#008080).</li>
-              <li><strong>Typography</strong>: Clear, readable font (Geist Sans).</li>
-              <li><strong>Layout</strong>: Clean, organized, responsive.</li>
-              <li><strong>Theme</strong>: Supports Dark, Light, and System modes.</li>
-              <li><strong>Icons</strong>: <code>lucide-react</code>.</li>
+              <li>{t('techOverview.section4.itemPrimaryColor')}</li>
+              <li>{t('techOverview.section4.itemSecondaryColors')}</li>
+              <li>{t('techOverview.section4.itemAccentColor')}</li>
+              <li>{t('techOverview.section4.itemTypography')}</li>
+              <li>{t('techOverview.section4.itemLayout')}</li>
+              <li>{t('techOverview.section4.itemTheme')}</li>
+              <li>{t('techOverview.section4.itemIcons')}</li>
             </ul>
           </CardContent>
         </Card>
         
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="text-xl">5. Future Considerations (Beyond Prototype)</CardTitle>
+            <CardTitle className="text-xl">{t('techOverview.section5.title')}</CardTitle>
           </CardHeader>
           <CardContent className="prose prose-sm dark:prose-invert max-w-none">
             <ul>
-              <li>Backend Development (Database, APIs, Auth).</li>
-              <li>Real-time Data Synchronization.</li>
-              <li>HL7/FHIR Integration.</li>
-              <li><strong>Direct Medical Instrument Integration</strong>: Ability to automatically read and import data from electronic hospital instruments (e.g., vital signs monitors for body temperature, blood pressure; laboratory analyzers for results; imaging equipment for DICOM data).</li>
-              <li>Advanced Reporting & Analytics (development of the Reporting module).</li>
-              <li>Health Campaign Management (development of the Campaigns module).</li>
-              <li>Security & Compliance.</li>
-              <li>User Roles & Permissions.</li>
-              <li>Offline Capabilities.</li>
-              <li>Full Internationalization (i18n).</li>
+              <li>{t('techOverview.section5.itemBackend')}</li>
+              <li>{t('techOverview.section5.itemRealtime')}</li>
+              <li>{t('techOverview.section5.itemHL7FHIR')}</li>
+              <li>{t('techOverview.section5.itemInstrumentIntegration')}</li>
+              <li>{t('techOverview.section5.itemAdvancedReporting')}</li>
+              <li>{t('techOverview.section5.itemCampaignManagement')}</li>
+              <li>{t('techOverview.section5.itemSecurityCompliance')}</li>
+              <li>{t('techOverview.section5.itemUserRoles')}</li>
+              <li>{t('techOverview.section5.itemOffline')}</li>
+              <li>{t('techOverview.section5.itemI18nFull')}</li>
             </ul>
           </CardContent>
         </Card>
@@ -190,3 +210,5 @@ export default function TechnicalOverviewPage() {
     </AppShell>
   );
 }
+
+    
