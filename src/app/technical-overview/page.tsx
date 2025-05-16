@@ -13,6 +13,13 @@ export default function TechnicalOverviewPage() {
   const [currentLocale, setCurrentLocale] = useState<Locale>('en');
   const t = getTranslator(currentLocale);
 
+  const renderListItem = (titleKey: string, descKey: string) => (
+    <li className="mb-2">
+      <strong className="text-primary/90">{t(titleKey)}:</strong>
+      <p className="text-sm text-muted-foreground mt-0.5 ml-1">{t(descKey)}</p>
+    </li>
+  );
+
   return (
     <AppShell>
       <div className="flex flex-col gap-6">
@@ -52,13 +59,13 @@ export default function TechnicalOverviewPage() {
             <CardTitle className="text-xl">{t('techOverview.section2.title')}</CardTitle>
           </CardHeader>
           <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-            <ul>
-              <li>{t('techOverview.section2.itemFrontend')}</li>
-              <li>{t('techOverview.section2.itemUI')}</li>
-              <li>{t('techOverview.section2.itemStyling')}</li>
-              <li>{t('techOverview.section2.itemAI')}</li>
-              <li>{t('techOverview.section2.itemState')}</li>
-              <li>{t('techOverview.section2.itemDeployment')}</li>
+            <ul className="list-none p-0">
+              {renderListItem('techOverview.section2.itemFrontend', 'techOverview.section2.itemFrontend.desc')}
+              {renderListItem('techOverview.section2.itemUI', 'techOverview.section2.itemUI.desc')}
+              {renderListItem('techOverview.section2.itemStyling', 'techOverview.section2.itemStyling.desc')}
+              {renderListItem('techOverview.section2.itemAI', 'techOverview.section2.itemAI.desc')}
+              {renderListItem('techOverview.section2.itemState', 'techOverview.section2.itemState.desc')}
+              {renderListItem('techOverview.section2.itemDeployment', 'techOverview.section2.itemDeployment.desc')}
             </ul>
           </CardContent>
         </Card>
@@ -70,100 +77,100 @@ export default function TechnicalOverviewPage() {
           <CardContent className="prose prose-sm dark:prose-invert max-w-none space-y-4">
             <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionDashboard.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionDashboard.itemOverview')}</li>
-                <li>{t('techOverview.section3.subsectionDashboard.itemSummaryCards')}</li>
-                <li>{t('techOverview.section3.subsectionDashboard.itemQuickActions')}</li>
-                <li>{t('techOverview.section3.subsectionDashboard.itemVisualAnalytics')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionDashboard.itemOverview', 'techOverview.section3.subsectionDashboard.itemOverview.desc')}
+                {renderListItem('techOverview.section3.subsectionDashboard.itemSummaryCards', 'techOverview.section3.subsectionDashboard.itemSummaryCards.desc')}
+                {renderListItem('techOverview.section3.subsectionDashboard.itemQuickActions', 'techOverview.section3.subsectionDashboard.itemQuickActions.desc')}
+                {renderListItem('techOverview.section3.subsectionDashboard.itemVisualAnalytics', 'techOverview.section3.subsectionDashboard.itemVisualAnalytics.desc')}
               </ul>
             </section>
             <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionPatientReg.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionPatientReg.itemIndividualBulk')}</li>
-                <li>{t('techOverview.section3.subsectionPatientReg.itemPhotoCapture')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionPatientReg.itemIndividualBulk', 'techOverview.section3.subsectionPatientReg.itemIndividualBulk.desc')}
+                {renderListItem('techOverview.section3.subsectionPatientReg.itemPhotoCapture', 'techOverview.section3.subsectionPatientReg.itemPhotoCapture.desc')}
               </ul>
             </section>
              <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionVisitingPatients.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionVisitingPatients.itemSearchModal')}</li>
-                <li>{t('techOverview.section3.subsectionVisitingPatients.itemVisitEntry')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionVisitingPatients.itemSearchModal', 'techOverview.section3.subsectionVisitingPatients.itemSearchModal.desc')}
+                {renderListItem('techOverview.section3.subsectionVisitingPatients.itemVisitEntry', 'techOverview.section3.subsectionVisitingPatients.itemVisitEntry.desc')}
               </ul>
             </section>
             <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionAppointments.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionAppointments.itemSchedulingListCalendar')}</li>
-                <li>{t('techOverview.section3.subsectionAppointments.itemNotifications')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionAppointments.itemSchedulingListCalendar', 'techOverview.section3.subsectionAppointments.itemSchedulingListCalendar.desc')}
+                {renderListItem('techOverview.section3.subsectionAppointments.itemNotifications', 'techOverview.section3.subsectionAppointments.itemNotifications.desc')}
               </ul>
             </section>
             <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionConsultation.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionConsultation.itemLayout')}</li>
-                <li>{t('techOverview.section3.subsectionConsultation.itemVitalsSymptomsAI')}</li>
-                <li>{t('techOverview.section3.subsectionConsultation.itemOrders')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionConsultation.itemLayout', 'techOverview.section3.subsectionConsultation.itemLayout.desc')}
+                {renderListItem('techOverview.section3.subsectionConsultation.itemVitalsSymptomsAI', 'techOverview.section3.subsectionConsultation.itemVitalsSymptomsAI.desc')}
+                {renderListItem('techOverview.section3.subsectionConsultation.itemOrders', 'techOverview.section3.subsectionConsultation.itemOrders.desc')}
               </ul>
             </section>
              <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionSpecializations.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionSpecializations.itemTailoredConsult')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionSpecializations.itemTailoredConsult', 'techOverview.section3.subsectionSpecializations.itemTailoredConsult.desc')}
               </ul>
             </section>
              <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionMaternity.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionMaternity.itemFeatures')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionMaternity.itemFeatures', 'techOverview.section3.subsectionMaternity.itemFeatures.desc')}
               </ul>
             </section>
             <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionWard.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionWard.itemFeatures')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionWard.itemFeatures', 'techOverview.section3.subsectionWard.itemFeatures.desc')}
               </ul>
             </section>
             <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionLab.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionLab.itemFeatures')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionLab.itemFeatures', 'techOverview.section3.subsectionLab.itemFeatures.desc')}
               </ul>
             </section>
             <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionImaging.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionImaging.itemFeatures')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionImaging.itemFeatures', 'techOverview.section3.subsectionImaging.itemFeatures.desc')}
               </ul>
             </section>
             <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionPharmacy.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionPharmacy.itemFeatures')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionPharmacy.itemFeatures', 'techOverview.section3.subsectionPharmacy.itemFeatures.desc')}
               </ul>
             </section>
             <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionER.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionER.itemFeatures')}</li>
+              <ul className="list-none p-0">
+                 {renderListItem('techOverview.section3.subsectionER.itemFeatures', 'techOverview.section3.subsectionER.itemFeatures.desc')}
               </ul>
             </section>
             <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionEpidemic.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionEpidemic.itemFeatures')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionEpidemic.itemFeatures', 'techOverview.section3.subsectionEpidemic.itemFeatures.desc')}
               </ul>
             </section>
             <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionCampaigns.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionCampaigns.itemFeatures')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionCampaigns.itemFeatures', 'techOverview.section3.subsectionCampaigns.itemFeatures.desc')}
               </ul>
             </section>
             <section>
               <h4 className="font-semibold">{t('techOverview.section3.subsectionReporting.title')}</h4>
-              <ul>
-                <li>{t('techOverview.section3.subsectionReporting.itemFeatures')}</li>
+              <ul className="list-none p-0">
+                {renderListItem('techOverview.section3.subsectionReporting.itemFeatures', 'techOverview.section3.subsectionReporting.itemFeatures.desc')}
               </ul>
             </section>
           </CardContent>
@@ -174,14 +181,14 @@ export default function TechnicalOverviewPage() {
             <CardTitle className="text-xl">{t('techOverview.section4.title')}</CardTitle>
           </CardHeader>
           <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-            <ul>
-              <li>{t('techOverview.section4.itemPrimaryColor')}</li>
-              <li>{t('techOverview.section4.itemSecondaryColors')}</li>
-              <li>{t('techOverview.section4.itemAccentColor')}</li>
-              <li>{t('techOverview.section4.itemTypography')}</li>
-              <li>{t('techOverview.section4.itemLayout')}</li>
-              <li>{t('techOverview.section4.itemTheme')}</li>
-              <li>{t('techOverview.section4.itemIcons')}</li>
+            <ul className="list-none p-0">
+              {renderListItem('techOverview.section4.itemPrimaryColor', 'techOverview.section4.itemPrimaryColor.desc')}
+              {renderListItem('techOverview.section4.itemSecondaryColors', 'techOverview.section4.itemSecondaryColors.desc')}
+              {renderListItem('techOverview.section4.itemAccentColor', 'techOverview.section4.itemAccentColor.desc')}
+              {renderListItem('techOverview.section4.itemTypography', 'techOverview.section4.itemTypography.desc')}
+              {renderListItem('techOverview.section4.itemLayout', 'techOverview.section4.itemLayout.desc')}
+              {renderListItem('techOverview.section4.itemTheme', 'techOverview.section4.itemTheme.desc')}
+              {renderListItem('techOverview.section4.itemIcons', 'techOverview.section4.itemIcons.desc')}
             </ul>
           </CardContent>
         </Card>
@@ -191,17 +198,17 @@ export default function TechnicalOverviewPage() {
             <CardTitle className="text-xl">{t('techOverview.section5.title')}</CardTitle>
           </CardHeader>
           <CardContent className="prose prose-sm dark:prose-invert max-w-none">
-            <ul>
-              <li>{t('techOverview.section5.itemBackend')}</li>
-              <li>{t('techOverview.section5.itemRealtime')}</li>
-              <li>{t('techOverview.section5.itemHL7FHIR')}</li>
-              <li>{t('techOverview.section5.itemInstrumentIntegration')}</li>
-              <li>{t('techOverview.section5.itemAdvancedReporting')}</li>
-              <li>{t('techOverview.section5.itemCampaignManagement')}</li>
-              <li>{t('techOverview.section5.itemSecurityCompliance')}</li>
-              <li>{t('techOverview.section5.itemUserRoles')}</li>
-              <li>{t('techOverview.section5.itemOffline')}</li>
-              <li>{t('techOverview.section5.itemI18nFull')}</li>
+            <ul className="list-none p-0">
+              {renderListItem('techOverview.section5.itemBackend', 'techOverview.section5.itemBackend.desc')}
+              {renderListItem('techOverview.section5.itemRealtime', 'techOverview.section5.itemRealtime.desc')}
+              {renderListItem('techOverview.section5.itemHL7FHIR', 'techOverview.section5.itemHL7FHIR.desc')}
+              {renderListItem('techOverview.section5.itemInstrumentIntegration', 'techOverview.section5.itemInstrumentIntegration.desc')}
+              {renderListItem('techOverview.section5.itemAdvancedReporting', 'techOverview.section5.itemAdvancedReporting.desc')}
+              {renderListItem('techOverview.section5.itemCampaignManagement', 'techOverview.section5.itemCampaignManagement.desc')}
+              {renderListItem('techOverview.section5.itemSecurityCompliance', 'techOverview.section5.itemSecurityCompliance.desc')}
+              {renderListItem('techOverview.section5.itemUserRoles', 'techOverview.section5.itemUserRoles.desc')}
+              {renderListItem('techOverview.section5.itemOffline', 'techOverview.section5.itemOffline.desc')}
+              {renderListItem('techOverview.section5.itemI18nFull', 'techOverview.section5.itemI18nFull.desc')}
             </ul>
           </CardContent>
         </Card>
