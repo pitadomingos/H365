@@ -135,13 +135,13 @@ export default function TechnicalOverviewPage() {
               </ul>
             </section>
             <section>
-              <h4 className="font-semibold">3.14. Campaigns (Planned)</h4>
+              <h4 className="font-semibold">3.14. Campaigns (Placeholder)</h4>
               <ul>
                 <li>Planned features: Management of health campaigns (e.g., vaccination, awareness), resource tracking, and outcome reporting.</li>
               </ul>
             </section>
             <section>
-              <h4 className="font-semibold">3.15. Reporting (Planned)</h4>
+              <h4 className="font-semibold">3.15. Reporting (Placeholder)</h4>
               <ul>
                 <li>Planned features: Comprehensive reporting module for all hospital activities, supporting various timeframes (daily, weekly, monthly, quarterly, yearly) and levels (local, district, provincial, national).</li>
               </ul>
@@ -175,6 +175,7 @@ export default function TechnicalOverviewPage() {
               <li>Backend Development (Database, APIs, Auth).</li>
               <li>Real-time Data Synchronization.</li>
               <li>HL7/FHIR Integration.</li>
+              <li><strong>Direct Medical Instrument Integration</strong>: Ability to automatically read and import data from electronic hospital instruments (e.g., vital signs monitors for body temperature, blood pressure; laboratory analyzers for results; imaging equipment for DICOM data).</li>
               <li>Advanced Reporting & Analytics (development of the Reporting module).</li>
               <li>Health Campaign Management (development of the Campaigns module).</li>
               <li>Security & Compliance.</li>
