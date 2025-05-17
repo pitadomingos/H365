@@ -37,6 +37,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { COMMON_ORDERABLE_LAB_TESTS, type OrderableLabTest } from '@/lib/constants';
 
 
 interface AntenatalVisit {
@@ -114,17 +115,6 @@ const mockPatients: MaternityPatient[] = [
   }
 ];
 
-const labTests = [
-  { id: "cbc", label: "Complete Blood Count (CBC)" },
-  { id: "blood_group_rh", label: "Blood Group & Rh Factor" },
-  { id: "urine_re", label: "Urine Routine & Microscopy (Urine R/E)" },
-  { id: "gtt", label: "Glucose Tolerance Test (GTT)" },
-  { id: "hiv", label: "HIV Screening" },
-  { id: "vdrl", label: "VDRL/RPR (Syphilis Test)" },
-  { id: "hbsag", label: "Hepatitis B Surface Antigen (HBsAg)" },
-  { id: "thyroid", label: "Thyroid Function Tests (TSH, T3, T4)" },
-];
-
 // New Visit Form State
 interface NewVisitFormState {
   visitDate?: Date;
@@ -148,6 +138,7 @@ export default function MaternityCarePage() {
     gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: ""
   });
 
+  const [selectedLabTests, setSelectedLabTests] = useState<Record<string, boolean>>({});
   const [isOrderingLabs, setIsOrderingLabs] = useState(false);
   const [isOrderingImaging, setIsOrderingImaging] = useState(false);
   
@@ -182,14 +173,26 @@ export default function MaternityCarePage() {
     setIsLoadingSearch(false);
   };
 
+  const handleLabTestSelection = (testId: string, checked: boolean) => {
+    setSelectedLabTests(prev => ({ ...prev, [testId]: checked }));
+  };
+
   const handleSubmitLabOrder = async () => {
     if (!selectedPatient) return;
     setIsOrderingLabs(true);
+    const orderedTestLabels = COMMON_ORDERABLE_LAB_TESTS
+        .filter(test => selectedLabTests[test.id])
+        .map(test => test.label);
+
     // Simulate API POST to /api/v1/maternity/patients/{patientId}/lab-orders
     await new Promise(resolve => setTimeout(resolve, 1500));
-    toast({title: "Lab Order Submitted (Mock)", description:`Lab tests ordered for ${selectedPatient?.fullName}.`});
+    toast({
+      title: "Lab Order Submitted (Mock)", 
+      description:`Lab tests ordered for ${selectedPatient?.fullName}: ${orderedTestLabels.length > 0 ? orderedTestLabels.join(', ') : 'No specific tests selected.'}`
+    });
+    setSelectedLabTests({});
     setIsOrderingLabs(false);
-    // Potentially close dialog here if needed
+    // Potentially close dialog here if it's a separate component or manage open state
   }
 
   const handleSubmitImagingOrder = async () => {
@@ -199,7 +202,7 @@ export default function MaternityCarePage() {
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${selectedPatient?.fullName}.`});
     setIsOrderingImaging(false);
-    // Potentially close dialog here if needed
+    // Potentially close dialog here
   }
 
   const handleNewVisitFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -516,7 +519,7 @@ export default function MaternityCarePage() {
                     </div>
                 </CardContent>
                  <CardFooter className="gap-2">
-                    <Dialog>
+                    <Dialog onOpenChange={(open) => !open && setSelectedLabTests({})}>
                       <DialogTrigger asChild>
                         <Button variant="outline" disabled={!selectedPatient || isOrderingLabs}>
                             {isOrderingLabs ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FlaskConical className="mr-2 h-4 w-4"/>}
@@ -528,13 +531,18 @@ export default function MaternityCarePage() {
                           <DialogTitle>Order Lab Tests for {selectedPatient?.fullName}</DialogTitle>
                           <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                        <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                           <Label className="text-base font-semibold">Common Prenatal Tests:</Label>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                            {labTests.map((test) => (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                            {COMMON_ORDERABLE_LAB_TESTS.map((test) => ( // Changed from maternity specific to common for now
                               <div key={test.id} className="flex items-center space-x-2">
-                                <Checkbox id={`test-${test.id}`} />
-                                <Label htmlFor={`test-${test.id}`} className="text-sm font-normal">
+                                <Checkbox 
+                                    id={`maternity-test-${test.id}`} 
+                                    checked={!!selectedLabTests[test.id]}
+                                    onCheckedChange={(checked) => handleLabTestSelection(test.id, !!checked)}
+                                    disabled={isOrderingLabs}
+                                />
+                                <Label htmlFor={`maternity-test-${test.id}`} className="text-sm font-normal">
                                   {test.label}
                                 </Label>
                               </div>
@@ -542,13 +550,13 @@ export default function MaternityCarePage() {
                           </div>
                           <Separator className="my-2"/>
                           <div className="space-y-2">
-                            <Label htmlFor="labClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
-                            <Textarea id="labClinicalNotes" placeholder="e.g., Routine antenatal screening, specific concerns..." />
+                            <Label htmlFor="maternityLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
+                            <Textarea id="maternityLabClinicalNotes" placeholder="e.g., Routine antenatal screening, specific concerns..." disabled={isOrderingLabs} />
                           </div>
                         </div>
                         <DialogFooter>
                           <DialogClose asChild><Button type="button" variant="outline" disabled={isOrderingLabs}>Cancel</Button></DialogClose>
-                          <Button type="submit" onClick={handleSubmitLabOrder} disabled={isOrderingLabs}>
+                          <Button type="submit" onClick={handleSubmitLabOrder} disabled={isOrderingLabs || Object.values(selectedLabTests).every(v => !v)}>
                             {isOrderingLabs ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                             {isOrderingLabs ? "Submitting..." : "Submit Lab Order"}
                           </Button>
@@ -571,7 +579,7 @@ export default function MaternityCarePage() {
                         <div className="grid gap-4 py-4">
                           <div className="space-y-2">
                             <Label htmlFor="imagingType">Imaging Type</Label>
-                            <Select>
+                            <Select disabled={isOrderingImaging}>
                               <SelectTrigger id="imagingType">
                                 <SelectValue placeholder="Select imaging type" />
                               </SelectTrigger>
@@ -585,11 +593,11 @@ export default function MaternityCarePage() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="imagingRegionDetails">Region / Details of Study</Label>
-                            <Textarea id="imagingRegionDetails" placeholder="e.g., Anomaly Scan, Pelvic Ultrasound, Fetal Growth Scan, Chest X-ray PA view, MRI Brain..." />
+                            <Textarea id="imagingRegionDetails" placeholder="e.g., Anomaly Scan, Pelvic Ultrasound, Fetal Growth Scan, Chest X-ray PA view, MRI Brain..." disabled={isOrderingImaging} />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="imagingClinicalNotes">Clinical Notes / Reason for Study</Label>
-                            <Textarea id="imagingClinicalNotes" placeholder="e.g., Routine 20-week scan, assess fetal well-being, rule out pneumonia..." />
+                            <Textarea id="imagingClinicalNotes" placeholder="e.g., Routine 20-week scan, assess fetal well-being, rule out pneumonia..." disabled={isOrderingImaging}/>
                           </div>
                         </div>
                         <DialogFooter>
