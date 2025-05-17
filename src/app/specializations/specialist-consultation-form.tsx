@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Sigma, Edit3, Send, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, Briefcase, FlaskConical, RadioTower } from "lucide-react";
+import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Sigma, Edit3, Send, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, Briefcase, FlaskConical, RadioTower, Save } from "lucide-react";
 import type { TreatmentRecommendationInput, TreatmentRecommendationOutput } from '@/ai/flows/treatment-recommendation';
 import { Separator } from '@/components/ui/separator';
 import { toast } from "@/hooks/use-toast";
@@ -79,6 +79,24 @@ const mockVisitHistory: VisitHistoryItem[] = [
   { id: "v3", date: "2023-11-05", department: "Cardiology", doctor: "Dr. Eve", reason: "Follow-up: Post MI" },
 ];
 
+const getBmiStatusAndColor = (bmi: number | null): { status: string; colorClass: string; textColorClass: string; } => {
+  if (bmi === null || isNaN(bmi)) {
+    return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+  }
+  if (bmi < 18.5) {
+    return { status: "Underweight", colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
+  } else if (bmi < 25) {
+    return { status: "Normal weight", colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
+  } else if (bmi < 30) {
+    return { status: "Overweight", colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
+  } else if (bmi < 35) {
+    return { status: "Obese (Class I)", colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
+  } else if (bmi < 40) {
+    return { status: "Obese (Class II)", colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
+  } else {
+    return { status: "Obese (Class III)", colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
+  }
+};
 
 interface SpecialistConsultationFormProps {
   getRecommendationAction: (input: TreatmentRecommendationInput) => Promise<TreatmentRecommendationOutput | { error: string }>;
@@ -91,13 +109,14 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
   const [isSearching, setIsSearching] = useState(false);
   const [patientData, setPatientData] = useState<PatientData | null>(null);
   const [bmi, setBmi] = useState<string | null>(null);
+  const [bmiDisplay, setBmiDisplay] = useState<{ status: string; colorClass: string; textColorClass: string; } | null>(null);
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
   const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false); 
   
   const [selectedLabTests, setSelectedLabTests] = useState<Record<string, boolean>>({});
   const [isSubmittingLabOrder, setIsSubmittingLabOrder] = useState(false);
   const [isSubmittingImagingOrder, setIsSubmittingImagingOrder] = useState(false);
-
+  const [isSavingProgress, setIsSavingProgress] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -110,7 +129,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
       labResultsSummary: "",
       imagingDataSummary: "",
       specialistComments: "",
-      currentSpecialty: "Cardiology",
+      currentSpecialty: "Cardiology", // Default specialty
     },
   });
 
@@ -125,8 +144,10 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
       const hM = h / 100;
       const calculatedBmi = w / (hM * hM);
       setBmi(calculatedBmi.toFixed(2));
+      setBmiDisplay(getBmiStatusAndColor(calculatedBmi));
     } else {
       setBmi(null);
+      setBmiDisplay(getBmiStatusAndColor(null));
     }
   }, [weightKg, heightCm]);
 
@@ -158,8 +179,10 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
         currentSpecialty: form.getValues("currentSpecialty"),
     });
     setBmi(null);
+    setBmiDisplay(getBmiStatusAndColor(null));
     setSelectedLabTests({});
 
+    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000)); 
     if (nationalId === "123456789" || nationalId === "987654321") {
       const fetchedPatientData: PatientData = {
@@ -210,7 +233,7 @@ Vitals:
 Body Temperature: ${data.bodyTemperature || 'N/A'}°C
 Weight: ${data.weight || 'N/A'}kg
 Height: ${data.height || 'N/A'}cm
-BMI: ${bmi || 'N/A'}
+BMI: ${bmi || 'N/A'} (${bmiDisplay?.status || 'N/A'})
 
 Chief Complaint/Symptoms (Specialist Focus):
 ${data.symptoms || "Not specified."}
@@ -243,18 +266,58 @@ ${visitHistoryString || "No recent visit history available."}
     }
     setIsSubmittingOutcome(true);
     
+    // Simulate API Call
     await new Promise(resolve => setTimeout(resolve, 1500));
+    console.log("Specialist Consultation Data to Save (Mock):", {
+      patientId: patientData.nationalId,
+      specialty: patientData.assignedSpecialty,
+      vitals: form.getValues(), // Or specific fields
+      symptoms: form.getValues("symptoms"),
+      aiRecommendation: recommendation,
+      specialistComments: form.getValues("specialistComments"),
+      outcome: outcome,
+    });
     
     toast({ title: "Specialist Consultation Finished", description: `Outcome: ${outcome}. Action (mock): ${outcome} process initiated for ${patientData?.fullName}.` });
 
-    form.reset();
+    form.reset({
+        nationalIdSearch: "",
+        bodyTemperature: "",
+        weight: "",
+        height: "",
+        symptoms: "",
+        labResultsSummary: "",
+        imagingDataSummary: "",
+        specialistComments: "",
+        currentSpecialty: form.getValues("currentSpecialty"), // Keep current specialty
+    });
     setPatientData(null);
     setRecommendation(null);
     setError(null);
     setBmi(null);
+    setBmiDisplay(getBmiStatusAndColor(null));
     setSelectedLabTests({});
     setIsOutcomeModalOpen(false);
     setIsSubmittingOutcome(false);
+  };
+  
+  const handleSaveProgress = async () => {
+    if (!patientData) {
+      toast({ variant: "destructive", title: "No patient loaded", description: "Cannot save progress without patient data." });
+      return;
+    }
+    setIsSavingProgress(true);
+    const currentFormData = form.getValues();
+    // Simulate API Call to save draft
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log("Saving Specialist Draft (Mock):", {
+      patientId: patientData.nationalId,
+      specialty: patientData.assignedSpecialty,
+      formData: currentFormData,
+      aiRecommendation: recommendation,
+    });
+    toast({ title: "Progress Saved (Mock)", description: "Specialist consultation draft has been saved." });
+    setIsSavingProgress(false);
   };
 
   const handleSubmitLabOrder = async () => {
@@ -264,6 +327,7 @@ ${visitHistoryString || "No recent visit history available."}
         .filter(test => selectedLabTests[test.id])
         .map(test => test.label);
      
+    // Simulate API Call: POST /api/v1/specialist-consultations/{consultationId}/lab-orders
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast({
         title: "Lab Order Submitted (Mock)", 
@@ -276,12 +340,13 @@ ${visitHistoryString || "No recent visit history available."}
   const handleSubmitImagingOrder = async () => {
     if (!patientData) return;
     setIsSubmittingImagingOrder(true);
+    // Simulate API Call: POST /api/v1/specialist-consultations/{consultationId}/imaging-orders
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName} by Specialist.`});
     setIsSubmittingImagingOrder(false);
   };
 
-  const isActionDisabled = isSearching || isAiPending || isSubmittingOutcome || isSubmittingLabOrder || isSubmittingImagingOrder;
+  const isActionDisabled = isSearching || isAiPending || isSubmittingOutcome || isSubmittingLabOrder || isSubmittingImagingOrder || isSavingProgress;
 
   const handleLabTestSelection = (testId: string, checked: boolean) => {
     setSelectedLabTests(prev => ({ ...prev, [testId]: checked }));
@@ -386,7 +451,14 @@ ${visitHistoryString || "No recent visit history available."}
                 </div>
                 <div className="space-y-1">
                   <Label className="flex items-center"><Sigma className="mr-1.5 h-4 w-4 text-primary" />BMI</Label>
-                  <Input value={bmi || "N/A"} readOnly className="font-semibold bg-muted/50" disabled={!patientData} />
+                  <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-muted/50">
+                    <span className="text-sm font-medium">{bmi || "N/A"}</span>
+                    {bmiDisplay && bmiDisplay.status !== "N/A" && (
+                      <Badge className={`${bmiDisplay.colorClass} ${bmiDisplay.textColorClass} border-transparent`}>
+                        {bmiDisplay.status}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -405,7 +477,7 @@ ${visitHistoryString || "No recent visit history available."}
               </div>
             </CardContent>
           </Card>
-
+          
           {patientData && (
             <Card className="shadow-sm">
               <CardHeader>
@@ -593,7 +665,10 @@ ${visitHistoryString || "No recent visit history available."}
                         />
                 </CardContent>
                 <CardFooter>
-                     <Button variant="secondary" onClick={() => toast({title: "Notes Saved (Mock)"})} disabled={isActionDisabled}>Save Notes &amp; Plan</Button>
+                     <Button variant="outline" onClick={handleSaveProgress} disabled={isActionDisabled || !patientData}>
+                        {isSavingProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                        {isSavingProgress ? "Saving..." : "Save Progress"}
+                    </Button>
                 </CardFooter>
             </Card>
 
