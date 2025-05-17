@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Baby, Search, CalendarPlus, FileText, ShieldAlert, Microscope, ScanSearch, FlaskConical, RadioTower } from "lucide-react";
+import { Baby, Search, CalendarPlus, FileText, ShieldAlert, Microscope, ScanSearch, FlaskConical, RadioTower, Loader2, CalendarIcon } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -33,6 +33,10 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 
 interface AntenatalVisit {
@@ -52,7 +56,7 @@ interface MaternityPatient {
   nationalId: string;
   fullName: string;
   age: number;
-  gender: "Male" | "Female" | "Other"; // Added gender
+  gender: "Male" | "Female" | "Other";
   photoUrl: string;
   edd: string; // Estimated Due Date
   gestationalAge: string;
@@ -121,10 +125,37 @@ const labTests = [
   { id: "thyroid", label: "Thyroid Function Tests (TSH, T3, T4)" },
 ];
 
+// New Visit Form State
+interface NewVisitFormState {
+  visitDate?: Date;
+  gestationalAge: string;
+  weightKg: string;
+  bp: string;
+  fhrBpm: string;
+  fundalHeightCm: string;
+  notes: string;
+  nextAppointmentDate?: Date;
+}
+
 export default function MaternityCarePage() {
   const [searchNationalId, setSearchNationalId] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<MaternityPatient | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false);
+
+  const [isNewVisitModalOpen, setIsNewVisitModalOpen] = useState(false);
+  const [isLoggingVisit, setIsLoggingVisit] = useState(false);
+  const [newVisitForm, setNewVisitForm] = useState<NewVisitFormState>({
+    gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: ""
+  });
+
+  const [isOrderingLabs, setIsOrderingLabs] = useState(false);
+  const [isOrderingImaging, setIsOrderingImaging] = useState(false);
+  
+  const [isScheduleNextVisitModalOpen, setIsScheduleNextVisitModalOpen] = useState(false);
+  const [isSchedulingNextVisit, setIsSchedulingNextVisit] = useState(false);
+  const [nextScheduledDate, setNextScheduledDate] = useState<Date | undefined>();
+  const [nextScheduledNotes, setNextScheduledNotes] = useState("");
+
 
   const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
     if (gender === "Male") return "male avatar";
@@ -132,33 +163,93 @@ export default function MaternityCarePage() {
     return "patient avatar";
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!searchNationalId) {
       toast({ variant: "destructive", title: "Error", description: "Please enter a National ID." });
       return;
     }
-    setIsLoading(true);
+    setIsLoadingSearch(true);
     setSelectedPatient(null);
-    // Simulate API call
-    setTimeout(() => {
-      const found = mockPatients.find(p => p.nationalId === searchNationalId);
-      if (found) {
-        setSelectedPatient(found);
-        toast({ title: "Patient Found", description: `${found.fullName}'s maternity record loaded.` });
-      } else {
-        toast({ variant: "destructive", title: "Not Found", description: "No maternity record found for this National ID." });
-      }
-      setIsLoading(false);
-    }, 1000);
+    // Simulate API call: GET /api/v1/maternity/patients/{nationalId}
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const found = mockPatients.find(p => p.nationalId === searchNationalId);
+    if (found) {
+      setSelectedPatient(found);
+      toast({ title: "Patient Found", description: `${found.fullName}'s maternity record loaded.` });
+    } else {
+      toast({ variant: "destructive", title: "Not Found", description: "No maternity record found for this National ID." });
+    }
+    setIsLoadingSearch(false);
   };
 
-  const handleSubmitLabOrder = () => {
+  const handleSubmitLabOrder = async () => {
+    if (!selectedPatient) return;
+    setIsOrderingLabs(true);
+    // Simulate API POST to /api/v1/maternity/patients/{patientId}/lab-orders
+    await new Promise(resolve => setTimeout(resolve, 1500));
     toast({title: "Lab Order Submitted (Mock)", description:`Lab tests ordered for ${selectedPatient?.fullName}.`});
+    setIsOrderingLabs(false);
+    // Potentially close dialog here if needed
   }
 
-  const handleSubmitImagingOrder = () => {
-     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${selectedPatient?.fullName}.`});
+  const handleSubmitImagingOrder = async () => {
+     if (!selectedPatient) return;
+    setIsOrderingImaging(true);
+    // Simulate API POST to /api/v1/maternity/patients/{patientId}/imaging-orders
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${selectedPatient?.fullName}.`});
+    setIsOrderingImaging(false);
+    // Potentially close dialog here if needed
   }
+
+  const handleNewVisitFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewVisitForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleLogNewVisitSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPatient || !newVisitForm.visitDate) {
+        toast({ variant: "destructive", title: "Missing Information", description: "Visit date is required." });
+        return;
+    }
+    setIsLoggingVisit(true);
+    // Simulate API POST: /api/v1/maternity/patients/{selectedPatient.id}/antenatal-visits
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const newVisit: AntenatalVisit = {
+        id: `AV${Date.now()}`,
+        date: format(newVisitForm.visitDate, "yyyy-MM-dd"),
+        gestationalAge: newVisitForm.gestationalAge,
+        weightKg: newVisitForm.weightKg,
+        bp: newVisitForm.bp,
+        fhrBpm: newVisitForm.fhrBpm,
+        fundalHeightCm: newVisitForm.fundalHeightCm,
+        notes: newVisitForm.notes,
+        nextAppointment: newVisitForm.nextAppointmentDate ? format(newVisitForm.nextAppointmentDate, "yyyy-MM-dd") : undefined,
+    };
+
+    setSelectedPatient(prev => prev ? ({ ...prev, antenatalVisits: [...prev.antenatalVisits, newVisit] }) : null);
+    toast({ title: "New Antenatal Visit Logged", description: `Visit on ${newVisit.date} for ${selectedPatient.fullName} saved.`});
+    setIsNewVisitModalOpen(false);
+    setNewVisitForm({ gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "" }); // Reset form
+    setIsLoggingVisit(false);
+  };
+  
+  const handleScheduleNextVisitSubmit = async () => {
+    if (!selectedPatient || !nextScheduledDate) {
+        toast({ variant: "destructive", title: "Missing Date", description: "Please select a date for the next appointment." });
+        return;
+    }
+    setIsSchedulingNextVisit(true);
+    // Simulate API POST or PUT for scheduling
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    toast({ title: "Next Visit Scheduled (Mock)", description: `Next ANC visit for ${selectedPatient.fullName} scheduled for ${format(nextScheduledDate, "PPP")}.`});
+    setIsScheduleNextVisitModalOpen(false);
+    setNextScheduledDate(undefined);
+    setNextScheduledNotes("");
+    setIsSchedulingNextVisit(false);
+  };
 
 
   return (
@@ -183,11 +274,11 @@ export default function MaternityCarePage() {
                 value={searchNationalId}
                 onChange={(e) => setSearchNationalId(e.target.value)}
                 className="max-w-xs"
-                disabled={isLoading}
+                disabled={isLoadingSearch}
               />
-              <Button onClick={handleSearch} disabled={isLoading}>
-                {isLoading ? <Search className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                Search
+              <Button onClick={handleSearch} disabled={isLoadingSearch || !searchNationalId.trim()}>
+                {isLoadingSearch ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                {isLoadingSearch ? "Searching..." : "Search"}
               </Button>
             </div>
           </CardContent>
@@ -235,7 +326,49 @@ export default function MaternityCarePage() {
                   </div>
                 </CardContent>
                  <CardFooter className="flex-col items-start gap-2">
-                    <Button variant="outline" className="w-full" onClick={() => toast({title: "Mock Action", description:"Open form to schedule next visit."})}><CalendarPlus className="mr-2 h-4 w-4"/>Schedule Next ANC Visit</Button>
+                    <Dialog open={isScheduleNextVisitModalOpen} onOpenChange={setIsScheduleNextVisitModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="w-full" disabled={!selectedPatient}>
+                                <CalendarPlus className="mr-2 h-4 w-4"/>Schedule Next ANC Visit
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Schedule Next ANC Visit for {selectedPatient.fullName}</DialogTitle>
+                                <DialogDescription>Select the date and add any relevant notes for the next visit.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="nextScheduledDate">Next Visit Date</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn("w-full justify-start text-left font-normal",!nextScheduledDate && "text-muted-foreground")}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {nextScheduledDate ? format(nextScheduledDate, "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                        <Calendar mode="single" selected={nextScheduledDate} onSelect={setNextScheduledDate} initialFocus />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="nextScheduledNotes">Notes (Optional)</Label>
+                                    <Textarea id="nextScheduledNotes" value={nextScheduledNotes} onChange={(e) => setNextScheduledNotes(e.target.value)} placeholder="e.g., Discuss scan results, GTT reminder."/>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSchedulingNextVisit}>Cancel</Button></DialogClose>
+                                <Button onClick={handleScheduleNextVisitSubmit} disabled={isSchedulingNextVisit || !nextScheduledDate}>
+                                    {isSchedulingNextVisit ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                    {isSchedulingNextVisit ? "Scheduling..." : "Schedule Visit"}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                  </CardFooter>
               </Card>
             </div>
@@ -278,9 +411,92 @@ export default function MaternityCarePage() {
                   )}
                 </CardContent>
                 <CardFooter>
-                  <Button onClick={() => toast({ title: "Mock Action", description: "Open form to add new antenatal visit." })}>
-                    <CalendarPlus className="mr-2 h-4 w-4" /> Log New Visit
-                  </Button>
+                    <Dialog open={isNewVisitModalOpen} onOpenChange={setIsNewVisitModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button disabled={!selectedPatient}>
+                                <CalendarPlus className="mr-2 h-4 w-4" /> Log New Visit
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-lg">
+                            <form onSubmit={handleLogNewVisitSubmit}>
+                                <DialogHeader>
+                                    <DialogTitle>Log New Antenatal Visit for {selectedPatient.fullName}</DialogTitle>
+                                    <DialogDescription>Enter details for the current antenatal visit.</DialogDescription>
+                                </DialogHeader>
+                                <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="visitDate">Visit Date <span className="text-destructive">*</span></Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn("w-full justify-start text-left font-normal",!newVisitForm.visitDate && "text-muted-foreground")}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {newVisitForm.visitDate ? format(newVisitForm.visitDate, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                            <Calendar mode="single" selected={newVisitForm.visitDate} onSelect={(date) => setNewVisitForm(prev => ({...prev, visitDate: date}))} initialFocus />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="gestationalAge">Gestational Age (weeks+days)</Label>
+                                            <Input id="gestationalAge" name="gestationalAge" value={newVisitForm.gestationalAge} onChange={handleNewVisitFormChange} placeholder="e.g., 12w 3d"/>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="weightKg">Weight (kg)</Label>
+                                            <Input id="weightKg" name="weightKg" type="number" value={newVisitForm.weightKg} onChange={handleNewVisitFormChange} placeholder="e.g., 65.5"/>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="bp">Blood Pressure (mmHg)</Label>
+                                            <Input id="bp" name="bp" value={newVisitForm.bp} onChange={handleNewVisitFormChange} placeholder="e.g., 120/80"/>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="fhrBpm">Fetal Heart Rate (bpm)</Label>
+                                            <Input id="fhrBpm" name="fhrBpm" type="number" value={newVisitForm.fhrBpm} onChange={handleNewVisitFormChange} placeholder="e.g., 140"/>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="fundalHeightCm">Fundal Height (cm)</Label>
+                                        <Input id="fundalHeightCm" name="fundalHeightCm" type="number" value={newVisitForm.fundalHeightCm} onChange={handleNewVisitFormChange} placeholder="e.g., 20"/>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="notes">Clinical Notes</Label>
+                                        <Textarea id="notes" name="notes" value={newVisitForm.notes} onChange={handleNewVisitFormChange} placeholder="Observations, advice given, etc."/>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="nextAppointmentDate">Next Appointment Date (Optional)</Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn("w-full justify-start text-left font-normal",!newVisitForm.nextAppointmentDate && "text-muted-foreground")}
+                                            >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {newVisitForm.nextAppointmentDate ? format(newVisitForm.nextAppointmentDate, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                            <Calendar mode="single" selected={newVisitForm.nextAppointmentDate} onSelect={(date) => setNewVisitForm(prev => ({...prev, nextAppointmentDate: date}))} initialFocus />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <DialogClose asChild><Button type="button" variant="outline" disabled={isLoggingVisit}>Cancel</Button></DialogClose>
+                                    <Button type="submit" disabled={isLoggingVisit || !newVisitForm.visitDate}>
+                                        {isLoggingVisit ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                        {isLoggingVisit ? "Logging Visit..." : "Log Visit"}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
                 </CardFooter>
               </Card>
 
@@ -302,8 +518,9 @@ export default function MaternityCarePage() {
                  <CardFooter className="gap-2">
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="outline" disabled={!selectedPatient}>
-                            <FlaskConical className="mr-2 h-4 w-4"/> Order Labs
+                        <Button variant="outline" disabled={!selectedPatient || isOrderingLabs}>
+                            {isOrderingLabs ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FlaskConical className="mr-2 h-4 w-4"/>}
+                            {isOrderingLabs ? "Ordering..." : "Order Labs"}
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-md">
@@ -330,16 +547,20 @@ export default function MaternityCarePage() {
                           </div>
                         </div>
                         <DialogFooter>
-                          <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                          <Button type="submit" onClick={handleSubmitLabOrder}>Submit Lab Order</Button>
+                          <DialogClose asChild><Button type="button" variant="outline" disabled={isOrderingLabs}>Cancel</Button></DialogClose>
+                          <Button type="submit" onClick={handleSubmitLabOrder} disabled={isOrderingLabs}>
+                            {isOrderingLabs ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                            {isOrderingLabs ? "Submitting..." : "Submit Lab Order"}
+                          </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
 
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="outline" disabled={!selectedPatient}>
-                            <RadioTower className="mr-2 h-4 w-4"/> Order Imaging Study
+                        <Button variant="outline" disabled={!selectedPatient || isOrderingImaging}>
+                            {isOrderingImaging ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RadioTower className="mr-2 h-4 w-4"/>}
+                            {isOrderingImaging ? "Ordering..." : "Order Imaging Study"}
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-md">
@@ -372,8 +593,11 @@ export default function MaternityCarePage() {
                           </div>
                         </div>
                         <DialogFooter>
-                           <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                          <Button type="submit" onClick={handleSubmitImagingOrder}>Submit Imaging Order</Button>
+                           <DialogClose asChild><Button type="button" variant="outline" disabled={isOrderingImaging}>Cancel</Button></DialogClose>
+                          <Button type="submit" onClick={handleSubmitImagingOrder} disabled={isOrderingImaging}>
+                            {isOrderingImaging ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                            {isOrderingImaging ? "Submitting..." : "Submit Imaging Order"}
+                          </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
@@ -399,3 +623,4 @@ export default function MaternityCarePage() {
     </AppShell>
   );
 }
+
