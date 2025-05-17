@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { BedDouble, Users, ListFilter, PlusCircle, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck } from "lucide-react";
+import { BedDouble, Users, ListFilter, PlusCircle, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed } from "lucide-react"; // Added Bed
 import {
   Table,
   TableBody,
@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label'; // Added Label import
+import { Label } from '@/components/ui/label';
 import { cn } from "@/lib/utils";
 
 
@@ -30,7 +30,7 @@ interface WardSummary {
   name: string;
 }
 
-interface Bed {
+interface BedData { // Renamed from Bed to BedData to avoid conflict with lucide-react Bed icon
     id: string;
     bedNumber: string;
     status: "Available" | "Occupied" | "Cleaning";
@@ -39,7 +39,7 @@ interface Bed {
 }
 
 interface PatientInWard {
-  admissionId: string; // This would be the unique ID for this specific admission
+  admissionId: string; 
   patientId: string;
   name: string;
   bedNumber: string;
@@ -55,7 +55,7 @@ interface WardDetails {
   availableBeds: number;
   occupancyRate: number;
   patients: PatientInWard[];
-  beds: Bed[];
+  beds: BedData[];
 }
 
 interface MedicationScheduleItem {
@@ -202,9 +202,6 @@ export default function WardManagementPage() {
     // Simulate API call: GET /api/v1/wards
     setTimeout(() => {
       setAllWardsData(mockWardSummariesData);
-      if (mockWardSummariesData.length > 0) {
-         // setSelectedWardId(mockWardSummariesData[0].id); // Auto-select the first ward
-      }
       setIsLoadingAllWards(false);
     }, 800);
   }, []);
@@ -213,8 +210,8 @@ export default function WardManagementPage() {
   useEffect(() => {
     if (selectedWardId) {
       setIsLoadingCurrentWardDetails(true);
-      setCurrentWardDetails(null); // Clear previous ward details
-      setSelectedPatientForDetails(null); // Clear selected patient when ward changes
+      setCurrentWardDetails(null); 
+      setSelectedPatientForDetails(null); 
       setCurrentAdmittedPatientFullDetails(null);
       // Simulate API call: GET /api/v1/wards/{selectedWardId}/details
       setTimeout(() => {
@@ -272,37 +269,37 @@ export default function WardManagementPage() {
   };
 
   const handleDischarge = async () => {
-    if (!currentAdmittedPatientFullDetails) return;
+    if (!currentAdmittedPatientFullDetails || !selectedWardId) return;
     setIsDischarging(true);
     // Simulate API call: PUT /api/v1/admissions/{admissionId}/discharge
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({ title: "Patient Discharged (Mock)", description: `${currentAdmittedPatientFullDetails.name} has been processed for discharge.` });
     
+    const admissionIdToDischarge = currentAdmittedPatientFullDetails.admissionId;
+    const patientIdToClearFromBed = currentAdmittedPatientFullDetails.patientId;
+
     setSelectedPatientForDetails(null); 
     setCurrentAdmittedPatientFullDetails(null);
     
     // Re-fetch current ward details to update patient list and bed status
-    if(selectedWardId) {
-        setIsLoadingCurrentWardDetails(true);
-        setTimeout(() => {
-            const updatedWardDetails = { ...mockWardDetailsData[selectedWardId] };
-            updatedWardDetails.patients = updatedWardDetails.patients.filter(p => p.admissionId !== currentAdmittedPatientFullDetails.admissionId);
-            updatedWardDetails.occupiedBeds = updatedWardDetails.patients.length;
-            updatedWardDetails.availableBeds = updatedWardDetails.totalBeds - updatedWardDetails.occupiedBeds;
-            updatedWardDetails.occupancyRate = (updatedWardDetails.occupiedBeds / updatedWardDetails.totalBeds) * 100;
-            
-            // Update bed status
-            const bedToUpdate = updatedWardDetails.beds.find(b => b.patientId === currentAdmittedPatientFullDetails.patientId);
-            if (bedToUpdate) {
-                bedToUpdate.status = "Cleaning"; // Or "Available" after a delay
-                bedToUpdate.patientId = undefined;
-                bedToUpdate.patientName = undefined;
-            }
+    // This is a simplified local update for mock purposes
+    setCurrentWardDetails(prevDetails => {
+        if (!prevDetails) return null;
+        const updatedPatients = prevDetails.patients.filter(p => p.admissionId !== admissionIdToDischarge);
+        const updatedBeds = prevDetails.beds.map(bed => 
+            bed.patientId === patientIdToClearFromBed ? { ...bed, status: "Cleaning" as "Cleaning", patientId: undefined, patientName: undefined } : bed
+        );
+        const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
 
-            setCurrentWardDetails(updatedWardDetails);
-            setIsLoadingCurrentWardDetails(false);
-        }, 500);
-    }
+        return {
+            ...prevDetails,
+            patients: updatedPatients,
+            beds: updatedBeds,
+            occupiedBeds: occupiedBeds,
+            availableBeds: prevDetails.totalBeds - occupiedBeds,
+            occupancyRate: (occupiedBeds / prevDetails.totalBeds) * 100,
+        };
+    });
     setIsDischarging(false);
   };
   
@@ -328,7 +325,6 @@ export default function WardManagementPage() {
           </Button>
         </div>
 
-        {/* Ward Selection & Dashboard Card */}
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Hospital className="h-6 w-6 text-primary"/>Select Ward & View Dashboard</CardTitle>
@@ -376,10 +372,8 @@ export default function WardManagementPage() {
           </CardContent>
         </Card>
 
-        {/* Main Content Area (Patient List & Bed Status if ward is selected) */}
         {selectedWardId && currentWardDetails && !isLoadingCurrentWardDetails && (
           <div className="grid lg:grid-cols-2 gap-6 items-start">
-            {/* Patients in Selected Ward Card */}
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/>Patients in {currentWardDetails.name}</CardTitle>
@@ -393,7 +387,7 @@ export default function WardManagementPage() {
                         <TableHead>Patient Name</TableHead>
                         <TableHead>Bed</TableHead>
                         <TableHead>Admitted</TableHead>
-                        <TableHead>Diagnosis (Primary)</TableHead>
+                        <TableHead>Diagnosis</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -420,7 +414,6 @@ export default function WardManagementPage() {
               </CardContent>
             </Card>
 
-            {/* Bed Status Overview Card */}
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5 text-primary"/>Bed Status - {currentWardDetails.name}</CardTitle>
@@ -433,14 +426,21 @@ export default function WardManagementPage() {
                         key={bed.id} 
                         variant={
                             bed.status === 'Occupied' ? 'destructive' : 
-                            bed.status === 'Cleaning' ? 'secondary' : 'default'
+                            bed.status === 'Cleaning' ? 'secondary' : 'default' // default (teal) for Available
                         } 
-                        className="text-xs p-1.5 justify-center h-12 flex flex-col items-center text-center"
-                        title={bed.status === 'Occupied' ? `Occupied by: ${bed.patientName}` : bed.status}
+                        className="h-16 w-full flex flex-col items-center justify-center p-1 text-center shadow-sm hover:shadow-md transition-shadow"
+                        title={bed.status === 'Occupied' && bed.patientName ? `Occupied by: ${bed.patientName}` : bed.status}
                     >
-                       <span>{bed.bedNumber}</span>
-                       {bed.status === 'Occupied' && bed.patientName && <span className="text-[10px] truncate w-full">{`(${bed.patientName.split(' ')[0]})`}</span>}
-                       {bed.status !== 'Occupied' && <span className="text-[10px]">{bed.status}</span>}
+                       <Bed className="h-5 w-5 mb-0.5" />
+                       <span className="text-xs font-medium">{bed.bedNumber}</span>
+                       {bed.status === 'Occupied' && bed.patientName && (
+                           <span className="text-[9px] truncate w-full opacity-80">
+                               {bed.patientName.split(' ')[0]}
+                           </span>
+                       )}
+                       {bed.status !== 'Occupied' && (
+                           <span className="text-[9px] opacity-80">{bed.status}</span>
+                       )}
                     </Badge>
                   ))}
                 </div>
@@ -449,7 +449,6 @@ export default function WardManagementPage() {
           </div>
         )}
 
-        {/* Patient Care Details Section */}
         {selectedPatientForDetails && (
           <Card className="lg:col-span-full shadow-sm mt-6">
             <CardHeader>
@@ -524,11 +523,11 @@ export default function WardManagementPage() {
             </CardContent>
             {currentAdmittedPatientFullDetails && (
                 <CardFooter className="border-t pt-4 flex-col sm:flex-row gap-2">
-                    <Button variant="outline" className="w-full" onClick={handleDischarge} disabled={isDischarging || isTransferring}>
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={handleDischarge} disabled={isDischarging || isTransferring}>
                         {isDischarging ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogOutIcon className="mr-2 h-4 w-4" />}
                         {isDischarging ? "Discharging..." : `Discharge ${currentAdmittedPatientFullDetails.name.split(' ')[0]}`}
                     </Button>
-                    <Button variant="outline" className="w-full" onClick={handleTransfer} disabled={isDischarging || isTransferring}>
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={handleTransfer} disabled={isDischarging || isTransferring}>
                         {isTransferring ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ArrowRightLeft className="mr-2 h-4 w-4" />}
                         {isTransferring ? "Transferring..." : `Transfer ${currentAdmittedPatientFullDetails.name.split(' ')[0]}`}
                     </Button>
