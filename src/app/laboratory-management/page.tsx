@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Microscope, ClipboardList, FlaskConical, AlertTriangle, CheckCircle2, PlusCircle, Users, RefreshCw, FileText, Edit3 } from "lucide-react";
+import { Microscope, ClipboardList, FlaskConical, AlertTriangle, CheckCircle2, PlusCircle, Users, RefreshCw, FileText, Edit3, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -55,23 +55,32 @@ interface Reagent {
   lastOrdered?: string;
 }
 
-export default function LaboratoryManagementPage() {
-  const [labRequests, setLabRequests] = useState<LabRequest[]>([
+const initialLabRequests: LabRequest[] = [
     { id: "LR001", patientName: "Alice Wonderland", nationalId: "NID001", testsRequested: ["CBC", "Lipid Profile"], orderingDoctor: "Dr. Smith", requestDate: "2024-07-30", status: "Sample Pending" },
     { id: "LR002", patientName: "Bob The Builder", nationalId: "NID002", testsRequested: ["Urinalysis", "Glucose"], orderingDoctor: "Dr. Jones", requestDate: "2024-07-30", status: "Processing" },
     { id: "LR003", patientName: "Charlie Brown", nationalId: "NID003", testsRequested: ["TSH", "Free T4"], orderingDoctor: "Dr. Eve", requestDate: "2024-07-29", status: "Results Ready", results:"TSH: 2.5 mIU/L, Free T4: 1.2 ng/dL. Normal." },
-  ]);
+];
 
-  const [reagents, setReagents] = useState<Reagent[]>([
+const initialReagents: Reagent[] = [
     { id: "RG001", name: "Hematology Reagent Pack", currentStock: 50, threshold: 20, unit: "packs" },
     { id: "RG002", name: "Glucose Test Strips", currentStock: 150, threshold: 100, unit: "strips (box of 50)" },
     { id: "RG003", name: "Microscope Slides", currentStock: 80, threshold: 50, unit: "boxes (100/box)" },
     { id: "RG004", name: "Saline Solution", currentStock: 5, threshold: 10, unit: "liters" },
-  ]);
+];
+
+export default function LaboratoryManagementPage() {
+  const [labRequests, setLabRequests] = useState<LabRequest[]>([]);
+  const [isLoadingLabRequests, setIsLoadingLabRequests] = useState(true);
+  const [reagents, setReagents] = useState<Reagent[]>([]);
+  const [isLoadingReagents, setIsLoadingReagents] = useState(true);
 
   const [selectedRequest, setSelectedRequest] = useState<LabRequest | null>(null);
   const [resultInput, setResultInput] = useState("");
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [isSavingResults, setIsSavingResults] = useState(false);
+  const [isReorderingReagentId, setIsReorderingReagentId] = useState<string | null>(null);
+  const [isRefreshingList, setIsRefreshingList] = useState(false);
+
 
   const [time, setTime] = useState(new Date());
 
@@ -80,11 +89,39 @@ export default function LaboratoryManagementPage() {
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    // Simulate fetching lab requests
+    setIsLoadingLabRequests(true);
+    setTimeout(() => {
+      setLabRequests(initialLabRequests);
+      setIsLoadingLabRequests(false);
+    }, 1200);
+
+    // Simulate fetching reagents
+    setIsLoadingReagents(true);
+    setTimeout(() => {
+      setReagents(initialReagents);
+      setIsLoadingReagents(false);
+    }, 1500);
+  }, []);
+  
+  const fetchLabRequests = async () => {
+    setIsRefreshingList(true);
+    // Simulate API call: GET /api/v1/lab/requests
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLabRequests([...initialLabRequests].sort(() => 0.5 - Math.random())); // shuffle for demo
+    toast({ title: "Lab Request List Refreshed", description: "List updated with latest requests (mock)." });
+    setIsRefreshingList(false);
+  };
+
+
   const samplesProcessedToday = labRequests.filter(r => r.status === "Results Ready").length;
   const pendingResults = labRequests.filter(r => r.status === "Processing" || r.status === "Sample Collected").length;
   const criticalReagentAlerts = reagents.filter(r => r.currentStock < r.threshold).length;
 
-  const handleUpdateStatus = (requestId: string, newStatus: LabRequest["status"]) => {
+  const handleUpdateStatus = async (requestId: string, newStatus: LabRequest["status"]) => {
+    // Simulate API call: PUT /api/v1/lab/requests/{requestId}/status
+    await new Promise(resolve => setTimeout(resolve, 500));
     setLabRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req));
     toast({ title: "Status Updated", description: `Request ${requestId} status changed to ${newStatus}.` });
   };
@@ -95,20 +132,28 @@ export default function LaboratoryManagementPage() {
     setIsResultModalOpen(true);
   };
 
-  const handleSaveResults = () => {
-    if (selectedRequest) {
-      setLabRequests(prev => prev.map(req => 
-        req.id === selectedRequest.id ? { ...req, results: resultInput, status: "Results Ready" } : req
-      ));
-      toast({ title: "Results Saved", description: `Results for ${selectedRequest.patientName} (ID: ${selectedRequest.id}) saved.` });
-      setIsResultModalOpen(false);
-      setSelectedRequest(null);
-      setResultInput("");
-    }
+  const handleSaveResults = async () => {
+    if (!selectedRequest) return;
+    setIsSavingResults(true);
+    // Simulate API call: POST /api/v1/lab/requests/{selectedRequest.id}/results
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    setLabRequests(prev => prev.map(req => 
+      req.id === selectedRequest.id ? { ...req, results: resultInput, status: "Results Ready" } : req
+    ));
+    toast({ title: "Results Saved (Mock)", description: `Results for ${selectedRequest.patientName} (ID: ${selectedRequest.id}) saved.` });
+    setIsResultModalOpen(false);
+    setSelectedRequest(null);
+    setResultInput("");
+    setIsSavingResults(false);
   };
   
-  const handleReorderReagent = (reagentName: string) => {
-      toast({title: "Reagent Reorder (Mock)", description: `Reorder request placed for ${reagentName}.`});
+  const handleReorderReagent = async (reagent: Reagent) => {
+      setIsReorderingReagentId(reagent.id);
+      // Simulate API call: POST /api/v1/lab/reagents/requisition
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast({title: "Reagent Reorder (Mock)", description: `Reorder request placed for ${reagent.name}.`});
+      setIsReorderingReagentId(null);
   }
 
   return (
@@ -132,58 +177,67 @@ export default function LaboratoryManagementPage() {
               <CardDescription>Manage and process pending laboratory test requests.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Tests</TableHead>
-                    <TableHead>Doctor</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {labRequests.map((req) => (
-                    <TableRow key={req.id}>
-                      <TableCell className="font-medium">
-                        {req.patientName} <br/> 
-                        <span className="text-xs text-muted-foreground">{req.nationalId}</span>
-                      </TableCell>
-                      <TableCell className="text-xs">{req.testsRequested.join(', ')}</TableCell>
-                      <TableCell>{req.orderingDoctor}</TableCell>
-                      <TableCell>{new Date(req.requestDate).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Select 
-                            value={req.status} 
-                            onValueChange={(value) => handleUpdateStatus(req.id, value as LabRequest["status"])}
-                        >
-                            <SelectTrigger className="h-8 text-xs w-[150px]">
-                                <SelectValue placeholder="Update Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Sample Pending">Sample Pending</SelectItem>
-                                <SelectItem value="Sample Collected">Sample Collected</SelectItem>
-                                <SelectItem value="Processing">Processing</SelectItem>
-                                <SelectItem value="Results Ready">Results Ready</SelectItem>
-                                <SelectItem value="Cancelled">Cancelled</SelectItem>
-                            </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => handleOpenResultModal(req)}>
-                          <Edit3 className="mr-1 h-3 w-3" /> {req.status === "Results Ready" ? "View/Edit" : "Enter"} Results
-                        </Button>
-                      </TableCell>
+              {isLoadingLabRequests ? (
+                 <div className="flex items-center justify-center py-10">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="ml-2 text-muted-foreground">Loading lab requests...</p>
+                  </div>
+              ) : labRequests.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Patient</TableHead>
+                      <TableHead>Tests</TableHead>
+                      <TableHead>Doctor</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {labRequests.length === 0 && <p className="text-center py-4 text-muted-foreground">No lab requests found.</p>}
+                  </TableHeader>
+                  <TableBody>
+                    {labRequests.map((req) => (
+                      <TableRow key={req.id}>
+                        <TableCell className="font-medium">
+                          {req.patientName} <br/> 
+                          <span className="text-xs text-muted-foreground">{req.nationalId}</span>
+                        </TableCell>
+                        <TableCell className="text-xs">{req.testsRequested.join(', ')}</TableCell>
+                        <TableCell>{req.orderingDoctor}</TableCell>
+                        <TableCell>{new Date(req.requestDate).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Select 
+                              value={req.status} 
+                              onValueChange={(value) => handleUpdateStatus(req.id, value as LabRequest["status"])}
+                          >
+                              <SelectTrigger className="h-8 text-xs w-[150px]">
+                                  <SelectValue placeholder="Update Status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="Sample Pending">Sample Pending</SelectItem>
+                                  <SelectItem value="Sample Collected">Sample Collected</SelectItem>
+                                  <SelectItem value="Processing">Processing</SelectItem>
+                                  <SelectItem value="Results Ready">Results Ready</SelectItem>
+                                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                              </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="outline" onClick={() => handleOpenResultModal(req)} disabled={isSavingResults}>
+                            <Edit3 className="mr-1 h-3 w-3" /> {req.status === "Results Ready" ? "View/Edit" : "Enter"} Results
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-center py-10 text-muted-foreground">No lab requests found.</p>
+              )}
             </CardContent>
              <CardFooter>
-                <Button variant="outline">
-                    <RefreshCw className="mr-2 h-4 w-4"/> Refresh Request List
+                <Button variant="outline" onClick={fetchLabRequests} disabled={isRefreshingList || isLoadingLabRequests}>
+                    {isRefreshingList ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
+                    {isRefreshingList ? "Refreshing..." : "Refresh Request List"}
                 </Button>
             </CardFooter>
           </Card>
@@ -197,19 +251,27 @@ export default function LaboratoryManagementPage() {
                  <CardDescription>Summary of today's lab activities.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                    <span className="text-sm font-medium">Samples Processed:</span>
-                    <Badge variant="secondary" className="text-base">{samplesProcessedToday}</Badge>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                    <span className="text-sm font-medium">Pending Results:</span>
-                    <Badge className="text-base">{pendingResults}</Badge>
-                </div>
-                 <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                    <span className="text-sm font-medium">Critical Reagent Alerts:</span>
-                    <Badge variant={criticalReagentAlerts > 0 ? "destructive" : "default"} className="text-base">{criticalReagentAlerts}</Badge>
-                </div>
-                 <Button className="w-full mt-2" variant="outline" disabled>View Full Daily Report</Button>
+               {isLoadingLabRequests || isLoadingReagents ? (
+                 <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary mr-2"/> Loading summary...
+                  </div>
+               ) : (
+                <>
+                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
+                      <span className="text-sm font-medium">Samples Processed:</span>
+                      <Badge variant="secondary" className="text-base">{samplesProcessedToday}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
+                      <span className="text-sm font-medium">Pending Results:</span>
+                      <Badge className="text-base">{pendingResults}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
+                      <span className="text-sm font-medium">Critical Reagent Alerts:</span>
+                      <Badge variant={criticalReagentAlerts > 0 ? "destructive" : "default"} className="text-base">{criticalReagentAlerts}</Badge>
+                  </div>
+                  <Button className="w-full mt-2" variant="outline" disabled>View Full Daily Report</Button>
+                </>
+               )}
               </CardContent>
             </Card>
 
@@ -221,36 +283,50 @@ export default function LaboratoryManagementPage() {
                 <CardDescription>Overview of lab reagent stock levels.</CardDescription>
               </CardHeader>
               <CardContent className="max-h-[300px] overflow-y-auto pr-1">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Reagent Name</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reagents.map((item) => {
-                      const isLowStock = item.currentStock < item.threshold;
-                      return (
-                        <TableRow key={item.id} className={isLowStock ? "bg-destructive/10 dark:bg-destructive/20" : ""}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>
-                            {item.currentStock} <span className="text-xs text-muted-foreground">({item.unit})</span>
-                            {isLowStock && <Badge variant="destructive" className="ml-2 text-xs">Low</Badge>}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {isLowStock && (
-                              <Button size="sm" variant="outline" onClick={() => handleReorderReagent(item.name)}>
-                                <RefreshCw className="mr-1 h-3 w-3"/> Re-order
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                {isLoadingReagents ? (
+                  <div className="flex items-center justify-center py-6">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary mr-2"/> Loading reagents...
+                  </div>
+                ) : reagents.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Reagent Name</TableHead>
+                        <TableHead>Stock</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {reagents.map((item) => {
+                        const isLowStock = item.currentStock < item.threshold;
+                        return (
+                          <TableRow key={item.id} className={isLowStock ? "bg-destructive/10 dark:bg-destructive/20" : ""}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell>
+                              {item.currentStock} <span className="text-xs text-muted-foreground">({item.unit})</span>
+                              {isLowStock && <Badge variant="destructive" className="ml-2 text-xs">Low</Badge>}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {isLowStock && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handleReorderReagent(item)}
+                                  disabled={isReorderingReagentId === item.id}
+                                >
+                                  {isReorderingReagentId === item.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin"/> : <RefreshCw className="mr-1 h-3 w-3"/>}
+                                  {isReorderingReagentId === item.id ? "Ordering..." : "Re-order"}
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                ) : (
+                   <p className="text-center py-6 text-muted-foreground">No reagent data available.</p>
+                )}
               </CardContent>
                <CardFooter className="pt-4">
                  <Alert variant="default" className="border-primary/50">
@@ -283,6 +359,7 @@ export default function LaboratoryManagementPage() {
                   onChange={(e) => setResultInput(e.target.value)}
                   placeholder="Enter detailed lab results here..."
                   className="min-h-[200px]"
+                  disabled={isSavingResults}
                 />
               </div>
                <div className="space-y-2">
@@ -291,12 +368,16 @@ export default function LaboratoryManagementPage() {
                   id="labTechComments"
                   placeholder="Any comments on sample quality, specific findings, etc."
                   className="min-h-[80px]"
+                  disabled={isSavingResults}
                 />
               </div>
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-              <Button type="button" onClick={handleSaveResults}>Save Results</Button>
+              <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingResults}>Cancel</Button></DialogClose>
+              <Button type="button" onClick={handleSaveResults} disabled={isSavingResults}>
+                {isSavingResults ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isSavingResults ? "Saving..." : "Save Results"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -305,3 +386,4 @@ export default function LaboratoryManagementPage() {
     </AppShell>
   );
 }
+
