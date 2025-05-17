@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { BedDouble, Users, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed, Edit } from "lucide-react";
+import { BedDouble, Users, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed, Edit, PlusCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input"; // Added Input
 import { toast } from "@/hooks/use-toast";
 import { Label } from '@/components/ui/label';
 import { cn } from "@/lib/utils";
@@ -31,8 +32,9 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Separator } from '@/components/ui/separator'; // Added Separator
 
-// --- Data Structures (aligned with API thinking) ---
+// --- Data Structures ---
 interface WardSummary {
   id: string;
   name: string;
@@ -75,6 +77,7 @@ interface MedicationScheduleItem {
   dosage: string;
   time: string;
   status: "Administered" | "Pending" | "Skipped";
+  notes?: string; // Added for reason for change/addition
 }
 
 interface DoctorNote {
@@ -139,9 +142,9 @@ const mockAdmittedPatientFullDetailsData: Record<string, AdmittedPatientFullDeta
     admissionId: "ADM001", patientId: "P001", name: "Eva Green", wardName: "General Medicine Ward A", bedNumber: "Bed 3",
     treatmentPlan: "IV Ceftriaxone 1g OD. Oxygen support PRN. Monitor vitals Q4H. Chest physiotherapy BID.",
     medicationSchedule: [
-      { medicationItemId: "MEDSCH001-A", medication: "Ceftriaxone 1g IV", dosage: "1g", time: "08:00", status: "Administered" },
+      { medicationItemId: "MEDSCH001-A", medication: "Ceftriaxone 1g IV", dosage: "1g", time: "08:00", status: "Administered", notes: "Given slowly over 30 mins." },
       { medicationItemId: "MEDSCH001-B", medication: "Paracetamol 500mg PO", dosage: "500mg", time: "12:00", status: "Pending" },
-      { medicationItemId: "MEDSCH001-C", medication: "Salbutamol Neb", dosage: "2.5mg", time: "14:00", status: "Pending" },
+      { medicationItemId: "MEDSCH001-C", medication: "Salbutamol Neb", dosage: "2.5mg", time: "14:00", status: "Pending", notes: "Check O2 sats before/after." },
     ],
     doctorNotes: [{ noteId: "DN001-A", date: new Date(Date.now() - 86400000).toISOString(), doctor: "Dr. Smith", note: "Patient responding well. Continue plan." }, {noteId: "DN001-B", date: new Date().toISOString(), doctor: "Dr. House", note: "Reviewed chest X-ray, slight improvement in consolidation."}],
   },
@@ -190,27 +193,29 @@ export default function WardManagementPage() {
   const [medicationScheduleInModal, setMedicationScheduleInModal] = useState<MedicationScheduleItem[]>([]);
   const [isSavingMedicationUpdates, setIsSavingMedicationUpdates] = useState(false);
 
+  // State for adding new medication in modal
+  const [newMedName, setNewMedName] = useState("");
+  const [newMedDosage, setNewMedDosage] = useState("");
+  const [newMedTime, setNewMedTime] = useState("");
+  const [newMedNotes, setNewMedNotes] = useState("");
+
   const [isDischarging, setIsDischarging] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
 
-  // Fetch all wards list on mount
   useEffect(() => {
     setIsLoadingAllWards(true);
-    // Simulate API call: GET /api/v1/wards
     setTimeout(() => {
       setAllWardsData(mockWardSummariesData);
       setIsLoadingAllWards(false);
     }, 800);
   }, []);
 
-  // Fetch details for the selected ward
   useEffect(() => {
     if (selectedWardId) {
       setIsLoadingCurrentWardDetails(true);
       setCurrentWardDetails(null); 
       setSelectedPatientForDetails(null); 
       setCurrentAdmittedPatientFullDetails(null);
-      // Simulate API call: GET /api/v1/wards/{selectedWardId}/details
       setTimeout(() => {
         const details = mockWardDetailsData[selectedWardId];
         if (details) {
@@ -236,18 +241,23 @@ export default function WardManagementPage() {
     }
   }, [selectedWardId]);
 
-  // Fetch full details for the selected patient within the ward
   useEffect(() => {
     if (selectedPatientForDetails) {
       setIsLoadingSelectedPatientDetails(true);
       setCurrentAdmittedPatientFullDetails(null);
-      // Simulate API call: GET /api/v1/admissions/{selectedPatientForDetails.admissionId}
       setTimeout(() => {
-        setCurrentAdmittedPatientFullDetails(mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId] || null);
+        const fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
+        setCurrentAdmittedPatientFullDetails(fullDetails || null);
+        if (fullDetails) {
+          setMedicationScheduleInModal(fullDetails.medicationSchedule.map(item => ({...item})));
+        } else {
+          setMedicationScheduleInModal([]);
+        }
         setIsLoadingSelectedPatientDetails(false);
       }, 800);
     } else {
         setCurrentAdmittedPatientFullDetails(null);
+        setMedicationScheduleInModal([]);
     }
   }, [selectedPatientForDetails]);
 
@@ -255,23 +265,11 @@ export default function WardManagementPage() {
   const handleAddNote = async () => {
     if (!newDoctorNote.trim() || !currentAdmittedPatientFullDetails) return;
     setIsAddingNote(true);
-    const payload = {
-        doctorId: "doc-currentUser-mockId", 
-        note: newDoctorNote
-    };
+    const payload = { doctorId: "doc-currentUser-mockId", note: newDoctorNote };
     console.log("Submitting to /api/v1/admissions/{admissionId}/doctor-notes (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newNoteEntry: DoctorNote = {
-        noteId: `DN${Date.now()}`,
-        date: new Date().toISOString(),
-        doctor: "Dr. Current User (Mock)",
-        note: newDoctorNote
-    };
-    setCurrentAdmittedPatientFullDetails(prev => prev ? ({
-        ...prev,
-        doctorNotes: [newNoteEntry, ...prev.doctorNotes] // Add to top for recent first
-    }) : null);
+    const newNoteEntry: DoctorNote = { noteId: `DN${Date.now()}`, date: new Date().toISOString(), doctor: "Dr. Current User (Mock)", note: newDoctorNote };
+    setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, doctorNotes: [newNoteEntry, ...prev.doctorNotes] }) : null);
     toast({title: "Note Saved (Mock)", description: "New doctor's note added."});
     setNewDoctorNote("");
     setIsAddingNote(false);
@@ -279,37 +277,53 @@ export default function WardManagementPage() {
 
   const handleOpenMedicationModal = () => {
     if (!currentAdmittedPatientFullDetails) return;
-    // Create a deep copy to avoid direct state mutation before saving
-    setMedicationScheduleInModal(
-      currentAdmittedPatientFullDetails.medicationSchedule.map(med => ({ ...med }))
-    );
+    setMedicationScheduleInModal(currentAdmittedPatientFullDetails.medicationSchedule.map(med => ({ ...med })));
+    // Reset new medication form fields when opening modal
+    setNewMedName("");
+    setNewMedDosage("");
+    setNewMedTime("");
+    setNewMedNotes("");
     setIsMedicationModalOpen(true);
   };
 
-  const handleMedicationStatusChangeInModal = (itemId: string, newStatus: MedicationScheduleItem["status"]) => {
+  const handleMedicationItemChangeInModal = (index: number, field: keyof MedicationScheduleItem, value: string) => {
     setMedicationScheduleInModal(prevSchedule =>
-      prevSchedule.map(item =>
-        item.medicationItemId === itemId ? { ...item, status: newStatus } : item
+      prevSchedule.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item
       )
     );
+  };
+  
+  const handleAddNewMedicationToModalSchedule = () => {
+    if (!newMedName.trim() || !newMedDosage.trim() || !newMedTime.trim()) {
+      toast({ variant: "destructive", title: "Missing Information", description: "Please fill Medication Name, Dosage, and Time." });
+      return;
+    }
+    const newMedItem: MedicationScheduleItem = {
+      medicationItemId: `temp-${Date.now()}`, // Temporary ID for new items
+      medication: newMedName,
+      dosage: newMedDosage,
+      time: newMedTime,
+      status: "Pending",
+      notes: newMedNotes.trim() || undefined,
+    };
+    setMedicationScheduleInModal(prev => [...prev, newMedItem]);
+    // Clear new medication form fields
+    setNewMedName("");
+    setNewMedDosage("");
+    setNewMedTime("");
+    setNewMedNotes("");
+    toast({ title: "Medication Added to Schedule", description: `${newMedName} is ready to be saved.` });
   };
 
   const handleSaveMedicationUpdates = async () => {
     if (!currentAdmittedPatientFullDetails) return;
     setIsSavingMedicationUpdates(true);
-    
-    const payload = {
-        admissionId: currentAdmittedPatientFullDetails.admissionId,
-        updatedSchedule: medicationScheduleInModal 
-    };
+    const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, updatedSchedule: medicationScheduleInModal };
     console.log("Submitting to /api/v1/admissions/{admissionId}/medication-schedule (mock with full schedule):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setCurrentAdmittedPatientFullDetails(prev => prev ? ({
-        ...prev,
-        medicationSchedule: medicationScheduleInModal
-    }) : null);
-    toast({title: "Medication Log Updated (Mock)", description: "Medication schedule statuses have been updated."});
+    setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, medicationSchedule: medicationScheduleInModal }) : null);
+    toast({title: "Medication Log Updated (Mock)", description: "Medication schedule has been updated."});
     setIsMedicationModalOpen(false);
     setIsSavingMedicationUpdates(false);
   };
@@ -317,22 +331,14 @@ export default function WardManagementPage() {
   const handleDischarge = async () => {
     if (!currentAdmittedPatientFullDetails || !selectedWardId) return;
     setIsDischarging(true);
-    const payload = {
-        dischargeDate: new Date().toISOString(),
-        dischargeSummary: "Patient stable for discharge. Follow up with GP.",
-        dischargedBy: "doc-currentUser-mockId"
-    };
+    const payload = { dischargeDate: new Date().toISOString(), dischargeSummary: "Patient stable for discharge.", dischargedBy: "doc-currentUser-mockId" };
     console.log("Submitting to /api/v1/admissions/{admissionId}/discharge (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast({ title: "Patient Discharged (Mock)", description: `${currentAdmittedPatientFullDetails.name} has been processed for discharge.` });
-    
+    toast({ title: "Patient Discharged (Mock)", description: `${currentAdmittedPatientFullDetails.name} processed for discharge.` });
     const admissionIdToDischarge = currentAdmittedPatientFullDetails.admissionId;
     const patientIdToClearFromBed = currentAdmittedPatientFullDetails.patientId;
-
     setSelectedPatientForDetails(null); 
     setCurrentAdmittedPatientFullDetails(null);
-    
     setCurrentWardDetails(prevDetails => {
         if (!prevDetails) return null;
         const updatedPatients = prevDetails.patients.filter(p => p.admissionId !== admissionIdToDischarge);
@@ -340,15 +346,7 @@ export default function WardManagementPage() {
             bed.patientId === patientIdToClearFromBed ? { ...bed, status: "Cleaning" as "Cleaning", patientId: undefined, patientName: undefined } : bed
         );
         const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
-
-        return {
-            ...prevDetails,
-            patients: updatedPatients,
-            beds: updatedBeds,
-            occupiedBeds: occupiedBeds,
-            availableBeds: prevDetails.totalBeds - occupiedBeds,
-            occupancyRate: (occupiedBeds / prevDetails.totalBeds) * 100,
-        };
+        return { ...prevDetails, patients: updatedPatients, beds: updatedBeds, occupiedBeds: occupiedBeds, availableBeds: prevDetails.totalBeds - occupiedBeds, occupancyRate: (occupiedBeds / prevDetails.totalBeds) * 100 };
     });
     setIsDischarging(false);
   };
@@ -356,15 +354,10 @@ export default function WardManagementPage() {
   const handleTransfer = async () => {
     if (!currentAdmittedPatientFullDetails) return;
     setIsTransferring(true);
-    const payload = {
-        transferDate: new Date().toISOString(),
-        destinationWardId: "WXYZ", 
-        transferReason: "Requires specialized cardiac monitoring.",
-        transferredBy: "doc-currentUser-mockId"
-    };
+    const payload = { transferDate: new Date().toISOString(), destinationWardId: "WXYZ", transferReason: "Requires specialized monitoring.", transferredBy: "doc-currentUser-mockId" };
     console.log("Submitting to /api/v1/admissions/{admissionId}/transfer (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
-    toast({ title: "Patient Transfer Initiated (Mock)", description: `Transfer process for ${currentAdmittedPatientFullDetails.name} has started.` });
+    toast({ title: "Patient Transfer Initiated (Mock)", description: `Transfer for ${currentAdmittedPatientFullDetails.name} started.` });
     setIsTransferring(false);
   };
 
@@ -527,46 +520,92 @@ export default function WardManagementPage() {
                         <Dialog open={isMedicationModalOpen} onOpenChange={setIsMedicationModalOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" size="sm" onClick={handleOpenMedicationModal} disabled={isSavingMedicationUpdates}>
-                                <Edit className="mr-2 h-3 w-3" /> Log/Update Medications
+                                <Edit className="mr-2 h-3 w-3" /> Manage Medication Log
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-lg">
+                            <DialogContent className="sm:max-w-2xl"> {/* Increased width */}
                                 <DialogHeader>
                                 <DialogTitle>Manage Medication Log for {currentAdmittedPatientFullDetails.name}</DialogTitle>
                                 <DialogDescription>
-                                    Update the status for each scheduled medication.
+                                    Update status, edit details, or add new medications to the schedule.
                                 </DialogDescription>
                                 </DialogHeader>
-                                <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
-                                {medicationScheduleInModal.map((med, index) => (
-                                    <div key={med.medicationItemId} className="grid grid-cols-[1fr_auto_120px] items-center gap-3 p-2 border-b">
-                                    <div>
-                                        <p className="text-sm font-medium">{med.medication} ({med.dosage})</p>
-                                        <p className="text-xs text-muted-foreground">Scheduled: {med.time}</p>
+                                <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                    {medicationScheduleInModal.map((med, index) => (
+                                        <div key={med.medicationItemId} className="p-3 border rounded-md space-y-3 bg-background shadow-sm">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`medName-${index}`} className="text-xs">Medication</Label>
+                                                    <Input id={`medName-${index}`} value={med.medication} onChange={(e) => handleMedicationItemChangeInModal(index, "medication", e.target.value)} disabled={isSavingMedicationUpdates} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`medDosage-${index}`} className="text-xs">Dosage</Label>
+                                                    <Input id={`medDosage-${index}`} value={med.dosage} onChange={(e) => handleMedicationItemChangeInModal(index, "dosage", e.target.value)} disabled={isSavingMedicationUpdates} />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_150px] gap-3 items-end">
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`medTime-${index}`} className="text-xs">Time</Label>
+                                                    <Input id={`medTime-${index}`} value={med.time} onChange={(e) => handleMedicationItemChangeInModal(index, "time", e.target.value)} disabled={isSavingMedicationUpdates} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`medStatus-${index}`} className="text-xs">Status</Label>
+                                                    <Select
+                                                        value={med.status}
+                                                        onValueChange={(value) => handleMedicationItemChangeInModal(index, "status", value as MedicationScheduleItem["status"])}
+                                                        disabled={isSavingMedicationUpdates}
+                                                    >
+                                                        <SelectTrigger id={`medStatus-${index}`} className="h-10 text-sm">
+                                                            <SelectValue placeholder="Status" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Pending">Pending</SelectItem>
+                                                            <SelectItem value="Administered">Administered</SelectItem>
+                                                            <SelectItem value="Skipped">Skipped</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label htmlFor={`medNotes-${index}`} className="text-xs">Notes/Reason for Change</Label>
+                                                <Textarea id={`medNotes-${index}`} value={med.notes || ""} onChange={(e) => handleMedicationItemChangeInModal(index, "notes", e.target.value)} placeholder="e.g., Administered by Nurse Jane, Patient refused..." rows={2} disabled={isSavingMedicationUpdates} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {medicationScheduleInModal.length === 0 && <p className="text-sm text-muted-foreground text-center">No medications currently scheduled.</p>}
+                                    
+                                    <Separator className="my-4" />
+                                    
+                                    <div className="p-3 border rounded-md space-y-3 bg-muted/30">
+                                        <h5 className="font-semibold text-md flex items-center gap-2"><PlusCircle className="h-5 w-5 text-primary" />Add New Medication to Schedule</h5>
+                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <Label htmlFor="newMedName" className="text-xs">Medication Name <span className="text-destructive">*</span></Label>
+                                                <Input id="newMedName" value={newMedName} onChange={(e) => setNewMedName(e.target.value)} placeholder="e.g., Amoxicillin" disabled={isSavingMedicationUpdates}/>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label htmlFor="newMedDosage" className="text-xs">Dosage <span className="text-destructive">*</span></Label>
+                                                <Input id="newMedDosage" value={newMedDosage} onChange={(e) => setNewMedDosage(e.target.value)} placeholder="e.g., 500mg PO" disabled={isSavingMedicationUpdates}/>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label htmlFor="newMedTime" className="text-xs">Time <span className="text-destructive">*</span></Label>
+                                            <Input id="newMedTime" value={newMedTime} onChange={(e) => setNewMedTime(e.target.value)} placeholder="e.g., 08:00, TID, PRN" disabled={isSavingMedicationUpdates}/>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label htmlFor="newMedNotes" className="text-xs">Notes/Reason for Addition</Label>
+                                            <Textarea id="newMedNotes" value={newMedNotes} onChange={(e) => setNewMedNotes(e.target.value)} placeholder="e.g., Started for new infection" rows={2} disabled={isSavingMedicationUpdates}/>
+                                        </div>
+                                        <Button type="button" size="sm" variant="outline" onClick={handleAddNewMedicationToModalSchedule} disabled={isSavingMedicationUpdates || !newMedName.trim() || !newMedDosage.trim() || !newMedTime.trim()}>
+                                            <PlusCircle className="mr-2 h-4 w-4"/> Add to Current Schedule
+                                        </Button>
                                     </div>
-                                    <Select
-                                        value={med.status}
-                                        onValueChange={(value) => handleMedicationStatusChangeInModal(med.medicationItemId, value as MedicationScheduleItem["status"])}
-                                        disabled={isSavingMedicationUpdates}
-                                    >
-                                        <SelectTrigger className="w-[120px] h-8 text-xs">
-                                        <SelectValue placeholder="Status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                        <SelectItem value="Pending">Pending</SelectItem>
-                                        <SelectItem value="Administered">Administered</SelectItem>
-                                        <SelectItem value="Skipped">Skipped</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    </div>
-                                ))}
-                                {medicationScheduleInModal.length === 0 && <p className="text-sm text-muted-foreground text-center">No medications scheduled.</p>}
                                 </div>
                                 <DialogFooter>
                                 <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingMedicationUpdates}>Cancel</Button></DialogClose>
                                 <Button onClick={handleSaveMedicationUpdates} disabled={isSavingMedicationUpdates}>
                                     {isSavingMedicationUpdates ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                    Save Medication Log
+                                    Save All Changes to Medication Log
                                 </Button>
                                 </DialogFooter>
                             </DialogContent>
@@ -656,57 +695,7 @@ export default function WardManagementPage() {
             </Card>
         )}
       </div>
-
-      {/* Medication Management Modal */}
-      {currentAdmittedPatientFullDetails && (
-         <Dialog open={isMedicationModalOpen} onOpenChange={setIsMedicationModalOpen}>
-            {/* The DialogTrigger is now part of the Medication Schedule card header */}
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Manage Medication Log for {currentAdmittedPatientFullDetails.name}</DialogTitle>
-                <DialogDescription>
-                  Update the status for each scheduled medication. Changes here will be reflected locally before saving to the backend.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-3 py-4 max-h-[60vh] overflow-y-auto pr-1">
-                {medicationScheduleInModal.map((med) => (
-                  <div key={med.medicationItemId} className="grid grid-cols-[1fr_130px] items-center gap-3 p-2.5 border rounded-md bg-muted/30">
-                    <div>
-                      <p className="text-sm font-medium">{med.medication} ({med.dosage})</p>
-                      <p className="text-xs text-muted-foreground">Scheduled: {med.time}</p>
-                    </div>
-                    <Select
-                      value={med.status}
-                      onValueChange={(value) => handleMedicationStatusChangeInModal(med.medicationItemId, value as MedicationScheduleItem["status"])}
-                      disabled={isSavingMedicationUpdates}
-                    >
-                      <SelectTrigger className="w-full h-9 text-xs">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Administered">Administered</SelectItem>
-                        <SelectItem value="Skipped">Skipped</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
-                {medicationScheduleInModal.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">No medications currently scheduled for this patient.</p>
-                )}
-              </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button type="button" variant="outline" disabled={isSavingMedicationUpdates}>Cancel</Button>
-                </DialogClose>
-                <Button onClick={handleSaveMedicationUpdates} disabled={isSavingMedicationUpdates || medicationScheduleInModal.length === 0}>
-                  {isSavingMedicationUpdates ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                  Save Medication Log
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-      )}
     </AppShell>
   );
 }
+
