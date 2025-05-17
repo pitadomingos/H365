@@ -21,8 +21,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/laboratory-management', label: 'Laboratory', icon: Microscope },
   { href: '/imaging-management', label: 'Imaging', icon: MonitorPlay },
   { href: '/pharmacy-locator', label: 'Drug Dispensing', icon: Pill },
-  { href: '/emergency-room', label: 'Emergency Room', icon: Siren, disabled: false },
-  { href: '/epidemic-control', label: 'Epidemic Control', icon: Biohazard, disabled: false },
+  { href: '/emergency-room', label: 'Emergency Room', icon: Siren },
+  { href: '/epidemic-control', label: 'Epidemic Control', icon: Biohazard },
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
   { href: '/reporting', label: 'Reporting', icon: BarChartBig },
   { href: '/technical-overview', label: 'Technical Overview', icon: Info },
@@ -132,5 +132,3 @@ export const MATERNITY_SPECIFIC_LAB_TESTS: OrderableLabTest[] = [
   { id: "group_b_strep_screen", label: "Group B Strep Screen (GBS)", category: "Microbiology" },
   { id: "antibody_screen_indirect_coombs", label: "Antibody Screen (Indirect Coombs)", category: "Hematology" },
 ];
-
-// ... (rest of the file remains the same)
