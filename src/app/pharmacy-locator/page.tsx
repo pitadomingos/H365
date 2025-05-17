@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Pill, ClipboardList, AlertTriangle, CheckCircle2, PackageCheck, FileText, RefreshCw, BellDot, Loader2 } from "lucide-react";
+import { Pill, ClipboardList, AlertTriangle, CheckCircle2, PackageCheck, FileText, RefreshCw, BellDot, Loader2, ListOrdered, Layers } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -36,6 +36,14 @@ interface StockItem {
   unit: string;
 }
 
+interface RequisitionLogItem {
+  id: string;
+  requestedItemsSummary: string;
+  dateSubmitted: string;
+  submittedBy: string;
+  status: "Pending" | "Partially Fulfilled" | "Fulfilled" | "Cancelled";
+}
+
 const initialPrescriptionsData: Prescription[] = [
   { id: "RX001", patientName: "Alice Wonderland", medication: "Amoxicillin 250mg", quantity: 20, doctor: "Dr. Smith", status: "Waiting" },
   { id: "RX002", patientName: "Bob The Builder", medication: "Paracetamol 500mg", quantity: 30, doctor: "Dr. Jones", status: "Waiting" },
@@ -57,6 +65,11 @@ const initialDailySummaryData = {
   lowStockItemsCount: 2,
 };
 
+const initialRequisitionLogData: RequisitionLogItem[] = [
+    { id: "REQ20240730-001", requestedItemsSummary: "Lisinopril 5mg (35 units)", dateSubmitted: new Date(Date.now() - 86400000 * 2).toISOString(), submittedBy: "Pharmacist Jane", status: "Fulfilled"},
+    { id: "REQ20240731-001", requestedItemsSummary: "Salbutamol Inhaler (30 units)", dateSubmitted: new Date(Date.now() - 86400000).toISOString(), submittedBy: "Pharmacist John", status: "Pending"},
+];
+
 
 export default function DrugDispensingPage() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -65,10 +78,13 @@ export default function DrugDispensingPage() {
   const [isLoadingStock, setIsLoadingStock] = useState(true);
   const [dailySummary, setDailySummary] = useState(initialDailySummaryData);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
+  const [requisitionLog, setRequisitionLog] = useState<RequisitionLogItem[]>([]);
+  const [isLoadingRequisitionLog, setIsLoadingRequisitionLog] = useState(true);
   
-  const [isRefreshingList, setIsRefreshingList] = useState(false);
+  const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const [isDispensingId, setIsDispensingId] = useState<string | null>(null);
-  const [isRequisitioningId, setIsRequisitioningId] = useState<string | null>(null);
+  const [isRequisitioningItemId, setIsRequisitioningItemId] = useState<string | null>(null);
+  const [isRequisitioningAll, setIsRequisitioningAll] = useState(false);
 
   const [clientTime, setClientTime] = useState<Date | null>(null);
 
@@ -82,19 +98,18 @@ export default function DrugDispensingPage() {
     setIsLoadingPrescriptions(true);
     setIsLoadingStock(true);
     setIsLoadingSummary(true);
+    setIsLoadingRequisitionLog(true);
 
-    // Simulate API: GET /api/v1/pharmacy/prescriptions?status=pending
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
     setPrescriptions(initialPrescriptionsData);
     setIsLoadingPrescriptions(false);
 
-    // Simulate API: GET /api/v1/pharmacy/inventory
-    await new Promise(resolve => setTimeout(resolve, 500));
     setStockLevels(initialStockLevelsData);
     setIsLoadingStock(false);
+    
+    setRequisitionLog(initialRequisitionLogData);
+    setIsLoadingRequisitionLog(false);
 
-    // Simulate API: GET /api/v1/pharmacy/reports/summary
-    await new Promise(resolve => setTimeout(resolve, 300));
     const dispensedCount = initialPrescriptionsData.filter(p => p.status === "Dispensed").length;
     const pendingCount = initialPrescriptionsData.filter(p => p.status === "Waiting").length;
     const lowStockCount = initialStockLevelsData.filter(item => item.currentStock < item.threshold).length;
@@ -111,15 +126,14 @@ export default function DrugDispensingPage() {
   }, []);
 
   const handleRefreshAll = async () => {
-    setIsRefreshingList(true);
+    setIsRefreshingAll(true);
     await fetchAllData();
-    toast({ title: "Pharmacy Data Refreshed", description: "Prescriptions, stock, and summary updated (mock)." });
-    setIsRefreshingList(false);
+    toast({ title: "Pharmacy Data Refreshed", description: "Prescriptions, stock, summary, and requisition log updated (mock)." });
+    setIsRefreshingAll(false);
   };
 
   const handleDispense = async (prescription: Prescription) => {
     setIsDispensingId(prescription.id);
-    // Simulate API: PUT /api/v1/pharmacy/prescriptions/{prescription.id}/dispense
     const payload = { dispensedQuantity: prescription.quantity, pharmacistId: "pharm001" };
     console.log("Dispensing payload (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -127,7 +141,6 @@ export default function DrugDispensingPage() {
     setPrescriptions(prev =>
       prev.map(p => (p.id === prescription.id ? { ...p, status: "Dispensed" } : p))
     );
-    // In a real app, this would also trigger an update to stockLevels
     const dispensedItem = stockLevels.find(item => item.name === prescription.medication);
     if (dispensedItem) {
         setStockLevels(prevStock => prevStock.map(item => 
@@ -140,32 +153,80 @@ export default function DrugDispensingPage() {
       description: `${prescription.medication} dispensed to ${prescription.patientName}.`,
     });
     setIsDispensingId(null);
-    // Re-calculate summary after dispensing
     setDailySummary(prev => ({
         ...prev,
         prescriptionsDispensedToday: prev.prescriptionsDispensedToday + 1,
         prescriptionsPending: prev.prescriptionsPending - 1,
     }));
-
   };
 
   const handleRequisitionStock = async (item: StockItem) => {
-    setIsRequisitioningId(item.id);
+    setIsRequisitioningItemId(item.id);
+    const requestedQuantity = item.threshold * 2 - item.currentStock;
     const payload = {
-      requestingFacilityId: "HOSPITAL_PHARM_001", // Mock facility ID
-      items: [{ itemId: item.id, requestedQuantity: item.threshold * 2 - item.currentStock, currentStockAtFacility: item.currentStock }],
-      notes: `Low stock for ${item.name}. Automatic requisition.`
+      requestingFacilityId: "HOSPITAL_PHARM_001",
+      items: [{ itemId: item.id, itemName: item.name, requestedQuantity, currentStockAtFacility: item.currentStock }],
+      notes: `Low stock for ${item.name}. Requisition from individual item action.`
     };
-    // Simulate API: POST /api/v1/pharmacy/requisitions
     console.log("Submitting requisition (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
     
+    const newLogEntry: RequisitionLogItem = {
+      id: `REQ${Date.now()}`,
+      requestedItemsSummary: `${item.name} (${requestedQuantity} ${item.unit})`,
+      dateSubmitted: new Date().toISOString(),
+      submittedBy: "Current Pharmacist (Mock)",
+      status: "Pending"
+    };
+    setRequisitionLog(prev => [newLogEntry, ...prev]);
     toast({
       variant: "default",
       title: "Stock Requisition Submitted (Mock)",
       description: `Requisition for ${item.name} sent to central warehouse.`,
     });
-    setIsRequisitioningId(null);
+    setIsRequisitioningItemId(null);
+  };
+
+  const handleRequisitionAllLowStock = async () => {
+    setIsRequisitioningAll(true);
+    const lowStockItems = stockLevels.filter(item => item.currentStock < item.threshold);
+    if (lowStockItems.length === 0) {
+      toast({ title: "No Low Stock Items", description: "All items are above their threshold." });
+      setIsRequisitioningAll(false);
+      return;
+    }
+
+    const requisitionItems = lowStockItems.map(item => ({
+      itemId: item.id,
+      itemName: item.name,
+      requestedQuantity: item.threshold * 2 - item.currentStock,
+      currentStockAtFacility: item.currentStock
+    }));
+
+    const payload = {
+      requestingFacilityId: "HOSPITAL_PHARM_001",
+      items: requisitionItems,
+      notes: `Bulk requisition for all low stock items.`
+    };
+    console.log("Submitting bulk requisition (mock):", payload);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const summary = lowStockItems.length > 1 ? `${lowStockItems.length} low stock items` : `${lowStockItems[0].name}`;
+    const newLogEntry: RequisitionLogItem = {
+      id: `REQBULK${Date.now()}`,
+      requestedItemsSummary: `Bulk: ${summary}`,
+      dateSubmitted: new Date().toISOString(),
+      submittedBy: "Current Pharmacist (Mock)",
+      status: "Pending"
+    };
+    setRequisitionLog(prev => [newLogEntry, ...prev]);
+
+    toast({
+      variant: "default",
+      title: "Bulk Stock Requisition Submitted (Mock)",
+      description: `Requisition for ${lowStockItems.length} low stock item(s) sent.`,
+    });
+    setIsRequisitioningAll(false);
   };
   
   return (
@@ -198,7 +259,7 @@ export default function DrugDispensingPage() {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <p className="ml-2 text-muted-foreground">Loading prescriptions...</p>
                 </div>
-              ) : prescriptions.length > 0 ? (
+              ) : prescriptions.filter(p => p.status === "Waiting").length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -211,8 +272,8 @@ export default function DrugDispensingPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {prescriptions.map((rx) => (
-                      <TableRow key={rx.id} className={rx.status === 'Dispensed' ? 'opacity-60' : ''}>
+                    {prescriptions.filter(p => p.status === "Waiting").map((rx) => (
+                      <TableRow key={rx.id}>
                         <TableCell className="font-medium">{rx.patientName}</TableCell>
                         <TableCell>{rx.medication}</TableCell>
                         <TableCell>{rx.quantity}</TableCell>
@@ -242,10 +303,10 @@ export default function DrugDispensingPage() {
                  <p className="text-center py-10 text-muted-foreground">No prescriptions currently waiting for dispensing.</p>
               )}
             </CardContent>
-            <CardFooter>
-                <Button variant="outline" onClick={handleRefreshAll} disabled={isRefreshingList || isLoadingPrescriptions}>
-                    {isRefreshingList ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
-                    {isRefreshingList ? "Refreshing..." : "Refresh All Data"}
+            <CardFooter className="flex-col sm:flex-row items-start sm:items-center gap-2">
+                <Button variant="outline" onClick={handleRefreshAll} disabled={isRefreshingAll || isLoadingPrescriptions}>
+                    {isRefreshingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
+                    {isRefreshingAll ? "Refreshing..." : "Refresh All Data"}
                 </Button>
             </CardFooter>
           </Card>
@@ -286,7 +347,7 @@ export default function DrugDispensingPage() {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-6 w-6 text-primary" /> Pharmacy Stock Levels
+                  <Layers className="h-6 w-6 text-primary" /> Pharmacy Stock Levels
                 </CardTitle>
                 <CardDescription>Overview of current medication inventory.</CardDescription>
               </CardHeader>
@@ -316,9 +377,9 @@ export default function DrugDispensingPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             {isLowStock && (
-                              <Button size="sm" variant="outline" onClick={() => handleRequisitionStock(item)} disabled={isRequisitioningId === item.id}>
-                                {isRequisitioningId === item.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin"/> : <BellDot className="mr-1 h-3 w-3"/>}
-                                {isRequisitioningId === item.id ? "Requisitioning..." : "Requisition"}
+                              <Button size="sm" variant="outline" onClick={() => handleRequisitionStock(item)} disabled={isRequisitioningItemId === item.id || isRequisitioningAll}>
+                                {isRequisitioningItemId === item.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin"/> : <BellDot className="mr-1 h-3 w-3"/>}
+                                {isRequisitioningItemId === item.id ? "Requisitioning..." : "Requisition"}
                               </Button>
                             )}
                           </TableCell>
@@ -331,8 +392,12 @@ export default function DrugDispensingPage() {
                   <p className="text-center py-6 text-muted-foreground">No stock data available.</p>
                 )}
               </CardContent>
-               <CardFooter className="pt-4">
-                 <Alert variant="default" className="border-primary/50">
+               <CardFooter className="pt-4 flex-col gap-2 items-stretch">
+                <Button onClick={handleRequisitionAllLowStock} disabled={isLoadingStock || isRequisitioningAll || stockLevels.filter(item => item.currentStock < item.threshold).length === 0}>
+                    {isRequisitioningAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BellDot className="mr-2 h-4 w-4" />}
+                    Requisition All Low Stock Items ({stockLevels.filter(item => item.currentStock < item.threshold).length})
+                </Button>
+                 <Alert variant="default" className="border-primary/50 mt-2">
                     <AlertTriangle className="h-4 w-4 text-primary" />
                     <AlertTitle className="text-sm">System Note</AlertTitle>
                     <AlertDescription className="text-xs">
@@ -343,7 +408,59 @@ export default function DrugDispensingPage() {
             </Card>
           </div>
         </div>
+
+        <Card className="shadow-sm">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <ListOrdered className="h-6 w-6 text-primary"/> Requisition History
+                </CardTitle>
+                <CardDescription>Log of recent stock requisitions submitted by this pharmacy.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isLoadingRequisitionLog ? (
+                    <div className="flex items-center justify-center py-10">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="ml-2 text-muted-foreground">Loading requisition history...</p>
+                    </div>
+                ) : requisitionLog.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Requisition ID</TableHead>
+                                <TableHead>Items Summary</TableHead>
+                                <TableHead>Date Submitted</TableHead>
+                                <TableHead>Submitted By</TableHead>
+                                <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {requisitionLog.map((log) => (
+                                <TableRow key={log.id}>
+                                    <TableCell className="font-mono text-xs">{log.id}</TableCell>
+                                    <TableCell className="text-xs">{log.requestedItemsSummary}</TableCell>
+                                    <TableCell className="text-xs">{new Date(log.dateSubmitted).toLocaleString()}</TableCell>
+                                    <TableCell className="text-xs">{log.submittedBy}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={
+                                            log.status === "Fulfilled" ? "default" :
+                                            log.status === "Pending" ? "secondary" :
+                                            log.status === "Cancelled" ? "destructive" : "outline"
+                                        } className="text-xs">
+                                            {log.status}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                ) : (
+                    <p className="text-center py-10 text-muted-foreground">No requisition history found.</p>
+                )}
+            </CardContent>
+        </Card>
+
       </div>
     </AppShell>
   );
 }
+
