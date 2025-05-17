@@ -41,36 +41,23 @@ interface ImagingRequest {
   orderingDoctor: string;
   requestDate: string;
   status: "Scheduled" | "Pending Scan" | "Scan Complete - Awaiting Report" | "Report Ready" | "Cancelled";
-  report?: string; // To store entered report
-}
-
-interface Equipment {
-  id: string;
-  name: string;
-  status: "Operational" | "Under Maintenance" | "Offline";
+  report?: string; 
+  impression?: string;
 }
 
 const initialImagingRequests: ImagingRequest[] = [
   { id: "IMG001", patientName: "Eva Green", nationalId: "NID004", studyRequested: "Chest X-Ray (PA View)", orderingDoctor: "Dr. Smith", requestDate: "2024-07-30", status: "Scheduled" },
   { id: "IMG002", patientName: "Tom Hanks", nationalId: "NID005", studyRequested: "MRI Brain with Contrast", orderingDoctor: "Dr. Jones", requestDate: "2024-07-30", status: "Scan Complete - Awaiting Report" },
-  { id: "IMG003", patientName: "Lucy Liu", nationalId: "NID006", studyRequested: "Ultrasound Abdomen", orderingDoctor: "Dr. Eve", requestDate: "2024-07-29", status: "Report Ready", report:"Liver and spleen appear normal. No focal lesions identified. Gallbladder is unremarkable." },
-];
-
-const initialEquipment: Equipment[] = [
-  { id: "EQ001", name: "X-Ray Machine 1", status: "Operational" },
-  { id: "EQ002", name: "MRI Scanner A", status: "Operational" },
-  { id: "EQ003", name: "CT Scanner 1", status: "Under Maintenance" },
-  { id: "EQ004", name: "Ultrasound Machine B", status: "Operational" },
+  { id: "IMG003", patientName: "Lucy Liu", nationalId: "NID006", studyRequested: "Ultrasound Abdomen", orderingDoctor: "Dr. Eve", requestDate: "2024-07-29", status: "Report Ready", report:"Liver and spleen appear normal. No focal lesions identified. Gallbladder is unremarkable.", impression: "Normal abdominal ultrasound." },
 ];
 
 export default function ImagingManagementPage() {
   const [imagingRequests, setImagingRequests] = useState<ImagingRequest[]>([]);
   const [isLoadingImagingRequests, setIsLoadingImagingRequests] = useState(true);
-  const [equipment, setEquipment] = useState<Equipment[]>([]);
-  const [isLoadingEquipment, setIsLoadingEquipment] = useState(true);
 
   const [selectedRequest, setSelectedRequest] = useState<ImagingRequest | null>(null);
   const [reportInput, setReportInput] = useState("");
+  const [impressionInput, setImpressionInput] = useState("");
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isSavingReport, setIsSavingReport] = useState(false);
   const [isRefreshingList, setIsRefreshingList] = useState(false);
@@ -85,26 +72,19 @@ export default function ImagingManagementPage() {
 
   useEffect(() => {
     setIsLoadingImagingRequests(true);
-    // Simulate API call: GET /api/v1/imaging/requests
     setTimeout(() => {
       setImagingRequests(initialImagingRequests);
       setIsLoadingImagingRequests(false);
     }, 1000);
-
-    setIsLoadingEquipment(true);
-    // Simulate API call: GET /api/v1/imaging/equipment
-    setTimeout(() => {
-      setEquipment(initialEquipment);
-      setIsLoadingEquipment(false);
-    }, 1200);
   }, []);
 
   const fetchImagingRequests = async () => {
     setIsRefreshingList(true);
-    // Simulate API call: GET /api/v1/imaging/requests
+    setIsLoadingImagingRequests(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setImagingRequests([...initialImagingRequests].sort(() => 0.5 - Math.random())); // Mock refresh
     toast({ title: "Imaging Request List Refreshed", description: "List updated with latest requests (mock)." });
+    setIsLoadingImagingRequests(false);
     setIsRefreshingList(false);
   };
 
@@ -121,21 +101,28 @@ export default function ImagingManagementPage() {
   const handleOpenReportModal = (request: ImagingRequest) => {
     setSelectedRequest(request);
     setReportInput(request.report || "");
+    setImpressionInput(request.impression || "");
     setIsReportModalOpen(true);
   };
 
   const handleSaveReport = async () => {
     if (selectedRequest) {
       setIsSavingReport(true);
+      const payload = {
+        reportContent: reportInput,
+        impression: impressionInput
+      };
+      console.log("Saving report (mock):", payload);
       // Simulate API call: POST /api/v1/imaging/requests/{selectedRequest.id}/report
       await new Promise(resolve => setTimeout(resolve, 1500));
       setImagingRequests(prev => prev.map(req => 
-        req.id === selectedRequest.id ? { ...req, report: reportInput, status: "Report Ready" } : req
+        req.id === selectedRequest.id ? { ...req, report: reportInput, impression: impressionInput, status: "Report Ready" } : req
       ));
       toast({ title: "Report Saved (Mock)", description: `Report for ${selectedRequest.patientName} (ID: ${selectedRequest.id}) saved.` });
       setIsReportModalOpen(false);
       setSelectedRequest(null);
       setReportInput("");
+      setImpressionInput("");
       setIsSavingReport(false);
     }
   };
@@ -151,7 +138,7 @@ export default function ImagingManagementPage() {
             {clientTime ? (
               `${clientTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${clientTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
             ) : (
-              "\u00A0" // Non-breaking space as placeholder
+              "\u00A0" 
             )}
           </div>
         </div>
@@ -191,7 +178,7 @@ export default function ImagingManagementPage() {
                         </TableCell>
                         <TableCell className="text-xs">{req.studyRequested}</TableCell>
                         <TableCell>{req.orderingDoctor}</TableCell>
-                        <TableCell>{new Date(req.requestDate).toLocaleDateString()}</TableCell>
+                        <TableCell>{new Date(req.requestDate + 'T00:00:00').toLocaleDateString()}</TableCell>
                         <TableCell>
                           <Select 
                               value={req.status} 
@@ -266,43 +253,15 @@ export default function ImagingManagementPage() {
                 </CardTitle>
                 <CardDescription>Overview of imaging equipment.</CardDescription>
               </CardHeader>
-              <CardContent className="max-h-[300px] overflow-y-auto pr-1">
-                {isLoadingEquipment ? (
-                  <div className="flex items-center justify-center py-6">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary mr-2"/> Loading equipment...
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Equipment Name</TableHead>
-                        <TableHead className="text-right">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {equipment.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant={item.status === "Operational" ? "default" : item.status === "Under Maintenance" ? "secondary" : "destructive"} className="text-xs">
-                                  {item.status}
-                              </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-               <CardFooter className="pt-4">
-                 <Alert variant="default" className="border-primary/50">
+              <CardContent>
+                <Alert variant="default" className="border-primary/50">
                     <AlertTriangle className="h-4 w-4 text-primary" />
                     <AlertTitle className="text-sm">System Note</AlertTitle>
                     <AlertDescription className="text-xs">
-                        Equipment maintenance schedules and fault reporting are handled by the Biomedical Engineering module (not shown).
+                        Equipment status, maintenance schedules, and fault reporting will be managed by the Biomedical Engineering module. This module is planned for future development.
                     </AlertDescription>
                 </Alert>
-               </CardFooter>
+              </CardContent>
             </Card>
           </div>
         </div>
@@ -332,6 +291,8 @@ export default function ImagingManagementPage() {
                 <Label htmlFor="impressionInput">Key Findings / Impression (Optional)</Label>
                 <Textarea
                   id="impressionInput"
+                  value={impressionInput}
+                  onChange={(e) => setImpressionInput(e.target.value)}
                   placeholder="Summarize key findings or clinical impression."
                   className="min-h-[80px]"
                   disabled={isSavingReport}
@@ -352,6 +313,5 @@ export default function ImagingManagementPage() {
     </AppShell>
   );
 }
-
 
     

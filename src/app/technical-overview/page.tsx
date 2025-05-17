@@ -16,7 +16,7 @@ export default function TechnicalOverviewPage() {
   const renderListItem = (titleKey: string, descKey: string) => (
     <li className="mb-2">
       <strong className="text-primary/90">{t(titleKey)}:</strong>
-      <p className="text-base text-muted-foreground mt-0.5 ml-1">{t(descKey)}</p> {/* Changed text-sm to text-base */}
+      <p className="text-base text-muted-foreground mt-0.5 ml-1">{t(descKey)}</p>
     </li>
   );
 
@@ -47,8 +47,8 @@ export default function TechnicalOverviewPage() {
           <CardHeader>
             <CardTitle className="text-xl">{t('techOverview.section1.title')}</CardTitle>
           </CardHeader>
-          <CardContent className="prose dark:prose-invert max-w-none"> {/* Removed prose-sm, using default prose size */}
-            <p className="text-base"> {/* Explicitly set text-base for main paragraph */}
+          <CardContent className="prose dark:prose-invert max-w-none">
+            <p className="text-base">
               {t('techOverview.section1.content')}
             </p>
           </CardContent>
@@ -203,6 +203,7 @@ export default function TechnicalOverviewPage() {
               {renderListItem('techOverview.section5.itemRealtime', 'techOverview.section5.itemRealtime.desc')}
               {renderListItem('techOverview.section5.itemHL7FHIR', 'techOverview.section5.itemHL7FHIR.desc')}
               {renderListItem('techOverview.section5.itemInstrumentIntegration', 'techOverview.section5.itemInstrumentIntegration.desc')}
+              {renderListItem('techOverview.section5.itemBiomedicalEngineering', 'techOverview.section5.itemBiomedicalEngineering.desc')}
               {renderListItem('techOverview.section5.itemAdvancedReporting', 'techOverview.section5.itemAdvancedReporting.desc')}
               {renderListItem('techOverview.section5.itemCampaignManagement', 'techOverview.section5.itemCampaignManagement.desc')}
               {renderListItem('techOverview.section5.itemSecurityCompliance', 'techOverview.section5.itemSecurityCompliance.desc')}
@@ -219,6 +220,5 @@ export default function TechnicalOverviewPage() {
     </AppShell>
   );
 }
-
 
     
