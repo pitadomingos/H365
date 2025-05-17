@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Pill, ClipboardList, AlertTriangle, CheckCircle2, PackageCheck, FileText, RefreshCw, BellDot, Loader2 } from "lucide-react"; // Added Loader2
+import { Pill, ClipboardList, AlertTriangle, CheckCircle2, PackageCheck, FileText, RefreshCw, BellDot, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -36,14 +36,14 @@ interface StockItem {
   unit: string;
 }
 
-const initialPrescriptions: Prescription[] = [
+const initialPrescriptionsData: Prescription[] = [
   { id: "RX001", patientName: "Alice Wonderland", medication: "Amoxicillin 250mg", quantity: 20, doctor: "Dr. Smith", status: "Waiting" },
   { id: "RX002", patientName: "Bob The Builder", medication: "Paracetamol 500mg", quantity: 30, doctor: "Dr. Jones", status: "Waiting" },
   { id: "RX003", patientName: "Charlie Brown", medication: "Atorvastatin 10mg", quantity: 60, doctor: "Dr. Eve", status: "Dispensed" },
   { id: "RX004", patientName: "Diana Prince", medication: "Lisinopril 5mg", quantity: 30, doctor: "Dr. Smith", status: "Waiting" },
 ];
 
-const initialStockLevels: StockItem[] = [
+const initialStockLevelsData: StockItem[] = [
   { id: "MED001", name: "Amoxicillin 250mg", currentStock: 50, threshold: 100, unit: "capsules" },
   { id: "MED002", name: "Paracetamol 500mg", currentStock: 200, threshold: 150, unit: "tablets" },
   { id: "MED003", name: "Atorvastatin 10mg", currentStock: 150, threshold: 50, unit: "tablets" },
@@ -51,16 +51,24 @@ const initialStockLevels: StockItem[] = [
   { id: "MED005", name: "Salbutamol Inhaler", currentStock: 10, threshold: 20, unit: "inhalers" },
 ];
 
+const initialDailySummaryData = {
+  prescriptionsDispensedToday: 1,
+  prescriptionsPending: 3,
+  lowStockItemsCount: 2,
+};
+
 
 export default function DrugDispensingPage() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoadingPrescriptions, setIsLoadingPrescriptions] = useState(true);
   const [stockLevels, setStockLevels] = useState<StockItem[]>([]);
   const [isLoadingStock, setIsLoadingStock] = useState(true);
+  const [dailySummary, setDailySummary] = useState(initialDailySummaryData);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   
   const [isRefreshingList, setIsRefreshingList] = useState(false);
   const [isDispensingId, setIsDispensingId] = useState<string | null>(null);
-  const [isNotifyingId, setIsNotifyingId] = useState<string | null>(null);
+  const [isRequisitioningId, setIsRequisitioningId] = useState<string | null>(null);
 
   const [clientTime, setClientTime] = useState<Date | null>(null);
 
@@ -70,62 +78,96 @@ export default function DrugDispensingPage() {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
+  const fetchAllData = async () => {
     setIsLoadingPrescriptions(true);
-    // Simulate API: GET /api/v1/pharmacy/prescriptions/pending
-    setTimeout(() => {
-      setPrescriptions(initialPrescriptions);
-      setIsLoadingPrescriptions(false);
-    }, 1000);
-
     setIsLoadingStock(true);
+    setIsLoadingSummary(true);
+
+    // Simulate API: GET /api/v1/pharmacy/prescriptions?status=pending
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setPrescriptions(initialPrescriptionsData);
+    setIsLoadingPrescriptions(false);
+
     // Simulate API: GET /api/v1/pharmacy/inventory
-    setTimeout(() => {
-      setStockLevels(initialStockLevels);
-      setIsLoadingStock(false);
-    }, 1200);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setStockLevels(initialStockLevelsData);
+    setIsLoadingStock(false);
+
+    // Simulate API: GET /api/v1/pharmacy/reports/summary
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const dispensedCount = initialPrescriptionsData.filter(p => p.status === "Dispensed").length;
+    const pendingCount = initialPrescriptionsData.filter(p => p.status === "Waiting").length;
+    const lowStockCount = initialStockLevelsData.filter(item => item.currentStock < item.threshold).length;
+    setDailySummary({
+        prescriptionsDispensedToday: dispensedCount,
+        prescriptionsPending: pendingCount,
+        lowStockItemsCount: lowStockCount
+    });
+    setIsLoadingSummary(false);
+  };
+
+  useEffect(() => {
+    fetchAllData();
   }, []);
 
-  const fetchPrescriptions = async () => {
+  const handleRefreshAll = async () => {
     setIsRefreshingList(true);
-    // Simulate API: GET /api/v1/pharmacy/prescriptions/pending
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setPrescriptions([...initialPrescriptions].sort(() => 0.5 - Math.random()));
-    toast({ title: "Prescription List Refreshed", description: "List updated (mock)." });
+    await fetchAllData();
+    toast({ title: "Pharmacy Data Refreshed", description: "Prescriptions, stock, and summary updated (mock)." });
     setIsRefreshingList(false);
   };
 
-  const handleDispense = async (id: string) => {
-    setIsDispensingId(id);
-    // Simulate API: PUT /api/v1/pharmacy/prescriptions/{id}/dispense
+  const handleDispense = async (prescription: Prescription) => {
+    setIsDispensingId(prescription.id);
+    // Simulate API: PUT /api/v1/pharmacy/prescriptions/{prescription.id}/dispense
+    const payload = { dispensedQuantity: prescription.quantity, pharmacistId: "pharm001" };
+    console.log("Dispensing payload (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
+    
     setPrescriptions(prev =>
-      prev.map(p => (p.id === id ? { ...p, status: "Dispensed" } : p))
+      prev.map(p => (p.id === prescription.id ? { ...p, status: "Dispensed" } : p))
     );
-    const patient = prescriptions.find(p=>p.id === id);
+    // In a real app, this would also trigger an update to stockLevels
+    const dispensedItem = stockLevels.find(item => item.name === prescription.medication);
+    if (dispensedItem) {
+        setStockLevels(prevStock => prevStock.map(item => 
+            item.id === dispensedItem.id ? {...item, currentStock: Math.max(0, item.currentStock - prescription.quantity)} : item
+        ));
+    }
+    
     toast({
       title: "Medication Dispensed (Mock)",
-      description: `${patient?.medication} dispensed to ${patient?.patientName}.`,
+      description: `${prescription.medication} dispensed to ${prescription.patientName}.`,
     });
     setIsDispensingId(null);
+    // Re-calculate summary after dispensing
+    setDailySummary(prev => ({
+        ...prev,
+        prescriptionsDispensedToday: prev.prescriptionsDispensedToday + 1,
+        prescriptionsPending: prev.prescriptionsPending - 1,
+    }));
+
   };
 
-  const handleNotifyLowStock = async (item: StockItem) => {
-    setIsNotifyingId(item.id);
-    // Simulate API: POST /api/v1/pharmacy/inventory/requisition or notification
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  const handleRequisitionStock = async (item: StockItem) => {
+    setIsRequisitioningId(item.id);
+    const payload = {
+      requestingFacilityId: "HOSPITAL_PHARM_001", // Mock facility ID
+      items: [{ itemId: item.id, requestedQuantity: item.threshold * 2 - item.currentStock, currentStockAtFacility: item.currentStock }],
+      notes: `Low stock for ${item.name}. Automatic requisition.`
+    };
+    // Simulate API: POST /api/v1/pharmacy/requisitions
+    console.log("Submitting requisition (mock):", payload);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
     toast({
       variant: "default",
-      title: "Low Stock Notification Sent (Mock)",
-      description: `Alert for ${item.name} (Stock: ${item.currentStock} ${item.unit}) sent.`,
+      title: "Stock Requisition Submitted (Mock)",
+      description: `Requisition for ${item.name} sent to central warehouse.`,
     });
-    setIsNotifyingId(null);
+    setIsRequisitioningId(null);
   };
   
-  const dispensedToday = prescriptions.filter(p => p.status === "Dispensed").length;
-  const pendingToday = prescriptions.filter(p => p.status === "Waiting").length;
-  const lowStockItemsCount = stockLevels.filter(item => item.currentStock < item.threshold).length;
-
   return (
     <AppShell>
       <div className="flex flex-col gap-6">
@@ -137,7 +179,7 @@ export default function DrugDispensingPage() {
             {clientTime ? (
               `${clientTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${clientTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
             ) : (
-              "\u00A0" // Non-breaking space as placeholder
+              "\u00A0" 
             )}
           </div>
         </div>
@@ -182,7 +224,7 @@ export default function DrugDispensingPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           {rx.status === "Waiting" ? (
-                            <Button size="sm" onClick={() => handleDispense(rx.id)} disabled={isDispensingId === rx.id}>
+                            <Button size="sm" onClick={() => handleDispense(rx)} disabled={isDispensingId === rx.id}>
                               {isDispensingId === rx.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PackageCheck className="mr-2 h-4 w-4" />}
                               {isDispensingId === rx.id ? "Dispensing..." : "Dispense"}
                             </Button>
@@ -201,9 +243,9 @@ export default function DrugDispensingPage() {
               )}
             </CardContent>
             <CardFooter>
-                <Button variant="outline" onClick={fetchPrescriptions} disabled={isRefreshingList || isLoadingPrescriptions}>
+                <Button variant="outline" onClick={handleRefreshAll} disabled={isRefreshingList || isLoadingPrescriptions}>
                     {isRefreshingList ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
-                    {isRefreshingList ? "Refreshing..." : "Refresh List"}
+                    {isRefreshingList ? "Refreshing..." : "Refresh All Data"}
                 </Button>
             </CardFooter>
           </Card>
@@ -217,7 +259,7 @@ export default function DrugDispensingPage() {
                  <CardDescription>Summary of today's dispensing activities.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                 {isLoadingPrescriptions || isLoadingStock ? (
+                 {isLoadingSummary ? (
                    <div className="flex items-center justify-center py-4">
                     <Loader2 className="h-5 w-5 animate-spin text-primary mr-2"/> Loading summary...
                   </div>
@@ -225,15 +267,15 @@ export default function DrugDispensingPage() {
                   <>
                     <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
                         <span className="text-sm font-medium">Prescriptions Dispensed:</span>
-                        <Badge variant="secondary" className="text-base">{dispensedToday}</Badge>
+                        <Badge variant="secondary" className="text-base">{dailySummary.prescriptionsDispensedToday}</Badge>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
                         <span className="text-sm font-medium">Prescriptions Pending:</span>
-                        <Badge className="text-base">{pendingToday}</Badge>
+                        <Badge className="text-base">{dailySummary.prescriptionsPending}</Badge>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
                         <span className="text-sm font-medium">Low Stock Items:</span>
-                        <Badge variant={lowStockItemsCount > 0 ? "destructive": "default"} className="text-base">{lowStockItemsCount}</Badge>
+                        <Badge variant={dailySummary.lowStockItemsCount > 0 ? "destructive": "default"} className="text-base">{dailySummary.lowStockItemsCount}</Badge>
                     </div>
                     <Button className="w-full mt-2" variant="outline" disabled>View Full Report</Button>
                   </>
@@ -274,9 +316,9 @@ export default function DrugDispensingPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             {isLowStock && (
-                              <Button size="sm" variant="outline" onClick={() => handleNotifyLowStock(item)} disabled={isNotifyingId === item.id}>
-                                {isNotifyingId === item.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin"/> : <BellDot className="mr-1 h-3 w-3"/>}
-                                {isNotifyingId === item.id ? "Notifying..." : "Notify"}
+                              <Button size="sm" variant="outline" onClick={() => handleRequisitionStock(item)} disabled={isRequisitioningId === item.id}>
+                                {isRequisitioningId === item.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin"/> : <BellDot className="mr-1 h-3 w-3"/>}
+                                {isRequisitioningId === item.id ? "Requisitioning..." : "Requisition"}
                               </Button>
                             )}
                           </TableCell>
@@ -305,6 +347,3 @@ export default function DrugDispensingPage() {
     </AppShell>
   );
 }
-
-
-    

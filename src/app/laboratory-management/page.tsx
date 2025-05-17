@@ -41,12 +41,12 @@ interface TestDetail {
   unit: string;
   normalRangeMin?: number;
   normalRangeMax?: number;
-  normalRangeDisplay: string; // e.g., "70-110", or "Negative"
-  interpretRanges?: { // For more complex, non-linear interpretations or very specific boundaries
-    veryLow?: number; // Upper bound for "Very Low"
-    low?: number;     // Upper bound for "Low"
-    high?: number;    // Lower bound for "High"
-    veryHigh?: number;// Lower bound for "Very High"
+  normalRangeDisplay: string; 
+  interpretRanges?: { 
+    veryLow?: number; 
+    low?: number;     
+    high?: number;    
+    veryHigh?: number;
   };
   isNumeric: boolean;
 }
@@ -65,11 +65,11 @@ interface LabRequest {
   id: string;
   patientName: string;
   nationalId: string;
-  testsRequested: string[]; // Array of test IDs like "glucose_random", "hemoglobin"
+  testsRequested: string[]; 
   orderingDoctor: string;
   requestDate: string;
   status: "Sample Pending" | "Sample Collected" | "Processing" | "Results Ready" | "Cancelled";
-  results?: ResultInputItem[] | string; // Can store structured results or a simple string
+  results?: ResultInputItem[] | string; 
 }
 
 interface Reagent {
@@ -85,7 +85,7 @@ interface Reagent {
 // --- Mock Data ---
 const MOCK_TEST_DEFINITIONS: Record<string, TestDetail> = {
   "glucose_random": { id: "glucose_random", name: "Glucose, Random", unit: "mg/dL", normalRangeMin: 70, normalRangeMax: 140, normalRangeDisplay: "70-140", isNumeric: true, interpretRanges: { low: 70, high: 140, veryHigh: 200 } },
-  "hemoglobin": { id: "hemoglobin", name: "Hemoglobin (Hgb)", unit: "g/dL", normalRangeMin: 12, normalRangeMax: 16, normalRangeDisplay: "12-16 (Female), 14-18 (Male)", isNumeric: true, interpretRanges: { veryLow: 7, low: 10, high: 18 } }, // Example generic range
+  "hemoglobin": { id: "hemoglobin", name: "Hemoglobin (Hgb)", unit: "g/dL", normalRangeMin: 12, normalRangeMax: 16, normalRangeDisplay: "12-16 (Female), 14-18 (Male)", isNumeric: true, interpretRanges: { veryLow: 7, low: 10, high: 18 } },
   "wbc_count": { id: "wbc_count", name: "White Blood Cell Count (WBC)", unit: "x10^9/L", normalRangeMin: 4.0, normalRangeMax: 11.0, normalRangeDisplay: "4.0-11.0", isNumeric: true, interpretRanges: { low: 3.0, high: 12.0, veryHigh: 20.0 } },
   "platelet_count": {id: "platelet_count", name: "Platelet Count", unit: "x10^9/L", normalRangeMin: 150, normalRangeMax: 450, normalRangeDisplay: "150-450", isNumeric: true, interpretRanges: {low: 100, veryLow: 50, high: 500, veryHigh: 600 } },
   "tsh": { id: "tsh", name: "TSH", unit: "mIU/L", normalRangeMin: 0.4, normalRangeMax: 4.0, normalRangeDisplay: "0.4-4.0", isNumeric: true, interpretRanges: { low: 0.1, high: 5.0, veryHigh: 10.0 } },
@@ -98,14 +98,13 @@ const MOCK_TEST_DEFINITIONS: Record<string, TestDetail> = {
   "urinalysis_re": { id: "urinalysis_re", name: "Urinalysis, Routine & Microscopy", unit: "", normalRangeDisplay: "Refer to report", isNumeric: false},
 };
 
-
-const initialLabRequests: LabRequest[] = [
+const initialLabRequestsData: LabRequest[] = [
     { id: "LR001", patientName: "Alice Wonderland", nationalId: "NID001", testsRequested: ["hemoglobin", "glucose_random", "urinalysis_re"], orderingDoctor: "Dr. Smith", requestDate: "2024-07-30", status: "Sample Pending" },
     { id: "LR002", patientName: "Bob The Builder", nationalId: "NID002", testsRequested: ["wbc_count", "platelet_count", "creatinine_serum"], orderingDoctor: "Dr. Jones", requestDate: "2024-07-30", status: "Processing" },
     { id: "LR003", patientName: "Charlie Brown", nationalId: "NID003", testsRequested: ["tsh", "free_t4"], orderingDoctor: "Dr. Eve", requestDate: "2024-07-29", status: "Results Ready", results: [{testId: "tsh", testName:"TSH", value: "2.5", unit: "mIU/L", normalRangeDisplay: "0.4-4.0", interpretation: "Normal", isNumeric:true}, {testId: "free_t4", testName:"Free T4", value:"1.2", unit:"ng/dL", normalRangeDisplay: "0.8-1.8", interpretation: "Normal", isNumeric:true}]},
 ];
 
-const initialReagents: Reagent[] = [
+const initialReagentsData: Reagent[] = [
     { id: "RG001", name: "Hematology Reagent Pack", currentStock: 50, threshold: 20, unit: "packs" },
     { id: "RG002", name: "Glucose Test Strips", currentStock: 150, threshold: 100, unit: "strips (box of 50)" },
     { id: "RG003", name: "Microscope Slides", currentStock: 80, threshold: 50, unit: "boxes (100/box)" },
@@ -123,47 +122,51 @@ export default function LaboratoryManagementPage() {
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [isSavingResults, setIsSavingResults] = useState(false);
   
-  const [isReorderingReagentId, setIsReorderingReagentId] = useState<string | null>(null);
+  const [isRequisitioningReagentId, setIsRequisitioningReagentId] = useState<string | null>(null);
   const [isRefreshingList, setIsRefreshingList] = useState(false);
 
   const [clientTime, setClientTime] = useState<Date | null>(null);
 
   useEffect(() => {
-    // This effect runs only on the client, after the component mounts
-    setClientTime(new Date()); // Set the initial time
-
+    setClientTime(new Date()); 
     const timerId = setInterval(() => {
-      setClientTime(new Date()); // Update the time every minute
+      setClientTime(new Date()); 
     }, 60000);
-
     return () => {
-      clearInterval(timerId); // Cleanup interval on component unmount
+      clearInterval(timerId); 
     };
-  }, []); // Empty dependency array means this effect runs once on mount and cleans up on unmount
+  }, []); 
 
 
   useEffect(() => {
     setIsLoadingLabRequests(true);
-    // Simulate API call: GET /api/v1/lab/requests
     setTimeout(() => {
-      setLabRequests(initialLabRequests);
+      setLabRequests(initialLabRequestsData);
       setIsLoadingLabRequests(false);
     }, 1200);
 
     setIsLoadingReagents(true);
-    // Simulate API call: GET /api/v1/lab/reagents
     setTimeout(() => {
-      setReagents(initialReagents);
+      setReagents(initialReagentsData);
       setIsLoadingReagents(false);
     }, 1500);
   }, []);
   
-  const fetchLabRequests = async () => {
+  const handleRefreshAll = async () => {
     setIsRefreshingList(true);
+    setIsLoadingLabRequests(true);
+    setIsLoadingReagents(true);
     // Simulate API Call: GET /api/v1/lab/requests
     await new Promise(resolve => setTimeout(resolve, 1000));
-    setLabRequests([...initialLabRequests].sort(() => 0.5 - Math.random())); 
-    toast({ title: "Lab Request List Refreshed", description: "List updated with latest requests (mock)." });
+    setLabRequests([...initialLabRequestsData].sort(() => 0.5 - Math.random())); 
+    setIsLoadingLabRequests(false);
+    
+    // Simulate API Call: GET /api/v1/lab/reagents
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setReagents([...initialReagentsData].sort(() => 0.5 - Math.random()));
+    setIsLoadingReagents(false);
+
+    toast({ title: "Lab Data Refreshed", description: "Request list and reagent inventory updated (mock)." });
     setIsRefreshingList(false);
   };
 
@@ -190,7 +193,7 @@ export default function LaboratoryManagementPage() {
         if (interpretRanges.low !== undefined && value < (interpretRanges.low ?? normalRangeMin ?? -Infinity)) return "Low";
         if (interpretRanges.veryHigh !== undefined && value > interpretRanges.veryHigh) return "Very High";
         if (interpretRanges.high !== undefined && value > (interpretRanges.high ?? normalRangeMax ?? Infinity)) return "High";
-    } else { // Fallback to simple range if interpretRanges not fully defined
+    } else { 
         if (normalRangeMin !== undefined && value < normalRangeMin) return "Low";
         if (normalRangeMax !== undefined && value > normalRangeMax) return "High";
     }
@@ -213,7 +216,7 @@ export default function LaboratoryManagementPage() {
             existingInterpretation = foundResult.interpretation;
         }
       } else if (typeof request.results === 'string' && !testDef) {
-        existingResultValue = request.results; // For general text area fallback
+        existingResultValue = request.results; 
       }
 
 
@@ -228,7 +231,6 @@ export default function LaboratoryManagementPage() {
           isNumeric: testDef.isNumeric,
         };
       }
-      // Fallback for tests not in definitions (e.g. "Lipid Profile" which is a panel)
       return {
         testId: testIdOrName,
         testName: testIdOrName,
@@ -236,7 +238,7 @@ export default function LaboratoryManagementPage() {
         unit: "",
         normalRangeDisplay: "N/A",
         interpretation: "N/A",
-        isNumeric: false, // Assume false if not defined
+        isNumeric: false, 
       };
     });
     setCurrentResultInputs(initialInputs);
@@ -262,6 +264,11 @@ export default function LaboratoryManagementPage() {
     if (!selectedRequestForResults) return;
     setIsSavingResults(true);
     // Simulate API Call: POST /api/v1/lab/requests/{selectedRequestForResults.id}/results
+    const payload = {
+        results: currentResultInputs,
+        labTechnicianComments: (document.getElementById('labTechComments') as HTMLTextAreaElement)?.value || ""
+    };
+    console.log("Saving lab results (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     setLabRequests(prevReqs => prevReqs.map(req => 
@@ -276,12 +283,18 @@ export default function LaboratoryManagementPage() {
     setIsSavingResults(false);
   };
   
-  const handleReorderReagent = async (reagent: Reagent) => {
-      setIsReorderingReagentId(reagent.id);
-      // Simulate API Call: POST /api/v1/lab/reagents/requisition
+  const handleRequisitionReagent = async (reagent: Reagent) => {
+      setIsRequisitioningReagentId(reagent.id);
+      const payload = {
+        requestingLabId: "LAB_MAIN_001", // Mock lab ID
+        items: [{ reagentId: reagent.id, requestedQuantity: reagent.threshold * 2 - reagent.currentStock, currentStockAtLab: reagent.currentStock }],
+        notes: `Low stock for ${reagent.name}. Automatic requisition.`
+      };
+      // Simulate API Call: POST /api/v1/lab/reagents/requisitions
+      console.log("Submitting reagent requisition (mock):", payload);
       await new Promise(resolve => setTimeout(resolve, 1500));
-      toast({title: "Reagent Reorder (Mock)", description: `Reorder request placed for ${reagent.name}.`});
-      setIsReorderingReagentId(null);
+      toast({title: "Reagent Requisition Submitted (Mock)", description: `Requisition for ${reagent.name} sent to central stores.`});
+      setIsRequisitioningReagentId(null);
   }
 
   return (
@@ -295,7 +308,7 @@ export default function LaboratoryManagementPage() {
             {clientTime ? (
               `${clientTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${clientTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
             ) : (
-              "\u00A0" // Non-breaking space as placeholder
+              "\u00A0" 
             )}
           </div>
         </div>
@@ -369,9 +382,9 @@ export default function LaboratoryManagementPage() {
               )}
             </CardContent>
              <CardFooter>
-                <Button variant="outline" onClick={fetchLabRequests} disabled={isRefreshingList || isLoadingLabRequests}>
+                <Button variant="outline" onClick={handleRefreshAll} disabled={isRefreshingList || isLoadingLabRequests}>
                     {isRefreshingList ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
-                    {isRefreshingList ? "Refreshing..." : "Refresh Request List"}
+                    {isRefreshingList ? "Refreshing..." : "Refresh All Lab Data"}
                 </Button>
             </CardFooter>
           </Card>
@@ -445,11 +458,11 @@ export default function LaboratoryManagementPage() {
                                 <Button 
                                   size="sm" 
                                   variant="outline" 
-                                  onClick={() => handleReorderReagent(item)}
-                                  disabled={isReorderingReagentId === item.id}
+                                  onClick={() => handleRequisitionReagent(item)}
+                                  disabled={isRequisitioningReagentId === item.id}
                                 >
-                                  {isReorderingReagentId === item.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin"/> : <RefreshCw className="mr-1 h-3 w-3"/>}
-                                  {isReorderingReagentId === item.id ? "Ordering..." : "Re-order"}
+                                  {isRequisitioningReagentId === item.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin"/> : <RefreshCw className="mr-1 h-3 w-3"/>}
+                                  {isRequisitioningReagentId === item.id ? "Requisitioning..." : "Requisition"}
                                 </Button>
                               )}
                             </TableCell>
@@ -475,9 +488,8 @@ export default function LaboratoryManagementPage() {
           </div>
         </div>
 
-        {/* Result Entry Modal */}
         <Dialog open={isResultModalOpen} onOpenChange={setIsResultModalOpen}>
-            <DialogContent className="sm:max-w-2xl"> {/* Increased width */}
+            <DialogContent className="sm:max-w-2xl"> 
                 <DialogHeader>
                     <DialogTitle>Enter/Edit Lab Results for {selectedRequestForResults?.patientName}</DialogTitle>
                     <DialogDescription>
@@ -508,7 +520,7 @@ export default function LaboratoryManagementPage() {
                                         variant={
                                             inputItem.interpretation === "Normal" ? "default" : 
                                             inputItem.interpretation === "N/A" || inputItem.interpretation === "Invalid Input" ? "outline" :
-                                            "secondary" // For Low, High, Very Low, Very High
+                                            "secondary" 
                                         }
                                         className={cn("text-xs sm:col-span-1 justify-center", {
                                             "bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300": inputItem.interpretation === "Normal",
@@ -556,6 +568,3 @@ export default function LaboratoryManagementPage() {
     </AppShell>
   );
 }
-
-
-    
