@@ -37,11 +37,11 @@ interface StockItem {
 }
 
 interface RequisitionLogItem {
-  id: string;
-  requestedItemsSummary: string;
-  dateSubmitted: string;
-  submittedBy: string;
-  status: "Pending" | "Partially Fulfilled" | "Fulfilled" | "Cancelled";
+  id: string; // Requisition ID from backend
+  requestedItemsSummary: string; // e.g., "Amoxicillin (50 units), Paracetamol (100 units)" or "Multiple items (3)"
+  dateSubmitted: string; // ISO date string
+  submittedBy: string; // Mocked as "Current Pharmacist"
+  status: "Pending" | "Partially Fulfilled" | "Fulfilled" | "Cancelled"; // Mock status
 }
 
 const initialPrescriptionsData: Prescription[] = [
@@ -125,9 +125,16 @@ export default function DrugDispensingPage() {
     fetchAllData();
   }, []);
 
+  const isItemPendingRequisition = (itemId: string): boolean => {
+    return requisitionLog.some(log => 
+      log.status === "Pending" && 
+      log.requestedItemsSummary.includes(stockLevels.find(s => s.id === itemId)?.name || '###') // Basic check, can be improved
+    );
+  };
+
   const handleRefreshAll = async () => {
     setIsRefreshingAll(true);
-    await fetchAllData();
+    await fetchAllData(); // This now includes fetching requisition log
     toast({ title: "Pharmacy Data Refreshed", description: "Prescriptions, stock, summary, and requisition log updated (mock)." });
     setIsRefreshingAll(false);
   };
@@ -161,10 +168,20 @@ export default function DrugDispensingPage() {
   };
 
   const handleRequisitionStock = async (item: StockItem) => {
+    if (isItemPendingRequisition(item.id)) {
+      toast({ variant: "default", title: "Already Requested", description: `${item.name} has a pending requisition.` });
+      return;
+    }
     setIsRequisitioningItemId(item.id);
-    const requestedQuantity = item.threshold * 2 - item.currentStock;
+    const requestedQuantity = Math.max(0, item.threshold * 2 - item.currentStock); // Ensure non-negative
+    if (requestedQuantity === 0) {
+        toast({variant: "default", title: "Sufficient Stock", description: `${item.name} does not need immediate requisition based on current levels.`});
+        setIsRequisitioningItemId(null);
+        return;
+    }
+
     const payload = {
-      requestingFacilityId: "HOSPITAL_PHARM_001",
+      requestingFacilityId: "HOSPITAL_PHARM_001", // Mock facility ID
       items: [{ itemId: item.id, itemName: item.name, requestedQuantity, currentStockAtFacility: item.currentStock }],
       notes: `Low stock for ${item.name}. Requisition from individual item action.`
     };
@@ -172,7 +189,7 @@ export default function DrugDispensingPage() {
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     const newLogEntry: RequisitionLogItem = {
-      id: `REQ${Date.now()}`,
+      id: `REQ${Date.now()}-${item.id.substring(0,3)}`,
       requestedItemsSummary: `${item.name} (${requestedQuantity} ${item.unit})`,
       dateSubmitted: new Date().toISOString(),
       submittedBy: "Current Pharmacist (Mock)",
@@ -189,32 +206,37 @@ export default function DrugDispensingPage() {
 
   const handleRequisitionAllLowStock = async () => {
     setIsRequisitioningAll(true);
-    const lowStockItems = stockLevels.filter(item => item.currentStock < item.threshold);
-    if (lowStockItems.length === 0) {
-      toast({ title: "No Low Stock Items", description: "All items are above their threshold." });
+    const itemsToRequisition = stockLevels.filter(item => 
+        item.currentStock < item.threshold && 
+        !isItemPendingRequisition(item.id) &&
+        (item.threshold * 2 - item.currentStock) > 0 // Ensure requested quantity is positive
+    );
+
+    if (itemsToRequisition.length === 0) {
+      toast({ title: "No Items to Requisition", description: "All low stock items either have sufficient stock or are already pending requisition." });
       setIsRequisitioningAll(false);
       return;
     }
 
-    const requisitionItems = lowStockItems.map(item => ({
+    const requisitionItemsPayload = itemsToRequisition.map(item => ({
       itemId: item.id,
       itemName: item.name,
-      requestedQuantity: item.threshold * 2 - item.currentStock,
+      requestedQuantity: Math.max(0, item.threshold * 2 - item.currentStock),
       currentStockAtFacility: item.currentStock
     }));
 
     const payload = {
       requestingFacilityId: "HOSPITAL_PHARM_001",
-      items: requisitionItems,
-      notes: `Bulk requisition for all low stock items.`
+      items: requisitionItemsPayload,
+      notes: `Bulk requisition for all eligible low stock items.`
     };
     console.log("Submitting bulk requisition (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const summary = lowStockItems.length > 1 ? `${lowStockItems.length} low stock items` : `${lowStockItems[0].name}`;
+    const summary = itemsToRequisition.length > 1 ? `${itemsToRequisition.length} low stock items` : `${itemsToRequisition[0].name}`;
     const newLogEntry: RequisitionLogItem = {
       id: `REQBULK${Date.now()}`,
-      requestedItemsSummary: `Bulk: ${summary}`,
+      requestedItemsSummary: `Bulk: ${summary} (${itemsToRequisition.map(i => i.name).join(', ')})`,
       dateSubmitted: new Date().toISOString(),
       submittedBy: "Current Pharmacist (Mock)",
       status: "Pending"
@@ -224,11 +246,17 @@ export default function DrugDispensingPage() {
     toast({
       variant: "default",
       title: "Bulk Stock Requisition Submitted (Mock)",
-      description: `Requisition for ${lowStockItems.length} low stock item(s) sent.`,
+      description: `Requisition for ${itemsToRequisition.length} eligible low stock item(s) sent.`,
     });
     setIsRequisitioningAll(false);
   };
   
+  const eligibleLowStockItemsCount = stockLevels.filter(item => 
+    item.currentStock < item.threshold && 
+    !isItemPendingRequisition(item.id) &&
+    (item.threshold * 2 - item.currentStock) > 0
+  ).length;
+
   return (
     <AppShell>
       <div className="flex flex-col gap-6">
@@ -368,6 +396,9 @@ export default function DrugDispensingPage() {
                   <TableBody>
                     {stockLevels.map((item) => {
                       const isLowStock = item.currentStock < item.threshold;
+                      const alreadyPending = isItemPendingRequisition(item.id);
+                      const canRequisition = isLowStock && !alreadyPending && (item.threshold * 2 - item.currentStock) > 0;
+
                       return (
                         <TableRow key={item.id} className={isLowStock ? "bg-destructive/10 dark:bg-destructive/20" : ""}>
                           <TableCell className="font-medium">{item.name}</TableCell>
@@ -377,9 +408,15 @@ export default function DrugDispensingPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             {isLowStock && (
-                              <Button size="sm" variant="outline" onClick={() => handleRequisitionStock(item)} disabled={isRequisitioningItemId === item.id || isRequisitioningAll}>
+                              <Button 
+                                size="sm" 
+                                variant={alreadyPending ? "secondary" : "outline"} 
+                                onClick={() => !alreadyPending && handleRequisitionStock(item)} 
+                                disabled={isRequisitioningItemId === item.id || isRequisitioningAll || alreadyPending}
+                                title={alreadyPending ? "Requisition for this item is already pending." : "Requisition more stock"}
+                              >
                                 {isRequisitioningItemId === item.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin"/> : <BellDot className="mr-1 h-3 w-3"/>}
-                                {isRequisitioningItemId === item.id ? "Requisitioning..." : "Requisition"}
+                                {isRequisitioningItemId === item.id ? "Requesting..." : (alreadyPending ? "Pending Req." : "Requisition")}
                               </Button>
                             )}
                           </TableCell>
@@ -393,9 +430,13 @@ export default function DrugDispensingPage() {
                 )}
               </CardContent>
                <CardFooter className="pt-4 flex-col gap-2 items-stretch">
-                <Button onClick={handleRequisitionAllLowStock} disabled={isLoadingStock || isRequisitioningAll || stockLevels.filter(item => item.currentStock < item.threshold).length === 0}>
+                <Button 
+                    onClick={handleRequisitionAllLowStock} 
+                    disabled={isLoadingStock || isRequisitioningAll || eligibleLowStockItemsCount === 0}
+                    title={eligibleLowStockItemsCount === 0 ? "No eligible low stock items to requisition." : "Requisition all eligible low stock items."}
+                >
                     {isRequisitioningAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BellDot className="mr-2 h-4 w-4" />}
-                    Requisition All Low Stock Items ({stockLevels.filter(item => item.currentStock < item.threshold).length})
+                    Requisition All Low Stock ({eligibleLowStockItemsCount})
                 </Button>
                  <Alert variant="default" className="border-primary/50 mt-2">
                     <AlertTriangle className="h-4 w-4 text-primary" />
@@ -464,3 +505,4 @@ export default function DrugDispensingPage() {
   );
 }
 
+    

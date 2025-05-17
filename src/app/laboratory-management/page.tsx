@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Microscope, ClipboardList, FlaskConical, AlertTriangle, CheckCircle2, PlusCircle, Users, RefreshCw, FileText, Edit3, Loader2 } from "lucide-react";
+import { Microscope, ClipboardList, FlaskConical, AlertTriangle, CheckCircle2, PlusCircle, Users, RefreshCw, FileText, Edit3, Loader2, ListOrdered, BellDot, Layers } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -82,6 +82,14 @@ interface Reagent {
   lastOrdered?: string;
 }
 
+interface LabRequisitionLogItem {
+  id: string;
+  requestedItemsSummary: string;
+  dateSubmitted: string;
+  submittedBy: string;
+  status: "Pending" | "Partially Fulfilled" | "Fulfilled" | "Cancelled";
+}
+
 // --- Mock Data ---
 const MOCK_TEST_DEFINITIONS: Record<string, TestDetail> = {
   "glucose_random": { id: "glucose_random", name: "Glucose, Random", unit: "mg/dL", normalRangeMin: 70, normalRangeMax: 140, normalRangeDisplay: "70-140", isNumeric: true, interpretRanges: { low: 70, high: 140, veryHigh: 200 } },
@@ -111,11 +119,20 @@ const initialReagentsData: Reagent[] = [
     { id: "RG004", name: "Saline Solution", currentStock: 5, threshold: 10, unit: "liters" },
 ];
 
+const initialLabRequisitionLogData: LabRequisitionLogItem[] = [
+    { id: "LREQ20240730-001", requestedItemsSummary: "Saline Solution (15 liters)", dateSubmitted: new Date(Date.now() - 86400000 * 2).toISOString(), submittedBy: "Lab Tech Alice", status: "Fulfilled"},
+    { id: "LREQ20240731-001", requestedItemsSummary: "Hematology Reagent Pack (5 packs)", dateSubmitted: new Date(Date.now() - 86400000).toISOString(), submittedBy: "Lab Tech Bob", status: "Pending"},
+];
+
+
 export default function LaboratoryManagementPage() {
   const [labRequests, setLabRequests] = useState<LabRequest[]>([]);
   const [isLoadingLabRequests, setIsLoadingLabRequests] = useState(true);
   const [reagents, setReagents] = useState<Reagent[]>([]);
   const [isLoadingReagents, setIsLoadingReagents] = useState(true);
+  
+  const [requisitionLog, setRequisitionLog] = useState<LabRequisitionLogItem[]>([]);
+  const [isLoadingRequisitionLog, setIsLoadingRequisitionLog] = useState(true);
 
   const [selectedRequestForResults, setSelectedRequestForResults] = useState<LabRequest | null>(null);
   const [currentResultInputs, setCurrentResultInputs] = useState<ResultInputItem[]>([]);
@@ -123,6 +140,7 @@ export default function LaboratoryManagementPage() {
   const [isSavingResults, setIsSavingResults] = useState(false);
   
   const [isRequisitioningReagentId, setIsRequisitioningReagentId] = useState<string | null>(null);
+  const [isRequisitioningAllReagents, setIsRequisitioningAllReagents] = useState(false);
   const [isRefreshingList, setIsRefreshingList] = useState(false);
 
   const [clientTime, setClientTime] = useState<Date | null>(null);
@@ -138,35 +156,32 @@ export default function LaboratoryManagementPage() {
   }, []); 
 
 
-  useEffect(() => {
+  const fetchAllLabData = async () => {
     setIsLoadingLabRequests(true);
-    setTimeout(() => {
-      setLabRequests(initialLabRequestsData);
-      setIsLoadingLabRequests(false);
-    }, 1200);
-
     setIsLoadingReagents(true);
-    setTimeout(() => {
-      setReagents(initialReagentsData);
-      setIsLoadingReagents(false);
-    }, 1500);
+    setIsLoadingRequisitionLog(true);
+    
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    setLabRequests(initialLabRequestsData);
+    setIsLoadingLabRequests(false);
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setReagents(initialReagentsData);
+    setIsLoadingReagents(false);
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+    setRequisitionLog(initialLabRequisitionLogData);
+    setIsLoadingRequisitionLog(false);
+  };
+
+  useEffect(() => {
+    fetchAllLabData();
   }, []);
   
   const handleRefreshAll = async () => {
     setIsRefreshingList(true);
-    setIsLoadingLabRequests(true);
-    setIsLoadingReagents(true);
-    // Simulate API Call: GET /api/v1/lab/requests
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setLabRequests([...initialLabRequestsData].sort(() => 0.5 - Math.random())); 
-    setIsLoadingLabRequests(false);
-    
-    // Simulate API Call: GET /api/v1/lab/reagents
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setReagents([...initialReagentsData].sort(() => 0.5 - Math.random()));
-    setIsLoadingReagents(false);
-
-    toast({ title: "Lab Data Refreshed", description: "Request list and reagent inventory updated (mock)." });
+    await fetchAllLabData();
+    toast({ title: "Lab Data Refreshed", description: "Request list, reagent inventory, and requisition log updated (mock)." });
     setIsRefreshingList(false);
   };
 
@@ -175,7 +190,6 @@ export default function LaboratoryManagementPage() {
   const criticalReagentAlerts = reagents.filter(r => r.currentStock < r.threshold).length;
 
   const handleUpdateStatus = async (requestId: string, newStatus: LabRequest["status"]) => {
-    // Simulate API Call: PUT /api/v1/lab/requests/{requestId}/status
     await new Promise(resolve => setTimeout(resolve, 500));
     setLabRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req));
     toast({ title: "Status Updated", description: `Request ${requestId} status changed to ${newStatus}.` });
@@ -215,10 +229,9 @@ export default function LaboratoryManagementPage() {
             existingResultValue = foundResult.value;
             existingInterpretation = foundResult.interpretation;
         }
-      } else if (typeof request.results === 'string' && !testDef) {
+      } else if (typeof request.results === 'string' && !testDef) { // Fallback for old string results
         existingResultValue = request.results; 
       }
-
 
       if (testDef) {
         return {
@@ -231,9 +244,10 @@ export default function LaboratoryManagementPage() {
           isNumeric: testDef.isNumeric,
         };
       }
+      // Fallback for tests not in MOCK_TEST_DEFINITIONS (e.g. panels)
       return {
         testId: testIdOrName,
-        testName: testIdOrName,
+        testName: testIdOrName, // Or fetch from a more comprehensive list if available
         value: existingResultValue,
         unit: "",
         normalRangeDisplay: "N/A",
@@ -252,7 +266,7 @@ export default function LaboratoryManagementPage() {
           const testDef = MOCK_TEST_DEFINITIONS[input.testId];
           const interpretation = testDef && testDef.isNumeric 
             ? interpretNumericResult(newValue, testDef) 
-            : "N/A";
+            : (input.isNumeric ? "N/A" : "See Report"); // Handle non-numeric or unknown numeric
           return { ...input, value: newValue, interpretation };
         }
         return input;
@@ -263,7 +277,6 @@ export default function LaboratoryManagementPage() {
   const handleSaveResults = async () => {
     if (!selectedRequestForResults) return;
     setIsSavingResults(true);
-    // Simulate API Call: POST /api/v1/lab/requests/{selectedRequestForResults.id}/results
     const payload = {
         results: currentResultInputs,
         labTechnicianComments: (document.getElementById('labTechComments') as HTMLTextAreaElement)?.value || ""
@@ -283,19 +296,98 @@ export default function LaboratoryManagementPage() {
     setIsSavingResults(false);
   };
   
+  const isReagentPendingRequisition = (reagentId: string): boolean => {
+    return requisitionLog.some(log => 
+      log.status === "Pending" && 
+      log.requestedItemsSummary.includes(reagents.find(r => r.id === reagentId)?.name || '###') // Basic check
+    );
+  };
+
   const handleRequisitionReagent = async (reagent: Reagent) => {
-      setIsRequisitioningReagentId(reagent.id);
-      const payload = {
-        requestingLabId: "LAB_MAIN_001", // Mock lab ID
-        items: [{ reagentId: reagent.id, requestedQuantity: reagent.threshold * 2 - reagent.currentStock, currentStockAtLab: reagent.currentStock }],
-        notes: `Low stock for ${reagent.name}. Automatic requisition.`
-      };
-      // Simulate API Call: POST /api/v1/lab/reagents/requisitions
-      console.log("Submitting reagent requisition (mock):", payload);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast({title: "Reagent Requisition Submitted (Mock)", description: `Requisition for ${reagent.name} sent to central stores.`});
-      setIsRequisitioningReagentId(null);
-  }
+    if (isReagentPendingRequisition(reagent.id)) {
+      toast({ variant: "default", title: "Already Requested", description: `${reagent.name} has a pending requisition.` });
+      return;
+    }
+    setIsRequisitioningReagentId(reagent.id);
+    const requestedQuantity = Math.max(0, reagent.threshold * 2 - reagent.currentStock);
+     if (requestedQuantity === 0) {
+        toast({variant: "default", title: "Sufficient Stock", description: `${reagent.name} does not need immediate requisition.`});
+        setIsRequisitioningReagentId(null);
+        return;
+    }
+    const payload = {
+      requestingLabId: "LAB_MAIN_001",
+      items: [{ reagentId: reagent.id, reagentName: reagent.name, requestedQuantity, currentStockAtLab: reagent.currentStock }],
+      notes: `Low stock for ${reagent.name}. Automatic requisition.`
+    };
+    console.log("Submitting reagent requisition (mock):", payload);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const newLogEntry: LabRequisitionLogItem = {
+        id: `LREQ${Date.now()}-${reagent.id.substring(0,3)}`,
+        requestedItemsSummary: `${reagent.name} (${requestedQuantity} ${reagent.unit})`,
+        dateSubmitted: new Date().toISOString(),
+        submittedBy: "Current Lab Tech (Mock)",
+        status: "Pending"
+    };
+    setRequisitionLog(prev => [newLogEntry, ...prev]);
+    toast({title: "Reagent Requisition Submitted (Mock)", description: `Requisition for ${reagent.name} sent to central stores.`});
+    setIsRequisitioningReagentId(null);
+  };
+
+  const handleRequisitionAllLowStockReagents = async () => {
+    setIsRequisitioningAllReagents(true);
+    const reagentsToRequisition = reagents.filter(r => 
+        r.currentStock < r.threshold && 
+        !isReagentPendingRequisition(r.id) &&
+        (r.threshold * 2 - r.currentStock) > 0
+    );
+
+    if (reagentsToRequisition.length === 0) {
+      toast({ title: "No Reagents to Requisition", description: "All low stock reagents either have sufficient stock or are already pending requisition." });
+      setIsRequisitioningAllReagents(false);
+      return;
+    }
+
+    const requisitionItemsPayload = reagentsToRequisition.map(r => ({
+      reagentId: r.id,
+      reagentName: r.name,
+      requestedQuantity: Math.max(0, r.threshold * 2 - r.currentStock),
+      currentStockAtLab: r.currentStock
+    }));
+
+    const payload = {
+      requestingLabId: "LAB_MAIN_001",
+      items: requisitionItemsPayload,
+      notes: `Bulk requisition for all eligible low stock reagents.`
+    };
+    console.log("Submitting bulk reagent requisition (mock):", payload);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const summary = reagentsToRequisition.length > 1 ? `${reagentsToRequisition.length} low stock reagents` : `${reagentsToRequisition[0].name}`;
+    const newLogEntry: LabRequisitionLogItem = {
+      id: `LREQBULK${Date.now()}`,
+      requestedItemsSummary: `Bulk: ${summary} (${reagentsToRequisition.map(r => r.name).join(', ')})`,
+      dateSubmitted: new Date().toISOString(),
+      submittedBy: "Current Lab Tech (Mock)",
+      status: "Pending"
+    };
+    setRequisitionLog(prev => [newLogEntry, ...prev]);
+
+    toast({
+      variant: "default",
+      title: "Bulk Reagent Requisition Submitted (Mock)",
+      description: `Requisition for ${reagentsToRequisition.length} eligible low stock reagent(s) sent.`,
+    });
+    setIsRequisitioningAllReagents(false);
+  };
+
+  const eligibleLowStockReagentsCount = reagents.filter(r => 
+    r.currentStock < r.threshold && 
+    !isReagentPendingRequisition(r.id) &&
+    (r.threshold * 2 - r.currentStock) > 0
+  ).length;
+
 
   return (
     <AppShell>
@@ -350,7 +442,7 @@ export default function LaboratoryManagementPage() {
                           {req.testsRequested.map(testId => MOCK_TEST_DEFINITIONS[testId]?.name || testId).join(', ')}
                         </TableCell>
                         <TableCell>{req.orderingDoctor}</TableCell>
-                        <TableCell>{new Date(req.requestDate).toLocaleDateString()}</TableCell>
+                        <TableCell>{new Date(req.requestDate + 'T00:00:00').toLocaleDateString()}</TableCell>
                         <TableCell>
                           <Select 
                               value={req.status} 
@@ -382,7 +474,7 @@ export default function LaboratoryManagementPage() {
               )}
             </CardContent>
              <CardFooter>
-                <Button variant="outline" onClick={handleRefreshAll} disabled={isRefreshingList || isLoadingLabRequests}>
+                <Button variant="outline" onClick={handleRefreshAll} disabled={isRefreshingList || isLoadingLabRequests || isLoadingReagents || isLoadingRequisitionLog}>
                     {isRefreshingList ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
                     {isRefreshingList ? "Refreshing..." : "Refresh All Lab Data"}
                 </Button>
@@ -425,7 +517,7 @@ export default function LaboratoryManagementPage() {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FlaskConical className="h-6 w-6 text-primary" /> Reagent Inventory
+                  <Layers className="h-6 w-6 text-primary" /> Reagent Inventory
                 </CardTitle>
                 <CardDescription>Overview of lab reagent stock levels.</CardDescription>
               </CardHeader>
@@ -446,6 +538,9 @@ export default function LaboratoryManagementPage() {
                     <TableBody>
                       {reagents.map((item) => {
                         const isLowStock = item.currentStock < item.threshold;
+                        const alreadyPending = isReagentPendingRequisition(item.id);
+                        const canRequisition = isLowStock && !alreadyPending && (item.threshold * 2 - item.currentStock) > 0;
+
                         return (
                           <TableRow key={item.id} className={isLowStock ? "bg-destructive/10 dark:bg-destructive/20" : ""}>
                             <TableCell className="font-medium">{item.name}</TableCell>
@@ -457,12 +552,13 @@ export default function LaboratoryManagementPage() {
                               {isLowStock && (
                                 <Button 
                                   size="sm" 
-                                  variant="outline" 
-                                  onClick={() => handleRequisitionReagent(item)}
-                                  disabled={isRequisitioningReagentId === item.id}
+                                  variant={alreadyPending ? "secondary" : "outline"} 
+                                  onClick={() => !alreadyPending && handleRequisitionReagent(item)}
+                                  disabled={isRequisitioningReagentId === item.id || isRequisitioningAllReagents || alreadyPending}
+                                  title={alreadyPending ? "Requisition for this reagent is already pending." : "Requisition more stock"}
                                 >
-                                  {isRequisitioningReagentId === item.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin"/> : <RefreshCw className="mr-1 h-3 w-3"/>}
-                                  {isRequisitioningReagentId === item.id ? "Requisitioning..." : "Requisition"}
+                                  {isRequisitioningReagentId === item.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin"/> : <BellDot className="mr-1 h-3 w-3"/>}
+                                  {isRequisitioningReagentId === item.id ? "Requesting..." : (alreadyPending ? "Pending Req." : "Requisition")}
                                 </Button>
                               )}
                             </TableCell>
@@ -475,8 +571,16 @@ export default function LaboratoryManagementPage() {
                    <p className="text-center py-6 text-muted-foreground">No reagent data available.</p>
                 )}
               </CardContent>
-               <CardFooter className="pt-4">
-                 <Alert variant="default" className="border-primary/50">
+               <CardFooter className="pt-4 flex-col gap-2 items-stretch">
+                 <Button 
+                    onClick={handleRequisitionAllLowStockReagents} 
+                    disabled={isLoadingReagents || isRequisitioningAllReagents || eligibleLowStockReagentsCount === 0}
+                    title={eligibleLowStockReagentsCount === 0 ? "No eligible low stock reagents to requisition." : "Requisition all eligible low stock reagents."}
+                >
+                    {isRequisitioningAllReagents ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BellDot className="mr-2 h-4 w-4" />}
+                    Requisition All Low Stock Reagents ({eligibleLowStockReagentsCount})
+                </Button>
+                 <Alert variant="default" className="border-primary/50 mt-2">
                     <AlertTriangle className="h-4 w-4 text-primary" />
                     <AlertTitle className="text-sm">System Note</AlertTitle>
                     <AlertDescription className="text-xs">
@@ -487,6 +591,56 @@ export default function LaboratoryManagementPage() {
             </Card>
           </div>
         </div>
+        
+        <Card className="shadow-sm">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <ListOrdered className="h-6 w-6 text-primary"/> Reagent Requisition History
+                </CardTitle>
+                <CardDescription>Log of recent reagent requisitions submitted by this laboratory.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isLoadingRequisitionLog ? (
+                    <div className="flex items-center justify-center py-10">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="ml-2 text-muted-foreground">Loading requisition history...</p>
+                    </div>
+                ) : requisitionLog.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Requisition ID</TableHead>
+                                <TableHead>Items Summary</TableHead>
+                                <TableHead>Date Submitted</TableHead>
+                                <TableHead>Submitted By</TableHead>
+                                <TableHead>Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {requisitionLog.map((log) => (
+                                <TableRow key={log.id}>
+                                    <TableCell className="font-mono text-xs">{log.id}</TableCell>
+                                    <TableCell className="text-xs">{log.requestedItemsSummary}</TableCell>
+                                    <TableCell className="text-xs">{new Date(log.dateSubmitted).toLocaleString()}</TableCell>
+                                    <TableCell className="text-xs">{log.submittedBy}</TableCell>
+                                    <TableCell>
+                                        <Badge variant={
+                                            log.status === "Fulfilled" ? "default" :
+                                            log.status === "Pending" ? "secondary" :
+                                            log.status === "Cancelled" ? "destructive" : "outline"
+                                        } className="text-xs">
+                                            {log.status}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                ) : (
+                    <p className="text-center py-10 text-muted-foreground">No reagent requisition history found.</p>
+                )}
+            </CardContent>
+        </Card>
 
         <Dialog open={isResultModalOpen} onOpenChange={setIsResultModalOpen}>
             <DialogContent className="sm:max-w-2xl"> 
@@ -568,3 +722,5 @@ export default function LaboratoryManagementPage() {
     </AppShell>
   );
 }
+
+    
