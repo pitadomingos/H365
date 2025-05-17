@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { MonitorPlay, ClipboardList, ScanSearch, AlertTriangle, CheckCircle2, PlusCircle, Users, RefreshCw, FileText, Edit3 } from "lucide-react";
+import { MonitorPlay, ClipboardList, ScanSearch, AlertTriangle, CheckCircle2, PlusCircle, Users, RefreshCw, FileText, Edit3, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -50,35 +50,70 @@ interface Equipment {
   status: "Operational" | "Under Maintenance" | "Offline";
 }
 
-export default function ImagingManagementPage() {
-  const [imagingRequests, setImagingRequests] = useState<ImagingRequest[]>([
-    { id: "IMG001", patientName: "Eva Green", nationalId: "NID004", studyRequested: "Chest X-Ray (PA View)", orderingDoctor: "Dr. Smith", requestDate: "2024-07-30", status: "Scheduled" },
-    { id: "IMG002", patientName: "Tom Hanks", nationalId: "NID005", studyRequested: "MRI Brain with Contrast", orderingDoctor: "Dr. Jones", requestDate: "2024-07-30", status: "Scan Complete - Awaiting Report" },
-    { id: "IMG003", patientName: "Lucy Liu", nationalId: "NID006", studyRequested: "Ultrasound Abdomen", orderingDoctor: "Dr. Eve", requestDate: "2024-07-29", status: "Report Ready", report:"Liver and spleen appear normal. No focal lesions identified. Gallbladder is unremarkable." },
-  ]);
+const initialImagingRequests: ImagingRequest[] = [
+  { id: "IMG001", patientName: "Eva Green", nationalId: "NID004", studyRequested: "Chest X-Ray (PA View)", orderingDoctor: "Dr. Smith", requestDate: "2024-07-30", status: "Scheduled" },
+  { id: "IMG002", patientName: "Tom Hanks", nationalId: "NID005", studyRequested: "MRI Brain with Contrast", orderingDoctor: "Dr. Jones", requestDate: "2024-07-30", status: "Scan Complete - Awaiting Report" },
+  { id: "IMG003", patientName: "Lucy Liu", nationalId: "NID006", studyRequested: "Ultrasound Abdomen", orderingDoctor: "Dr. Eve", requestDate: "2024-07-29", status: "Report Ready", report:"Liver and spleen appear normal. No focal lesions identified. Gallbladder is unremarkable." },
+];
 
-  const [equipment, setEquipment] = useState<Equipment[]>([
-    { id: "EQ001", name: "X-Ray Machine 1", status: "Operational" },
-    { id: "EQ002", name: "MRI Scanner A", status: "Operational" },
-    { id: "EQ003", name: "CT Scanner 1", status: "Under Maintenance" },
-    { id: "EQ004", name: "Ultrasound Machine B", status: "Operational" },
-  ]);
+const initialEquipment: Equipment[] = [
+  { id: "EQ001", name: "X-Ray Machine 1", status: "Operational" },
+  { id: "EQ002", name: "MRI Scanner A", status: "Operational" },
+  { id: "EQ003", name: "CT Scanner 1", status: "Under Maintenance" },
+  { id: "EQ004", name: "Ultrasound Machine B", status: "Operational" },
+];
+
+export default function ImagingManagementPage() {
+  const [imagingRequests, setImagingRequests] = useState<ImagingRequest[]>([]);
+  const [isLoadingImagingRequests, setIsLoadingImagingRequests] = useState(true);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [isLoadingEquipment, setIsLoadingEquipment] = useState(true);
 
   const [selectedRequest, setSelectedRequest] = useState<ImagingRequest | null>(null);
   const [reportInput, setReportInput] = useState("");
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-
-  const [time, setTime] = useState(new Date());
+  const [isSavingReport, setIsSavingReport] = useState(false);
+  const [isRefreshingList, setIsRefreshingList] = useState(false);
+  
+  const [clientTime, setClientTime] = useState<Date | null>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 60000);
+    setClientTime(new Date());
+    const timer = setInterval(() => setClientTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    setIsLoadingImagingRequests(true);
+    // Simulate API call: GET /api/v1/imaging/requests
+    setTimeout(() => {
+      setImagingRequests(initialImagingRequests);
+      setIsLoadingImagingRequests(false);
+    }, 1000);
+
+    setIsLoadingEquipment(true);
+    // Simulate API call: GET /api/v1/imaging/equipment
+    setTimeout(() => {
+      setEquipment(initialEquipment);
+      setIsLoadingEquipment(false);
+    }, 1200);
+  }, []);
+
+  const fetchImagingRequests = async () => {
+    setIsRefreshingList(true);
+    // Simulate API call: GET /api/v1/imaging/requests
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setImagingRequests([...initialImagingRequests].sort(() => 0.5 - Math.random())); // Mock refresh
+    toast({ title: "Imaging Request List Refreshed", description: "List updated with latest requests (mock)." });
+    setIsRefreshingList(false);
+  };
 
   const scansPerformedToday = imagingRequests.filter(r => r.status === "Report Ready" || r.status === "Scan Complete - Awaiting Report").length;
   const pendingReports = imagingRequests.filter(r => r.status === "Scan Complete - Awaiting Report").length;
 
-  const handleUpdateStatus = (requestId: string, newStatus: ImagingRequest["status"]) => {
+  const handleUpdateStatus = async (requestId: string, newStatus: ImagingRequest["status"]) => {
+    // Simulate API call: PUT /api/v1/imaging/requests/{requestId}/status
+    await new Promise(resolve => setTimeout(resolve, 500));
     setImagingRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req));
     toast({ title: "Status Updated", description: `Request ${requestId} status changed to ${newStatus}.` });
   };
@@ -89,15 +124,19 @@ export default function ImagingManagementPage() {
     setIsReportModalOpen(true);
   };
 
-  const handleSaveReport = () => {
+  const handleSaveReport = async () => {
     if (selectedRequest) {
+      setIsSavingReport(true);
+      // Simulate API call: POST /api/v1/imaging/requests/{selectedRequest.id}/report
+      await new Promise(resolve => setTimeout(resolve, 1500));
       setImagingRequests(prev => prev.map(req => 
         req.id === selectedRequest.id ? { ...req, report: reportInput, status: "Report Ready" } : req
       ));
-      toast({ title: "Report Saved", description: `Report for ${selectedRequest.patientName} (ID: ${selectedRequest.id}) saved.` });
+      toast({ title: "Report Saved (Mock)", description: `Report for ${selectedRequest.patientName} (ID: ${selectedRequest.id}) saved.` });
       setIsReportModalOpen(false);
       setSelectedRequest(null);
       setReportInput("");
+      setIsSavingReport(false);
     }
   };
   
@@ -109,7 +148,11 @@ export default function ImagingManagementPage() {
             <MonitorPlay className="h-8 w-8" /> Imaging & Radiology Management
           </h1>
            <div className="text-sm text-muted-foreground">
-            {time.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {clientTime ? (
+              `${clientTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${clientTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            ) : (
+              "\u00A0" // Non-breaking space as placeholder
+            )}
           </div>
         </div>
 
@@ -122,58 +165,67 @@ export default function ImagingManagementPage() {
               <CardDescription>Manage and process pending imaging study requests.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Study Requested</TableHead>
-                    <TableHead>Doctor</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {imagingRequests.map((req) => (
-                    <TableRow key={req.id}>
-                      <TableCell className="font-medium">
-                        {req.patientName} <br/> 
-                        <span className="text-xs text-muted-foreground">{req.nationalId}</span>
-                      </TableCell>
-                      <TableCell className="text-xs">{req.studyRequested}</TableCell>
-                      <TableCell>{req.orderingDoctor}</TableCell>
-                      <TableCell>{new Date(req.requestDate).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Select 
-                            value={req.status} 
-                            onValueChange={(value) => handleUpdateStatus(req.id, value as ImagingRequest["status"])}
-                        >
-                            <SelectTrigger className="h-8 text-xs w-[180px]">
-                                <SelectValue placeholder="Update Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Scheduled">Scheduled</SelectItem>
-                                <SelectItem value="Pending Scan">Pending Scan</SelectItem>
-                                <SelectItem value="Scan Complete - Awaiting Report">Scan Complete - Awaiting Report</SelectItem>
-                                <SelectItem value="Report Ready">Report Ready</SelectItem>
-                                <SelectItem value="Cancelled">Cancelled</SelectItem>
-                            </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => handleOpenReportModal(req)}>
-                          <Edit3 className="mr-1 h-3 w-3" /> {req.status === "Report Ready" ? "View/Edit" : "Enter"} Report
-                        </Button>
-                      </TableCell>
+              {isLoadingImagingRequests ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="ml-2 text-muted-foreground">Loading imaging requests...</p>
+                </div>
+              ) : imagingRequests.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Patient</TableHead>
+                      <TableHead>Study Requested</TableHead>
+                      <TableHead>Doctor</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {imagingRequests.length === 0 && <p className="text-center py-4 text-muted-foreground">No imaging requests found.</p>}
+                  </TableHeader>
+                  <TableBody>
+                    {imagingRequests.map((req) => (
+                      <TableRow key={req.id}>
+                        <TableCell className="font-medium">
+                          {req.patientName} <br/> 
+                          <span className="text-xs text-muted-foreground">{req.nationalId}</span>
+                        </TableCell>
+                        <TableCell className="text-xs">{req.studyRequested}</TableCell>
+                        <TableCell>{req.orderingDoctor}</TableCell>
+                        <TableCell>{new Date(req.requestDate).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Select 
+                              value={req.status} 
+                              onValueChange={(value) => handleUpdateStatus(req.id, value as ImagingRequest["status"])}
+                          >
+                              <SelectTrigger className="h-8 text-xs w-[180px]">
+                                  <SelectValue placeholder="Update Status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                  <SelectItem value="Pending Scan">Pending Scan</SelectItem>
+                                  <SelectItem value="Scan Complete - Awaiting Report">Scan Complete - Awaiting Report</SelectItem>
+                                  <SelectItem value="Report Ready">Report Ready</SelectItem>
+                                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                              </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="outline" onClick={() => handleOpenReportModal(req)} disabled={isSavingReport}>
+                            <Edit3 className="mr-1 h-3 w-3" /> {req.status === "Report Ready" ? "View/Edit" : "Enter"} Report
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-center py-10 text-muted-foreground">No imaging requests found.</p>
+              )}
             </CardContent>
              <CardFooter>
-                <Button variant="outline">
-                    <RefreshCw className="mr-2 h-4 w-4"/> Refresh Request List
+                <Button variant="outline" onClick={fetchImagingRequests} disabled={isRefreshingList || isLoadingImagingRequests}>
+                    {isRefreshingList ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
+                    {isRefreshingList ? "Refreshing..." : "Refresh Request List"}
                 </Button>
             </CardFooter>
           </Card>
@@ -187,15 +239,23 @@ export default function ImagingManagementPage() {
                  <CardDescription>Summary of today's imaging activities.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                    <span className="text-sm font-medium">Scans Performed:</span>
-                    <Badge variant="secondary" className="text-base">{scansPerformedToday}</Badge>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                    <span className="text-sm font-medium">Pending Reports:</span>
-                    <Badge className="text-base">{pendingReports}</Badge>
-                </div>
-                 <Button className="w-full mt-2" variant="outline" disabled>View Full Daily Report</Button>
+                {isLoadingImagingRequests ? (
+                   <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary mr-2"/> Loading summary...
+                  </div>
+                ) : (
+                <>
+                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
+                      <span className="text-sm font-medium">Scans Performed:</span>
+                      <Badge variant="secondary" className="text-base">{scansPerformedToday}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
+                      <span className="text-sm font-medium">Pending Reports:</span>
+                      <Badge className="text-base">{pendingReports}</Badge>
+                  </div>
+                  <Button className="w-full mt-2" variant="outline" disabled>View Full Daily Report</Button>
+                </>
+                )}
               </CardContent>
             </Card>
 
@@ -207,26 +267,32 @@ export default function ImagingManagementPage() {
                 <CardDescription>Overview of imaging equipment.</CardDescription>
               </CardHeader>
               <CardContent className="max-h-[300px] overflow-y-auto pr-1">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Equipment Name</TableHead>
-                      <TableHead className="text-right">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {equipment.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-right">
-                           <Badge variant={item.status === "Operational" ? "default" : item.status === "Under Maintenance" ? "secondary" : "destructive"} className="text-xs">
-                                {item.status}
-                            </Badge>
-                        </TableCell>
+                {isLoadingEquipment ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary mr-2"/> Loading equipment...
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Equipment Name</TableHead>
+                        <TableHead className="text-right">Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {equipment.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant={item.status === "Operational" ? "default" : item.status === "Under Maintenance" ? "secondary" : "destructive"} className="text-xs">
+                                  {item.status}
+                              </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
                <CardFooter className="pt-4">
                  <Alert variant="default" className="border-primary/50">
@@ -259,6 +325,7 @@ export default function ImagingManagementPage() {
                   onChange={(e) => setReportInput(e.target.value)}
                   placeholder="Enter detailed imaging report here. Include findings, impressions, and conclusions."
                   className="min-h-[250px]"
+                  disabled={isSavingReport}
                 />
               </div>
                <div className="space-y-2">
@@ -267,12 +334,16 @@ export default function ImagingManagementPage() {
                   id="impressionInput"
                   placeholder="Summarize key findings or clinical impression."
                   className="min-h-[80px]"
+                  disabled={isSavingReport}
                 />
               </div>
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-              <Button type="button" onClick={handleSaveReport}>Save Report</Button>
+              <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingReport}>Cancel</Button></DialogClose>
+              <Button type="button" onClick={handleSaveReport} disabled={isSavingReport}>
+                {isSavingReport ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isSavingReport ? "Saving..." : "Save Report"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -281,3 +352,6 @@ export default function ImagingManagementPage() {
     </AppShell>
   );
 }
+
+
+    

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 // --- Data Structures ---
 interface TestDetail {
@@ -125,22 +126,32 @@ export default function LaboratoryManagementPage() {
   const [isReorderingReagentId, setIsReorderingReagentId] = useState<string | null>(null);
   const [isRefreshingList, setIsRefreshingList] = useState(false);
 
-
-  const [time, setTime] = useState(new Date());
+  const [clientTime, setClientTime] = useState<Date | null>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
+    // This effect runs only on the client, after the component mounts
+    setClientTime(new Date()); // Set the initial time
+
+    const timerId = setInterval(() => {
+      setClientTime(new Date()); // Update the time every minute
+    }, 60000);
+
+    return () => {
+      clearInterval(timerId); // Cleanup interval on component unmount
+    };
+  }, []); // Empty dependency array means this effect runs once on mount and cleans up on unmount
+
 
   useEffect(() => {
     setIsLoadingLabRequests(true);
+    // Simulate API call: GET /api/v1/lab/requests
     setTimeout(() => {
       setLabRequests(initialLabRequests);
       setIsLoadingLabRequests(false);
     }, 1200);
 
     setIsLoadingReagents(true);
+    // Simulate API call: GET /api/v1/lab/reagents
     setTimeout(() => {
       setReagents(initialReagents);
       setIsLoadingReagents(false);
@@ -149,6 +160,7 @@ export default function LaboratoryManagementPage() {
   
   const fetchLabRequests = async () => {
     setIsRefreshingList(true);
+    // Simulate API Call: GET /api/v1/lab/requests
     await new Promise(resolve => setTimeout(resolve, 1000));
     setLabRequests([...initialLabRequests].sort(() => 0.5 - Math.random())); 
     toast({ title: "Lab Request List Refreshed", description: "List updated with latest requests (mock)." });
@@ -160,6 +172,7 @@ export default function LaboratoryManagementPage() {
   const criticalReagentAlerts = reagents.filter(r => r.currentStock < r.threshold).length;
 
   const handleUpdateStatus = async (requestId: string, newStatus: LabRequest["status"]) => {
+    // Simulate API Call: PUT /api/v1/lab/requests/{requestId}/status
     await new Promise(resolve => setTimeout(resolve, 500));
     setLabRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req));
     toast({ title: "Status Updated", description: `Request ${requestId} status changed to ${newStatus}.` });
@@ -223,7 +236,7 @@ export default function LaboratoryManagementPage() {
         unit: "",
         normalRangeDisplay: "N/A",
         interpretation: "N/A",
-        isNumeric: false,
+        isNumeric: false, // Assume false if not defined
       };
     });
     setCurrentResultInputs(initialInputs);
@@ -248,6 +261,7 @@ export default function LaboratoryManagementPage() {
   const handleSaveResults = async () => {
     if (!selectedRequestForResults) return;
     setIsSavingResults(true);
+    // Simulate API Call: POST /api/v1/lab/requests/{selectedRequestForResults.id}/results
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     setLabRequests(prevReqs => prevReqs.map(req => 
@@ -264,6 +278,7 @@ export default function LaboratoryManagementPage() {
   
   const handleReorderReagent = async (reagent: Reagent) => {
       setIsReorderingReagentId(reagent.id);
+      // Simulate API Call: POST /api/v1/lab/reagents/requisition
       await new Promise(resolve => setTimeout(resolve, 1500));
       toast({title: "Reagent Reorder (Mock)", description: `Reorder request placed for ${reagent.name}.`});
       setIsReorderingReagentId(null);
@@ -277,7 +292,11 @@ export default function LaboratoryManagementPage() {
             <Microscope className="h-8 w-8" /> Laboratory Information & Management
           </h1>
            <div className="text-sm text-muted-foreground">
-            {time.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {clientTime ? (
+              `${clientTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${clientTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            ) : (
+              "\u00A0" // Non-breaking space as placeholder
+            )}
           </div>
         </div>
 
@@ -538,3 +557,5 @@ export default function LaboratoryManagementPage() {
   );
 }
 
+
+    
