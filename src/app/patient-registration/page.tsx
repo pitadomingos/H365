@@ -37,6 +37,7 @@ const patientFormSchema = z.object({
   fullName: z.string().min(1, "Full name is required."),
   dateOfBirth: z.date({ required_error: "Date of birth is required."}),
   gender: z.string().min(1, "Gender is required."),
+  allergies: z.string().optional(), // Added allergies field
   contactNumber: z.string().min(1, "Contact number is required."),
   email: z.string().email("Invalid email address.").optional().or(z.literal('')),
   address: z.string().min(1, "Address is required."),
@@ -59,6 +60,7 @@ export default function PatientRegistrationPage() {
       fullName: "",
       dateOfBirth: undefined,
       gender: "",
+      allergies: "",
       contactNumber: "",
       email: "",
       address: "",
@@ -77,10 +79,10 @@ export default function PatientRegistrationPage() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [currentDate, setCurrentDate] = useState('');
-  const hospitalName = "HealthFlow Central Hospital";
+  const hospitalName = "HealthFlow Central Hospital"; // To be replaced by dynamic data later
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false); // New state for bulk upload
+  const [isUploading, setIsUploading] = useState(false);
 
   const [waitingList, setWaitingList] = useState<WaitingListItem[]>([]);
   const [isWaitingListLoading, setIsWaitingListLoading] = useState(true);
@@ -88,8 +90,8 @@ export default function PatientRegistrationPage() {
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
     
-    // Simulate fetching waiting list data
     setIsWaitingListLoading(true);
+    // Simulate fetching waiting list data from /api/v1/visits/waiting-list
     setTimeout(() => {
       const initialWaitingList: WaitingListItem[] = [
         { id: 1, name: "Alice Wonderland", gender: "Female", time: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
@@ -101,19 +103,18 @@ export default function PatientRegistrationPage() {
       ];
       setWaitingList(initialWaitingList);
       setIsWaitingListLoading(false);
-    }, 1500); // Simulate 1.5 second fetch
+    }, 1500);
 
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [stream]); // stream dependency to handle cleanup
+  }, [stream]);
 
   const enableCamera = async () => {
-    if (hasCameraPermission === false) {
-      setHasCameraPermission(null);
-      setStream(null); 
+    if (hasCameraPermission === false && !stream) {
+      setHasCameraPermission(null); // Allow re-requesting permission
     }
 
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -206,12 +207,16 @@ export default function PatientRegistrationPage() {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
     }
+     // Re-enable camera automatically or prompt user to re-enable
+    if (hasCameraPermission) { // only if permission was initially true
+        enableCamera();
+    }
   };
 
 
   const downloadCSVTemplate = () => {
     const headers = [
-      "NationalID", "FullName", "DateOfBirth (YYYY-MM-DD)", "Gender",
+      "NationalID", "FullName", "DateOfBirth (YYYY-MM-DD)", "Gender", "Allergies (comma-separated)",
       "ContactNumber", "EmailAddress", "Address", "District", "Province",
       "HomeHospital", "NextOfKinName", "NextOfKinNumber", "NextOfKinAddress"
     ];
@@ -237,16 +242,14 @@ export default function PatientRegistrationPage() {
   const handleFileUpload = async () => {
     if (selectedFile) {
       setIsUploading(true);
-      // Mock upload processing
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
       toast({
         title: "File Upload (Mock)",
         description: `${selectedFile.name} would be processed. This is a mock action.`,
       });
-      // Reset file input
       setSelectedFile(null);
       const fileInput = document.getElementById('bulkPatientFile') as HTMLInputElement;
-      if (fileInput) fileInput.value = ""; // Clear the file input
+      if (fileInput) fileInput.value = ""; 
       setIsUploading(false);
     } else {
       toast({
@@ -274,31 +277,20 @@ export default function PatientRegistrationPage() {
       ...data,
       dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, "yyyy-MM-dd") : undefined,
       photoDataUri: capturedImage,
+      allergies: data.allergies || "", // Ensure allergies is at least an empty string
     };
 
-    console.log("Submitting to /api/v1/patients:", payload);
+    console.log("Submitting to /api/v1/patients (mock):", payload);
 
     try {
-      // Simulate API Call
       await new Promise(resolve => setTimeout(resolve, 1500)); 
       const mockSuccess = Math.random() > 0.1; 
 
       if (mockSuccess) {
-        const mockResult = { 
-            message: "Patient registered successfully",
-            patient: {
-                id: `BE${Date.now()}`, 
-                nationalId: data.nationalId,
-                fullName: data.fullName,
-                age: data.dateOfBirth ? new Date().getFullYear() - data.dateOfBirth.getFullYear() : 'N/A', 
-                gender: data.gender,
-                address: data.address,
-                homeClinic: data.homeHospital || 'N/A'
-            }
-        };
+        const patientAge = data.dateOfBirth ? new Date().getFullYear() - new Date(data.dateOfBirth).getFullYear() : 'N/A';
         toast({ 
             title: "Patient Registered (Mock API)", 
-            description: `${mockResult.patient.fullName} (ID: ${mockResult.patient.nationalId}) registered. Age: ${mockResult.patient.age}, Gender: ${mockResult.patient.gender}. Address: ${mockResult.patient.address}, Home Clinic: ${mockResult.patient.homeClinic}` 
+            description: `${data.fullName} (ID: ${data.nationalId}) registered. Age: ${patientAge}, Gender: ${data.gender}, Address: ${data.address}, Home Clinic: ${data.homeHospital || 'N/A'}. Allergies: ${data.allergies || 'None'}` 
         });
         form.reset();
         setCapturedImage(null);
@@ -356,226 +348,236 @@ export default function PatientRegistrationPage() {
             </CardHeader>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <CardContent className="py-6">
-                <div className="space-y-8">
-                  <div className="grid lg:grid-cols-3 gap-x-6 gap-y-4 items-start">
-                    <div className="lg:col-span-1">
-                      <div className="relative w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden border border-dashed border-primary/50">
-                        {!capturedImage && (
-                          <video
-                            ref={videoRef}
-                            className={cn("w-full h-full object-cover", !stream && "hidden")}
-                            autoPlay
-                            muted
-                            playsInline
+                <div className="grid lg:grid-cols-3 gap-x-6 gap-y-4 items-start">
+                  <div className="lg:col-span-1">
+                    <div className="relative w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden border border-dashed border-primary/50">
+                       {capturedImage ? (
+                          <Image 
+                            src={capturedImage} 
+                            alt="Captured patient photo" 
+                            width={240} 
+                            height={308} 
+                            className="w-full h-full object-contain rounded-md" 
+                            data-ai-hint={getAvatarHint(form.watch("gender") as any || "Other")}
                           />
-                        )}
-                        {capturedImage ? (
-                          <Image src={capturedImage} alt="Captured patient photo" width={240} height={308} className="w-full h-full object-contain rounded-md" data-ai-hint={getAvatarHint(form.watch("gender") as any || "Other")}/>
                         ) : (
-                           <>
-                            { !(hasCameraPermission && stream) && (
+                          <>
+                            <video
+                                ref={videoRef}
+                                className={cn("w-full h-full object-cover", !stream && "hidden")}
+                                autoPlay
+                                muted
+                                playsInline
+                            />
+                            {!(hasCameraPermission && stream) && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-muted">
                                     <UserCircle className="w-24 h-24 text-muted-foreground" />
                                 </div>
                             )}
-                           </>
+                          </>
                         )}
-                      </div>
-                      <canvas ref={canvasRef} className="hidden"></canvas>
-                       {hasCameraPermission === false && !stream && (
-                          <Alert variant="destructive" className="w-full mt-2">
-                              <AlertTitle>Camera Access Denied</AlertTitle>
-                              <AlertDescription>
-                                Please allow camera access in your browser settings.
-                                <Button onClick={enableCamera} variant="link" className="p-0 h-auto ml-1">Retry</Button>
-                              </AlertDescription>
-                          </Alert>
-                      )}
                     </div>
+                    <canvas ref={canvasRef} className="hidden"></canvas>
+                     {hasCameraPermission === false && !stream && (
+                        <Alert variant="destructive" className="w-full mt-2">
+                            <AlertTitle>Camera Access Denied</AlertTitle>
+                            <AlertDescription>
+                              Please allow camera access in your browser settings.
+                              <Button onClick={enableCamera} variant="link" className="p-0 h-auto ml-1">Retry</Button>
+                            </AlertDescription>
+                        </Alert>
+                    )}
+                  </div>
 
-                    <div className="lg:col-span-2 space-y-4">
-                      <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="nationalId">National ID Number <span className="text-destructive">*</span></Label>
-                          <Input id="nationalId" placeholder="e.g., 1234567890" {...form.register("nationalId")} />
-                          {form.formState.errors.nationalId && <p className="text-xs text-destructive">{form.formState.errors.nationalId.message}</p>}
-                          <p className="text-xs text-muted-foreground">Patient's National ID must be unique.</p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="fullName">Full Name <span className="text-destructive">*</span></Label>
-                          <Input id="fullName" placeholder="e.g., John Michael Doe" {...form.register("fullName")} />
-                           {form.formState.errors.fullName && <p className="text-xs text-destructive">{form.formState.errors.fullName.message}</p>}
-                        </div>
+                  <div className="lg:col-span-2 space-y-4">
+                    <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nationalId">National ID Number <span className="text-destructive">*</span></Label>
+                        <Input id="nationalId" placeholder="e.g., 1234567890" {...form.register("nationalId")} />
+                        {form.formState.errors.nationalId && <p className="text-xs text-destructive">{form.formState.errors.nationalId.message}</p>}
+                        <p className="text-xs text-muted-foreground">Patient's National ID must be unique.</p>
                       </div>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="dob">Date of Birth <span className="text-destructive">*</span></Label>
-                          <Controller
-                            control={form.control}
-                            name="dateOfBirth"
-                            render={({ field }) => (
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                      "w-full justify-start text-left font-normal",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                  >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                  <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
-                                </PopoverContent>
-                              </Popover>
-                            )}
-                          />
-                           {form.formState.errors.dateOfBirth && <p className="text-xs text-destructive">{form.formState.errors.dateOfBirth.message}</p>}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="gender">Gender <span className="text-destructive">*</span></Label>
-                          <Controller
-                            control={form.control}
-                            name="gender"
-                            render={({ field }) => (
-                              <Select onValueChange={field.onChange} value={field.value} >
-                                <SelectTrigger id="gender">
-                                  <SelectValue placeholder="Select gender" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Male">Male</SelectItem>
-                                  <SelectItem value="Female">Female</SelectItem>
-                                  <SelectItem value="Other">Other</SelectItem>
-                                  <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
-                          {form.formState.errors.gender && <p className="text-xs text-destructive">{form.formState.errors.gender.message}</p>}
-                        </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fullName">Full Name <span className="text-destructive">*</span></Label>
+                        <Input id="fullName" placeholder="e.g., John Michael Doe" {...form.register("fullName")} />
+                         {form.formState.errors.fullName && <p className="text-xs text-destructive">{form.formState.errors.fullName.message}</p>}
                       </div>
-                        <div className="pt-2">
-                            <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
-                            <Camera className="h-5 w-5" /> Patient Photo Capture <span className="text-destructive">*</span>
-                            </h3>
-                            <p className="text-sm text-muted-foreground">Capture a clear photo. Aim for a passport-style image. Photo is mandatory for this form.</p>
-                            <div className="flex gap-2 mt-2">
-                            {!stream && !capturedImage && (
-                                <Button type="button" onClick={enableCamera} variant="outline">
-                                <Camera className="mr-2 h-4 w-4" /> Enable Camera
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="dob">Date of Birth <span className="text-destructive">*</span></Label>
+                        <Controller
+                          control={form.control}
+                          name="dateOfBirth"
+                          render={({ field }) => (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                 </Button>
-                            )}
-                            {stream && hasCameraPermission && !capturedImage && (
-                                <Button type="button" onClick={capturePhoto}>
-                                <Camera className="mr-2 h-4 w-4" /> Capture Photo
-                                </Button>
-                            )}
-                            {capturedImage && (
-                                <Button type="button" onClick={discardPhoto} variant="destructive" className="flex items-center">
-                                <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
-                                </Button>
-                            )}
-                            </div>
-                            {hasCameraPermission === null && !stream && !capturedImage &&(
-                            <p className="text-xs text-muted-foreground mt-1">Click "Enable Camera" to start.</p>
-                            )}
-                        </div>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        />
+                         {form.formState.errors.dateOfBirth && <p className="text-xs text-destructive">{form.formState.errors.dateOfBirth.message}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gender">Gender <span className="text-destructive">*</span></Label>
+                        <Controller
+                          control={form.control}
+                          name="gender"
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value} >
+                              <SelectTrigger id="gender">
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Male">Male</SelectItem>
+                                <SelectItem value="Female">Female</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                                <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                        {form.formState.errors.gender && <p className="text-xs text-destructive">{form.formState.errors.gender.message}</p>}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="allergies">Allergies (comma-separated if multiple)</Label>
+                        <Textarea id="allergies" placeholder="e.g., Penicillin, Dust mites, Peanuts" {...form.register("allergies")} />
+                        {form.formState.errors.allergies && <p className="text-xs text-destructive">{form.formState.errors.allergies.message}</p>}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="pt-2">
+                  <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
+                    <Camera className="h-5 w-5" /> Patient Photo Capture <span className="text-destructive">*</span>
+                  </h3>
+                  <p className="text-sm text-muted-foreground">Capture a clear photo. Aim for a passport-style image. Photo is mandatory for this form.</p>
+                  <div className="flex gap-2 mt-2">
+                  {!stream && !capturedImage && (
+                      <Button type="button" onClick={enableCamera} variant="outline">
+                      <Camera className="mr-2 h-4 w-4" /> Enable Camera
+                      </Button>
+                  )}
+                  {stream && hasCameraPermission && !capturedImage && (
+                      <Button type="button" onClick={capturePhoto}>
+                      <Camera className="mr-2 h-4 w-4" /> Capture Photo
+                      </Button>
+                  )}
+                  {capturedImage && (
+                      <Button type="button" onClick={discardPhoto} variant="destructive" className="flex items-center">
+                      <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
+                      </Button>
+                  )}
+                  </div>
+                  {hasCameraPermission === null && !stream && !capturedImage &&(
+                  <p className="text-xs text-muted-foreground mt-1">Click "Enable Camera" to start.</p>
+                  )}
+                </div>
+
+
+                <div className="space-y-6 pt-4">
+                  <div className="space-y-4">
+                    <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="contactNumber">Phone/Cell Number <span className="text-destructive">*</span></Label>
+                        <Input id="contactNumber" type="tel" placeholder="e.g., (555) 123-4567" {...form.register("contactNumber")} />
+                        {form.formState.errors.contactNumber && <p className="text-xs text-destructive">{form.formState.errors.contactNumber.message}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email Address</Label>
+                        <Input id="email" type="email" placeholder="e.g., john.doe@example.com" {...form.register("email")} />
+                         {form.formState.errors.email && <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Full Address <span className="text-destructive">*</span></Label>
+                      <Textarea id="address" placeholder="e.g., 123 Main St, Anytown, Province, Postal Code" {...form.register("address")} />
+                       {form.formState.errors.address && <p className="text-xs text-destructive">{form.formState.errors.address.message}</p>}
                     </div>
                   </div>
 
-                  <div className="space-y-6 pt-4">
-                    <div className="space-y-4">
-                      <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="contactNumber">Phone/Cell Number <span className="text-destructive">*</span></Label>
-                          <Input id="contactNumber" type="tel" placeholder="e.g., (555) 123-4567" {...form.register("contactNumber")} />
-                          {form.formState.errors.contactNumber && <p className="text-xs text-destructive">{form.formState.errors.contactNumber.message}</p>}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address</Label>
-                          <Input id="email" type="email" placeholder="e.g., john.doe@example.com" {...form.register("email")} />
-                           {form.formState.errors.email && <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>}
-                        </div>
+                  <div className="space-y-4">
+                    <h3 className="text-md font-semibold border-b pb-1">Location & Origin</h3>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="district">District <span className="text-destructive">*</span></Label>
+                        <Input id="district" placeholder="e.g., Central District" {...form.register("district")}/>
+                         {form.formState.errors.district && <p className="text-xs text-destructive">{form.formState.errors.district.message}</p>}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="address">Full Address <span className="text-destructive">*</span></Label>
-                        <Textarea id="address" placeholder="e.g., 123 Main St, Anytown, Province, Postal Code" {...form.register("address")} />
-                         {form.formState.errors.address && <p className="text-xs text-destructive">{form.formState.errors.address.message}</p>}
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <h3 className="text-md font-semibold border-b pb-1">Location & Origin</h3>
-                      <div className="grid md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="district">District <span className="text-destructive">*</span></Label>
-                          <Input id="district" placeholder="e.g., Central District" {...form.register("district")}/>
-                           {form.formState.errors.district && <p className="text-xs text-destructive">{form.formState.errors.district.message}</p>}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="province">Province <span className="text-destructive">*</span></Label>
-                          <Input id="province" placeholder="e.g., Capital Province" {...form.register("province")}/>
-                          {form.formState.errors.province && <p className="text-xs text-destructive">{form.formState.errors.province.message}</p>}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="homeHospital">Home Hospital / Clinic</Label>
-                          <Input id="homeHospital" placeholder="e.g., City General Hospital" {...form.register("homeHospital")} />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <h3 className="text-md font-semibold border-b pb-1">Next of Kin (Optional)</h3>
-                      <div className="grid md:grid-cols-2 gap-4">
-                         <div className="space-y-2">
-                          <Label htmlFor="nextOfKinName">Full Name</Label>
-                          <Input id="nextOfKinName" placeholder="e.g., Jane Doe (Spouse)" {...form.register("nextOfKinName")}/>
-                           {form.formState.errors.nextOfKinName && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinName.message}</p>}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="nextOfKinNumber">Contact Number</Label>
-                          <Input id="nextOfKinNumber" type="tel" placeholder="e.g., (555) 987-6543" {...form.register("nextOfKinNumber")}/>
-                          {form.formState.errors.nextOfKinNumber && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinNumber.message}</p>}
-                        </div>
+                        <Label htmlFor="province">Province <span className="text-destructive">*</span></Label>
+                        <Input id="province" placeholder="e.g., Capital Province" {...form.register("province")}/>
+                        {form.formState.errors.province && <p className="text-xs text-destructive">{form.formState.errors.province.message}</p>}
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="nextOfKinAddress">Address</Label>
-                        <Textarea id="nextOfKinAddress" placeholder="e.g., 456 Oak Ln, Anytown" {...form.register("nextOfKinAddress")}/>
-                         {form.formState.errors.nextOfKinAddress && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinAddress.message}</p>}
+                        <Label htmlFor="homeHospital">Home Hospital / Clinic</Label>
+                        <Input id="homeHospital" placeholder="e.g., City General Hospital" {...form.register("homeHospital")} />
                       </div>
                     </div>
+                  </div>
 
-                    <div className="space-y-4 pt-4 border-t">
-                       <h3 className="text-md font-semibold flex items-center gap-2 pt-2">
-                          <UploadCloud className="h-6 w-6" /> Bulk Patient Registration
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Upload an Excel or CSV file to register multiple patients at once. Download the template for the correct format. Photos must be added individually post-registration.
-                      </p>
-                      <Button type="button" onClick={downloadCSVTemplate} variant="outline" className="w-full md:w-auto">
-                        <Download className="mr-2 h-4 w-4" /> Download CSV Template
-                      </Button>
-                      <div className="space-y-2">
-                        <Label htmlFor="bulkPatientFile">Upload File</Label>
-                        <Input
-                          id="bulkPatientFile"
-                          type="file"
-                          accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-                          onChange={handleFileChange}
-                          disabled={isUploading}
-                        />
-                        {selectedFile && <p className="text-xs text-muted-foreground">Selected: {selectedFile.name}</p>}
+                  <div className="space-y-4">
+                    <h3 className="text-md font-semibold border-b pb-1">Next of Kin (Optional)</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                       <div className="space-y-2">
+                        <Label htmlFor="nextOfKinName">Full Name</Label>
+                        <Input id="nextOfKinName" placeholder="e.g., Jane Doe (Spouse)" {...form.register("nextOfKinName")}/>
+                         {form.formState.errors.nextOfKinName && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinName.message}</p>}
                       </div>
-                      <Button type="button" onClick={handleFileUpload} className="w-full md:w-auto" disabled={!selectedFile || isUploading}>
-                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
-                        {isUploading ? "Uploading..." : "Upload and Process File"}
-                      </Button>
+                      <div className="space-y-2">
+                        <Label htmlFor="nextOfKinNumber">Contact Number</Label>
+                        <Input id="nextOfKinNumber" type="tel" placeholder="e.g., (555) 987-6543" {...form.register("nextOfKinNumber")}/>
+                        {form.formState.errors.nextOfKinNumber && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinNumber.message}</p>}
+                      </div>
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nextOfKinAddress">Address</Label>
+                      <Textarea id="nextOfKinAddress" placeholder="e.g., 456 Oak Ln, Anytown" {...form.register("nextOfKinAddress")}/>
+                       {form.formState.errors.nextOfKinAddress && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinAddress.message}</p>}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t">
+                     <h3 className="text-md font-semibold flex items-center gap-2 pt-2">
+                        <UploadCloud className="h-6 w-6" /> Bulk Patient Registration
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Upload an Excel or CSV file to register multiple patients at once. Download the template for the correct format. Photos must be added individually post-registration.
+                    </p>
+                    <Button type="button" onClick={downloadCSVTemplate} variant="outline" className="w-full md:w-auto">
+                      <Download className="mr-2 h-4 w-4" /> Download CSV Template
+                    </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="bulkPatientFile">Upload File</Label>
+                      <Input
+                        id="bulkPatientFile"
+                        type="file"
+                        accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                        onChange={handleFileChange}
+                        disabled={isUploading}
+                      />
+                      {selectedFile && <p className="text-xs text-muted-foreground">Selected: {selectedFile.name}</p>}
+                    </div>
+                    <Button type="button" onClick={handleFileUpload} className="w-full md:w-auto" disabled={!selectedFile || isUploading}>
+                      {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
+                      {isUploading ? "Uploading..." : "Upload and Process File"}
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -640,7 +642,7 @@ export default function PatientRegistrationPage() {
                     <p>No patients currently in the waiting list.</p>
                   </div>
                 )}
-                 <Button type="button" variant="outline" className="w-full mt-6" disabled={isWaitingListLoading}>
+                 <Button type="button" variant="outline" className="w-full mt-6" onClick={() => toast({ title: "List Refreshed (Mock)"})} disabled={isWaitingListLoading}>
                     {isWaitingListLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                     Refresh List
                  </Button>
@@ -667,6 +669,4 @@ export default function PatientRegistrationPage() {
     </AppShell>
   );
 }
-    
-
     
