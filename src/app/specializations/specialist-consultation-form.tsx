@@ -111,12 +111,12 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
   const [bmi, setBmi] = useState<string | null>(null);
   const [bmiDisplay, setBmiDisplay] = useState<{ status: string; colorClass: string; textColorClass: string; } | null>(null);
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
-  const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false); 
   
   const [selectedLabTests, setSelectedLabTests] = useState<Record<string, boolean>>({});
   const [isSubmittingLabOrder, setIsSubmittingLabOrder] = useState(false);
   const [isSubmittingImagingOrder, setIsSubmittingImagingOrder] = useState(false);
   const [isSavingProgress, setIsSavingProgress] = useState(false);
+  const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false); 
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -129,7 +129,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
       labResultsSummary: "",
       imagingDataSummary: "",
       specialistComments: "",
-      currentSpecialty: "Cardiology", // Default specialty
+      currentSpecialty: "Cardiology", 
     },
   });
 
@@ -164,7 +164,6 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
       return;
     }
     setIsSearching(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000)); 
     if (nationalId === "123456789" || nationalId === "987654321") {
       const fetchedPatientData: PatientData = {
@@ -191,7 +190,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
     setRecommendation(null);
     setError(null);
     form.reset({
-        nationalIdSearch: nationalId, // Keep searched ID
+        nationalIdSearch: nationalId, 
         bodyTemperature: "",
         weight: "",
         height: "",
@@ -265,17 +264,35 @@ ${visitHistoryString || "No recent visit history available."}
     }
     setIsSubmittingOutcome(true);
     
-    // Simulate API Call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log("Specialist Consultation Data to Save (Mock):", {
+    const currentFormData = form.getValues();
+    const payload = {
       patientId: patientData.nationalId,
-      specialty: patientData.assignedSpecialty,
-      vitals: form.getValues(), // Or specific fields
-      symptoms: form.getValues("symptoms"),
-      aiRecommendation: recommendation,
-      specialistComments: form.getValues("specialistComments"),
+      consultationDate: new Date().toISOString(),
+      consultingDoctorId: "doc-specialist-mockId", // Mocked
+      department: patientData.assignedSpecialty || currentFormData.currentSpecialty || "Specialist Consultation",
+      referringDoctorId: patientData.referringDoctor, // If available
+      reasonForReferral: patientData.reasonForReferral, // If available
+      vitals: {
+        bodyTemperatureCelsius: parseFloat(currentFormData.bodyTemperature || "0") || undefined,
+        weightKg: parseFloat(currentFormData.weight || "0") || undefined,
+        heightCm: parseFloat(currentFormData.height || "0") || undefined,
+        bmi: parseFloat(bmi || "0") || undefined
+      },
+      symptoms: currentFormData.symptoms,
+      labResultsSummaryInput: currentFormData.labResultsSummary,
+      imagingDataSummaryInput: currentFormData.imagingDataSummary,
+      aiDiagnosis: recommendation?.diagnosis,
+      aiPrescription: recommendation?.prescription,
+      aiRecommendations: recommendation?.recommendations,
+      doctorNotes: currentFormData.specialistComments, // Using specialistComments field
+      // In a real app, finalDiagnosis and prescription would likely be separate, structured fields
+      finalDiagnosis: currentFormData.specialistComments ? `Diagnosis based on specialist notes: ${currentFormData.specialistComments.substring(0,50)}...` : "Diagnosis TBD",
+      prescription: recommendation?.prescription ? `Prescription based on AI: ${recommendation.prescription}` : "Prescription TBD",
       outcome: outcome,
-    });
+    };
+
+    console.log("Submitting Specialist Consultation to /api/v1/consultations (mock):", payload);
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
     toast({ title: "Specialist Consultation Finished", description: `Outcome: ${outcome}. Action (mock): ${outcome} process initiated for ${patientData?.fullName}.` });
 
@@ -288,7 +305,7 @@ ${visitHistoryString || "No recent visit history available."}
         labResultsSummary: "",
         imagingDataSummary: "",
         specialistComments: "",
-        currentSpecialty: form.getValues("currentSpecialty"), // Keep current specialty
+        currentSpecialty: form.getValues("currentSpecialty"), 
     });
     setPatientData(null);
     setRecommendation(null);
@@ -307,14 +324,29 @@ ${visitHistoryString || "No recent visit history available."}
     }
     setIsSavingProgress(true);
     const currentFormData = form.getValues();
-    // Simulate API Call to save draft
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log("Saving Specialist Draft (Mock):", {
+
+    const payload = {
       patientId: patientData.nationalId,
-      specialty: patientData.assignedSpecialty,
-      formData: currentFormData,
-      aiRecommendation: recommendation,
-    });
+      consultingDoctorId: "doc-specialist-mockId", // Mocked
+      department: patientData.assignedSpecialty || currentFormData.currentSpecialty || "Specialist Consultation",
+      vitals: {
+        bodyTemperatureCelsius: parseFloat(currentFormData.bodyTemperature || "0") || undefined,
+        weightKg: parseFloat(currentFormData.weight || "0") || undefined,
+        heightCm: parseFloat(currentFormData.height || "0") || undefined,
+        bmi: parseFloat(bmi || "0") || undefined
+      },
+      symptoms: currentFormData.symptoms,
+      labResultsSummaryInput: currentFormData.labResultsSummary,
+      imagingDataSummaryInput: currentFormData.imagingDataSummary,
+      aiDiagnosis: recommendation?.diagnosis,
+      aiPrescription: recommendation?.prescription,
+      aiRecommendations: recommendation?.recommendations,
+      doctorNotes: currentFormData.specialistComments, // Using specialistComments
+      status: "DRAFT"
+    };
+    
+    console.log("Saving Specialist Draft to /api/v1/consultations/drafts (mock):", payload);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     toast({ title: "Progress Saved (Mock)", description: "Specialist consultation draft has been saved." });
     setIsSavingProgress(false);
   };
@@ -326,7 +358,11 @@ ${visitHistoryString || "No recent visit history available."}
         .filter(test => selectedLabTests[test.id])
         .map(test => test.label);
      
-    // Simulate API Call: POST /api/v1/specialist-consultations/{consultationId}/lab-orders
+    const payload = {
+        testIds: Object.keys(selectedLabTests).filter(key => selectedLabTests[key]),
+        clinicalNotes: (document.getElementById('specialistLabClinicalNotes') as HTMLTextAreaElement)?.value || ""
+    };
+    console.log("Submitting Lab Order to /api/v1/consultations/{consultationId}/lab-orders (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast({
         title: "Lab Order Submitted (Mock)", 
@@ -339,9 +375,14 @@ ${visitHistoryString || "No recent visit history available."}
   const handleSubmitImagingOrder = async () => {
     if (!patientData) return;
     setIsSubmittingImagingOrder(true);
-    // Simulate API Call: POST /api/v1/specialist-consultations/{consultationId}/imaging-orders
+    const payload = {
+        imagingType: (document.getElementById('specialistImagingType') as HTMLSelectElement)?.value || "",
+        regionDetails: (document.getElementById('specialistImagingRegionDetails') as HTMLTextAreaElement)?.value || "",
+        clinicalNotes: (document.getElementById('specialistImagingClinicalNotes') as HTMLTextAreaElement)?.value || ""
+    };
+    console.log("Submitting Imaging Order to /api/v1/consultations/{consultationId}/imaging-orders (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName} by Specialist.`});
+    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName} by Specialist. Payload: ${JSON.stringify(payload)}`});
     setIsSubmittingImagingOrder(false);
   };
 
@@ -483,7 +524,7 @@ ${visitHistoryString || "No recent visit history available."}
                 <CardTitle>Diagnostic Orders for Specialist</CardTitle>
                 <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-wrap items-center gap-2"> {/* Use flex-wrap */}
+              <CardContent className="flex flex-wrap items-center gap-2"> 
                  <Dialog onOpenChange={(open) => !open && setSelectedLabTests({})}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
@@ -778,6 +819,4 @@ ${visitHistoryString || "No recent visit history available."}
     </div>
   );
 }
-
-
     

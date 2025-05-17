@@ -108,12 +108,12 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
   const [bmi, setBmi] = useState<string | null>(null);
   const [bmiDisplay, setBmiDisplay] = useState<{ status: string; colorClass: string, textColorClass: string; } | null>(null);
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
-  const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false);
   
   const [selectedLabTests, setSelectedLabTests] = useState<Record<string, boolean>>({});
   const [isSubmittingLabOrder, setIsSubmittingLabOrder] = useState(false);
   const [isSubmittingImagingOrder, setIsSubmittingImagingOrder] = useState(false);
   const [isSavingProgress, setIsSavingProgress] = useState(false);
+  const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false);
 
 
   const form = useForm<FormValues>({
@@ -179,12 +179,12 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
       toast({ title: "Patient Found", description: `${fetchedPatientData.fullName}'s details loaded.` });
     } else {
       toast({ variant: "destructive", title: "Not Found", description: "Patient with this National ID not found." });
-      setPatientData(null); // Clear patient data if not found
+      setPatientData(null); 
     }
     setRecommendation(null);
     setError(null);
     form.reset({
-        nationalIdSearch: nationalId, // Keep the searched ID
+        nationalIdSearch: nationalId, 
         bodyTemperature: "",
         weight: "",
         height: "",
@@ -252,16 +252,33 @@ ${visitHistoryString || "No recent visit history available."}
     }
     setIsSubmittingOutcome(true);
     
-    // Simulate API Call to save consultation
-    await new Promise(resolve => setTimeout(resolve, 1500)); 
-    console.log("Consultation Data to Save (Mock):", {
+    const currentFormData = form.getValues();
+    const payload = {
       patientId: patientData.nationalId,
-      vitals: form.getValues(), // Or specific fields
-      symptoms: form.getValues("symptoms"),
-      aiRecommendation: recommendation,
-      doctorComments: form.getValues("doctorComments"),
+      consultationDate: new Date().toISOString(),
+      consultingDoctorId: "doc-currentUser-mockId", // Mocked
+      department: "General Consultation", // Or dynamically set
+      vitals: {
+        bodyTemperatureCelsius: parseFloat(currentFormData.bodyTemperature || "0") || undefined,
+        weightKg: parseFloat(currentFormData.weight || "0") || undefined,
+        heightCm: parseFloat(currentFormData.height || "0") || undefined,
+        bmi: parseFloat(bmi || "0") || undefined
+      },
+      symptoms: currentFormData.symptoms,
+      labResultsSummaryInput: currentFormData.labResultsSummary,
+      imagingDataSummaryInput: currentFormData.imagingDataSummary,
+      aiDiagnosis: recommendation?.diagnosis,
+      aiPrescription: recommendation?.prescription,
+      aiRecommendations: recommendation?.recommendations,
+      doctorNotes: currentFormData.doctorComments,
+      // In a real app, finalDiagnosis and prescription would likely be separate, structured fields
+      finalDiagnosis: currentFormData.doctorComments ? `Diagnosis based on notes: ${currentFormData.doctorComments.substring(0,50)}...` : "Diagnosis TBD",
+      prescription: recommendation?.prescription ? `Prescription based on AI: ${recommendation.prescription}` : "Prescription TBD",
       outcome: outcome,
-    });
+    };
+
+    console.log("Submitting to /api/v1/consultations (mock):", payload);
+    await new Promise(resolve => setTimeout(resolve, 1500)); 
 
     toast({ title: "Consultation Finished", description: `Outcome: ${outcome}. Action (mock): ${outcome} process initiated for ${patientData?.fullName}.` });
     
@@ -283,13 +300,28 @@ ${visitHistoryString || "No recent visit history available."}
     }
     setIsSavingProgress(true);
     const currentFormData = form.getValues();
-    // Simulate API Call to save draft
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log("Saving Draft (Mock):", {
+    const payload = {
       patientId: patientData.nationalId,
-      formData: currentFormData,
-      aiRecommendation: recommendation, 
-    });
+      consultingDoctorId: "doc-currentUser-mockId", // Mocked
+      department: "General Consultation", // Or dynamically set
+      vitals: {
+        bodyTemperatureCelsius: parseFloat(currentFormData.bodyTemperature || "0") || undefined,
+        weightKg: parseFloat(currentFormData.weight || "0") || undefined,
+        heightCm: parseFloat(currentFormData.height || "0") || undefined,
+        bmi: parseFloat(bmi || "0") || undefined
+      },
+      symptoms: currentFormData.symptoms,
+      labResultsSummaryInput: currentFormData.labResultsSummary,
+      imagingDataSummaryInput: currentFormData.imagingDataSummary,
+      aiDiagnosis: recommendation?.diagnosis,
+      aiPrescription: recommendation?.prescription,
+      aiRecommendations: recommendation?.recommendations,
+      doctorNotes: currentFormData.doctorComments,
+      status: "DRAFT" // Indicate it's a draft
+    };
+
+    console.log("Saving Draft to /api/v1/consultations/drafts (mock):", payload);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     toast({ title: "Progress Saved (Mock)", description: "Consultation draft has been saved." });
     setIsSavingProgress(false);
   };
@@ -301,26 +333,33 @@ ${visitHistoryString || "No recent visit history available."}
      const orderedTestLabels = COMMON_ORDERABLE_LAB_TESTS
         .filter(test => selectedLabTests[test.id])
         .map(test => test.label);
-
-    // Simulate API Call: POST /api/v1/consultations/{consultationId}/lab-orders
+    
+    const payload = {
+        testIds: Object.keys(selectedLabTests).filter(key => selectedLabTests[key]),
+        clinicalNotes: (document.getElementById('consultLabClinicalNotes') as HTMLTextAreaElement)?.value || ""
+    };
+    console.log("Submitting Lab Order to /api/v1/consultations/{consultationId}/lab-orders (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast({
         title: "Lab Order Submitted (Mock)", 
         description:`Lab tests ordered for ${patientData?.fullName}: ${orderedTestLabels.length > 0 ? orderedTestLabels.join(', ') : 'No specific tests selected.'}`
     });
     setSelectedLabTests({}); 
-    // Potentially close dialog here if it's a separate component
     setIsSubmittingLabOrder(false);
   };
 
   const handleSubmitImagingOrder = async () => {
     if (!patientData) return;
     setIsSubmittingImagingOrder(true);
-    // Simulate API Call: POST /api/v1/consultations/{consultationId}/imaging-orders
+    const payload = {
+        imagingType: (document.getElementById('consultImagingType') as HTMLSelectElement)?.value || "",
+        regionDetails: (document.getElementById('consultImagingRegionDetails') as HTMLTextAreaElement)?.value || "",
+        clinicalNotes: (document.getElementById('consultImagingClinicalNotes') as HTMLTextAreaElement)?.value || ""
+    };
+    console.log("Submitting Imaging Order to /api/v1/consultations/{consultationId}/imaging-orders (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName}.`});
+    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName}. Payload: ${JSON.stringify(payload)}`});
     setIsSubmittingImagingOrder(false);
-    // Potentially close dialog here
   };
   
   const isActionDisabled = isSearching || isAiPending || isSubmittingOutcome || isSubmittingLabOrder || isSubmittingImagingOrder || isSavingProgress;
@@ -422,16 +461,16 @@ ${visitHistoryString || "No recent visit history available."}
             </CardContent>
           </Card>
           
-          {patientData && (
+           {patientData && (
               <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle>Diagnostic Orders</CardTitle>
                   <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-wrap items-center gap-2"> {/* Use flex-wrap for responsiveness */}
+                <CardContent className="flex flex-wrap items-center gap-2">
                   <Dialog onOpenChange={(open) => !open && setSelectedLabTests({})}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}> {/* flex-shrink-0 helps button maintain size */}
+                      <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
                         <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
                       </Button>
                     </DialogTrigger>
@@ -525,6 +564,7 @@ ${visitHistoryString || "No recent visit history available."}
                 </CardContent>
               </Card>
           )}
+
 
           <Card className="shadow-sm">
             <CardHeader>
@@ -724,6 +764,4 @@ ${visitHistoryString || "No recent visit history available."}
     </div>
   );
 }
-
-
     
