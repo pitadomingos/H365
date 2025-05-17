@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useTransition, useEffect } from 'react';
@@ -102,7 +101,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
   const [patientData, setPatientData] = useState<PatientData | null>(null);
   const [bmi, setBmi] = useState<string | null>(null);
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
-  const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false); // Added
+  const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false); 
 
 
   const form = useForm<FormValues>({
@@ -285,7 +284,7 @@ ${visitHistoryString || "No recent visit history available."}
       <div className="lg:col-span-2 space-y-6">
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle>Patient & Referral Information</CardTitle>
+            <CardTitle>Patient &amp; Referral Information</CardTitle>
             <CardDescription>Search patient and select specialty (e.g., 123456789 for demo).</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -319,7 +318,7 @@ ${visitHistoryString || "No recent visit history available."}
                             {...form.register('nationalIdSearch')}
                             disabled={isActionDisabled}
                         />
-                        <Button onClick={handlePatientSearch} disabled={isActionDisabled || !form.watch("nationalIdSearch")}>
+                        <Button onClick={handlePatientSearch} disabled={isActionDisabled || !form.watch("nationalIdSearch")?.trim()}>
                             {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                             {isSearching ? "Searching..." : "Search"}
                         </Button>
@@ -361,7 +360,7 @@ ${visitHistoryString || "No recent visit history available."}
         <form onSubmit={form.handleSubmit(onAiSubmit)} className="space-y-6">
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle>Patient Vitals & Specialist Assessment</CardTitle>
+              <CardTitle>Patient Vitals &amp; Specialist Assessment</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -379,7 +378,7 @@ ${visitHistoryString || "No recent visit history available."}
                 </div>
                 <div className="space-y-1">
                   <Label className="flex items-center"><Sigma className="mr-1.5 h-4 w-4 text-primary" />BMI</Label>
-                  <Input value={bmi || "N/A"} readOnly className="font-semibold bg-muted/50" />
+                  <Input value={bmi || "N/A"} readOnly className="font-semibold bg-muted/50" disabled={!patientData} />
                 </div>
               </div>
 
@@ -399,48 +398,8 @@ ${visitHistoryString || "No recent visit history available."}
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle>Medical Data for AI Analysis</CardTitle>
-              <CardDescription>Provide summaries of lab results and imaging data if available.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <Label htmlFor="labResultsSummary">Relevant Lab Results Summary</Label>
-                <Textarea
-                  id="labResultsSummary"
-                  placeholder="e.g., Echo: EF 55%. Troponin: <0.01 ng/mL..."
-                  {...form.register('labResultsSummary')}
-                  className="min-h-[100px]"
-                  disabled={isActionDisabled || !patientData}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="imagingDataSummary">Relevant Imaging Data Summary</Label>
-                <Textarea
-                  id="imagingDataSummary"
-                  placeholder="e.g., Cardiac MRI: No significant abnormalities. Angiogram: Mild LAD stenosis..."
-                  {...form.register('imagingDataSummary')}
-                  className="min-h-[100px]"
-                  disabled={isActionDisabled || !patientData}
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" disabled={isActionDisabled || !patientData} className="w-full md:w-auto">
-                {isAiPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 h-4 w-4" />
-                )}
-                {isAiPending ? "Getting Recommendation..." : "Get AI Recommendation"}
-              </Button>
-            </CardFooter>
-          </Card>
-        </form>
-
-        {patientData && (
-            <Card className="shadow-sm mt-6">
+          {patientData && (
+            <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle>Diagnostic Orders for Specialist</CardTitle>
                 <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
@@ -525,7 +484,47 @@ ${visitHistoryString || "No recent visit history available."}
                 </Dialog>
               </CardContent>
             </Card>
-        )}
+          )}
+
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle>Medical Data for AI Analysis</CardTitle>
+              <CardDescription>Provide summaries of existing lab results and imaging data if available for AI input.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1">
+                <Label htmlFor="labResultsSummary">Relevant Lab Results Summary</Label>
+                <Textarea
+                  id="labResultsSummary"
+                  placeholder="e.g., Echo: EF 55%. Troponin: &lt;0.01 ng/mL..."
+                  {...form.register('labResultsSummary')}
+                  className="min-h-[100px]"
+                  disabled={isActionDisabled || !patientData}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="imagingDataSummary">Relevant Imaging Data Summary</Label>
+                <Textarea
+                  id="imagingDataSummary"
+                  placeholder="e.g., Cardiac MRI: No significant abnormalities. Angiogram: Mild LAD stenosis..."
+                  {...form.register('imagingDataSummary')}
+                  className="min-h-[100px]"
+                  disabled={isActionDisabled || !patientData}
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" disabled={isActionDisabled || !patientData} className="w-full md:w-auto">
+                {isAiPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                {isAiPending ? "Getting Recommendation..." : "Get AI Recommendation"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </form>
 
         {error && !recommendation && (
           <Alert variant="destructive" className="mt-6">
@@ -563,7 +562,7 @@ ${visitHistoryString || "No recent visit history available."}
 
             <Card className="shadow-sm">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Edit3 className="mr-1.5 h-5 w-5 text-primary"/>Specialist's Notes & Plan</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Edit3 className="mr-1.5 h-5 w-5 text-primary"/>Specialist's Notes &amp; Plan</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Textarea
@@ -575,7 +574,7 @@ ${visitHistoryString || "No recent visit history available."}
                         />
                 </CardContent>
                 <CardFooter>
-                     <Button variant="secondary" onClick={() => toast({title: "Notes Saved (Mock)"})} disabled={isActionDisabled}>Save Notes & Plan</Button>
+                     <Button variant="secondary" onClick={() => toast({title: "Notes Saved (Mock)"})} disabled={isActionDisabled}>Save Notes &amp; Plan</Button>
                 </CardFooter>
             </Card>
 
@@ -583,7 +582,7 @@ ${visitHistoryString || "No recent visit history available."}
                 <Dialog open={isOutcomeModalOpen} onOpenChange={setIsOutcomeModalOpen}>
                     <DialogTrigger asChild>
                     <Button variant="default" disabled={isActionDisabled || !patientData} size="lg">
-                        <Send className="mr-2 h-4 w-4" /> Finish Specialist Consultation & Select Outcome
+                        <Send className="mr-2 h-4 w-4" /> Finish Specialist Consultation &amp; Select Outcome
                     </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
@@ -688,3 +687,4 @@ ${visitHistoryString || "No recent visit history available."}
     </div>
   );
 }
+

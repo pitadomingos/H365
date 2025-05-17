@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useTransition, useEffect } from 'react';
@@ -97,6 +96,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
   const [patientData, setPatientData] = useState<PatientData | null>(null);
   const [bmi, setBmi] = useState<string | null>(null);
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
+  const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false);
 
 
   const form = useForm<FormValues>({
@@ -157,7 +157,8 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     });
     setBmi(null);
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Simulate API call: GET /api/v1/patients/search?nationalId={nationalId}
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
     if (nationalId === "123456789" || nationalId === "987654321") {
       const fetchedPatientData: PatientData = {
         nationalId: nationalId,
@@ -224,26 +225,47 @@ ${visitHistoryString || "No recent visit history available."}
     });
   };
 
-  const handleOutcome = (outcome: string) => {
-    setIsOutcomeModalOpen(false);
+  const handleOutcome = async (outcome: string) => {
+    if (!patientData) {
+        toast({ variant: "destructive", title: "No patient loaded", description: "Please load patient data before selecting an outcome." });
+        return;
+    }
+    setIsSubmittingOutcome(true);
+    // Simulate API POST request to /api/v1/consultations
+    // Payload would include patientData.nationalId, form.getValues(), recommendation (if any), and selected outcome
+    await new Promise(resolve => setTimeout(resolve, 1500)); 
+
     toast({ title: "Consultation Finished", description: `Outcome: ${outcome}. Action (mock): ${outcome} process initiated for ${patientData?.fullName}.` });
-    if (outcome === "Send to Pharmacy" && patientData && recommendation?.prescription) {
+    
+    if (outcome === "Send to Pharmacy" && recommendation?.prescription) {
         console.log(`Prescription for ${patientData.fullName} to be sent to pharmacy: ${recommendation.prescription}`);
     }
+    
+    // Reset form and state
     form.reset();
     setPatientData(null);
     setRecommendation(null);
     setError(null);
     setBmi(null);
+    setIsOutcomeModalOpen(false);
+    setIsSubmittingOutcome(false);
   };
 
-  const handleSubmitLabOrder = () => {
+  const handleSubmitLabOrder = async () => {
+     if (!patientData) return;
+    // Simulate API POST to /api/v1/consultations/{id}/lab-orders
+    await new Promise(resolve => setTimeout(resolve, 1000));
     toast({title: "Lab Order Submitted (Mock)", description:`Lab tests ordered for ${patientData?.fullName}.`});
   };
 
-  const handleSubmitImagingOrder = () => {
-     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName}.`});
+  const handleSubmitImagingOrder = async () => {
+    if (!patientData) return;
+    // Simulate API POST to /api/v1/consultations/{id}/imaging-orders
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName}.`});
   };
+  
+  const isActionDisabled = isSearching || isAiPending || isSubmittingOutcome;
 
   return (
     <div className="grid lg:grid-cols-3 gap-6 items-start">
@@ -260,10 +282,11 @@ ${visitHistoryString || "No recent visit history available."}
                 placeholder="Enter National ID"
                 {...form.register('nationalIdSearch')}
                 className="max-w-xs"
+                disabled={isActionDisabled}
               />
-              <Button onClick={handlePatientSearch} disabled={isSearching}>
+              <Button onClick={handlePatientSearch} disabled={isActionDisabled || !form.watch("nationalIdSearch")?.trim()}>
                 {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                Search Patient
+                {isSearching ? "Searching..." : "Search Patient"}
               </Button>
             </div>
 
@@ -298,19 +321,19 @@ ${visitHistoryString || "No recent visit history available."}
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="bodyTemperature" className="flex items-center"><Thermometer className="mr-1.5 h-4 w-4 text-primary" />Body Temperature (°C)</Label>
-                  <Input id="bodyTemperature" placeholder="e.g., 37.5" {...form.register('bodyTemperature')} />
+                  <Input id="bodyTemperature" placeholder="e.g., 37.5" {...form.register('bodyTemperature')} disabled={isActionDisabled || !patientData} />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="weight" className="flex items-center"><Weight className="mr-1.5 h-4 w-4 text-primary" />Weight (kg)</Label>
-                  <Input id="weight" placeholder="e.g., 70" {...form.register('weight')} />
+                  <Input id="weight" placeholder="e.g., 70" {...form.register('weight')} disabled={isActionDisabled || !patientData}/>
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="height" className="flex items-center"><Ruler className="mr-1.5 h-4 w-4 text-primary" />Height (cm)</Label>
-                  <Input id="height" placeholder="e.g., 175" {...form.register('height')} />
+                  <Input id="height" placeholder="e.g., 175" {...form.register('height')} disabled={isActionDisabled || !patientData}/>
                 </div>
                 <div className="space-y-1">
                   <Label className="flex items-center"><Sigma className="mr-1.5 h-4 w-4 text-primary" />BMI (kg/m²)</Label>
-                  <Input value={bmi || "N/A"} readOnly className="font-semibold bg-muted/50" />
+                  <Input value={bmi || "N/A"} readOnly className="font-semibold bg-muted/50" disabled={!patientData}/>
                 </div>
               </div>
 
@@ -321,6 +344,7 @@ ${visitHistoryString || "No recent visit history available."}
                   placeholder="Detailed description of patient's symptoms..."
                   {...form.register('symptoms')}
                   className="min-h-[100px]"
+                  disabled={isActionDisabled || !patientData}
                 />
                 {form.formState.errors.symptoms && (
                   <p className="text-sm text-destructive">{form.formState.errors.symptoms.message}</p>
@@ -329,10 +353,98 @@ ${visitHistoryString || "No recent visit history available."}
             </CardContent>
           </Card>
 
+          {patientData && (
+              <Card className="shadow-sm">
+                <CardHeader>
+                  <CardTitle>Diagnostic Orders</CardTitle>
+                  <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col sm:flex-row gap-2">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="w-full sm:w-auto" disabled={isActionDisabled || !patientData}>
+                        <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Order Lab Tests for {patientData?.fullName}</DialogTitle>
+                        <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                        <Label className="text-base font-semibold">Common Lab Tests:</Label>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                          {generalLabTests.map((test) => (
+                            <div key={test.id} className="flex items-center space-x-2">
+                              <Checkbox id={`consult-test-${test.id}`} />
+                              <Label htmlFor={`consult-test-${test.id}`} className="text-sm font-normal">
+                                {test.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                        <Separator className="my-2" />
+                        <div className="space-y-2">
+                          <Label htmlFor="consultLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
+                          <Textarea id="consultLabClinicalNotes" placeholder="e.g., Routine screening, specific concerns..." />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                        <Button type="submit" onClick={handleSubmitLabOrder}>Submit Lab Order</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="w-full sm:w-auto" disabled={isActionDisabled || !patientData}>
+                        <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Order Imaging Study for {patientData?.fullName}</DialogTitle>
+                        <DialogDescription>Select imaging type, specify details, and add clinical notes.</DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="consultImagingType">Imaging Type</Label>
+                          <Select>
+                            <SelectTrigger id="consultImagingType">
+                              <SelectValue placeholder="Select imaging type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ultrasound">Ultrasound</SelectItem>
+                              <SelectItem value="xray">X-Ray</SelectItem>
+                              <SelectItem value="mri">MRI</SelectItem>
+                              <SelectItem value="ctscan">CT Scan</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="consultImagingRegionDetails">Region / Details of Study</Label>
+                          <Textarea id="consultImagingRegionDetails" placeholder="e.g., Abdominal Ultrasound, Chest X-ray PA view, MRI Brain..." />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="consultImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
+                          <Textarea id="consultImagingClinicalNotes" placeholder="e.g., Rule out appendicitis, check for pneumonia..." />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                        <Button type="submit" onClick={handleSubmitImagingOrder}>Submit Imaging Order</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </CardContent>
+              </Card>
+          )}
+
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle>Medical Data for AI Analysis</CardTitle>
-              <CardDescription>Provide summaries of lab results and imaging data if available.</CardDescription>
+              <CardDescription>Provide summaries of existing lab results and imaging data if available for AI input.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1">
@@ -342,6 +454,7 @@ ${visitHistoryString || "No recent visit history available."}
                   placeholder="e.g., CBC: WBC 12.5 x 10^9/L. Blood Glucose: 110 mg/dL..."
                   {...form.register('labResultsSummary')}
                   className="min-h-[100px]"
+                  disabled={isActionDisabled || !patientData}
                 />
               </div>
               <div className="space-y-1">
@@ -351,109 +464,23 @@ ${visitHistoryString || "No recent visit history available."}
                   placeholder="e.g., Chest X-ray: Bilateral infiltrates. CT Brain: No acute findings..."
                   {...form.register('imagingDataSummary')}
                   className="min-h-[100px]"
+                  disabled={isActionDisabled || !patientData}
                 />
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={isAiPending || !patientData} className="w-full md:w-auto">
+              <Button type="submit" disabled={isActionDisabled || !patientData} className="w-full md:w-auto">
                 {isAiPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Sparkles className="mr-2 h-4 w-4" />
                 )}
-                Get AI Recommendation
+                {isAiPending ? "Getting Recommendation..." : "Get AI Recommendation"}
               </Button>
             </CardFooter>
           </Card>
         </form>
 
-        {patientData && (
-            <Card className="shadow-sm mt-6">
-              <CardHeader>
-                <CardTitle>Diagnostic Orders</CardTitle>
-                <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col sm:flex-row gap-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full sm:w-auto" disabled={!patientData}>
-                      <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Order Lab Tests for {patientData?.fullName}</DialogTitle>
-                      <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
-                      <Label className="text-base font-semibold">Common Lab Tests:</Label>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                        {generalLabTests.map((test) => (
-                          <div key={test.id} className="flex items-center space-x-2">
-                            <Checkbox id={`consult-test-${test.id}`} />
-                            <Label htmlFor={`consult-test-${test.id}`} className="text-sm font-normal">
-                              {test.label}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                      <Separator className="my-2" />
-                      <div className="space-y-2">
-                        <Label htmlFor="consultLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
-                        <Textarea id="consultLabClinicalNotes" placeholder="e.g., Routine screening, specific concerns..." />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                      <Button type="submit" onClick={handleSubmitLabOrder}>Submit Lab Order</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full sm:w-auto" disabled={!patientData}>
-                      <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Order Imaging Study for {patientData?.fullName}</DialogTitle>
-                      <DialogDescription>Select imaging type, specify details, and add clinical notes.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="consultImagingType">Imaging Type</Label>
-                        <Select>
-                          <SelectTrigger id="consultImagingType">
-                            <SelectValue placeholder="Select imaging type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ultrasound">Ultrasound</SelectItem>
-                            <SelectItem value="xray">X-Ray</SelectItem>
-                            <SelectItem value="mri">MRI</SelectItem>
-                            <SelectItem value="ctscan">CT Scan</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="consultImagingRegionDetails">Region / Details of Study</Label>
-                        <Textarea id="consultImagingRegionDetails" placeholder="e.g., Abdominal Ultrasound, Chest X-ray PA view, MRI Brain..." />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="consultImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
-                        <Textarea id="consultImagingClinicalNotes" placeholder="e.g., Rule out appendicitis, check for pneumonia..." />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                      <Button type="submit" onClick={handleSubmitImagingOrder}>Submit Imaging Order</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </CardContent>
-            </Card>
-        )}
 
         {error && !recommendation && (
           <Alert variant="destructive" className="mt-6">
@@ -499,18 +526,19 @@ ${visitHistoryString || "No recent visit history available."}
                         placeholder="Add any comments, adjustments, or final decisions here..."
                         {...form.register('doctorComments')}
                         className="min-h-[100px]"
+                        disabled={isActionDisabled}
                         />
                 </CardContent>
                 <CardFooter>
-                     <Button variant="secondary" onClick={() => toast({title: "Comments Saved (Mock)"})}>Save Comments</Button>
+                     <Button variant="secondary" onClick={() => toast({title: "Comments Saved (Mock)"})} disabled={isActionDisabled}>Save Comments</Button>
                 </CardFooter>
             </Card>
 
             <div className="flex justify-end mt-6">
                 <Dialog open={isOutcomeModalOpen} onOpenChange={setIsOutcomeModalOpen}>
                     <DialogTrigger asChild>
-                    <Button variant="default" disabled={!patientData} size="lg">
-                        <Send className="mr-2 h-4 w-4" /> Finish Consultation & Select Outcome
+                    <Button variant="default" disabled={isActionDisabled || !patientData} size="lg">
+                        <Send className="mr-2 h-4 w-4" /> Finish Consultation &amp; Select Outcome
                     </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
@@ -518,13 +546,27 @@ ${visitHistoryString || "No recent visit history available."}
                         <DialogTitle>Consultation Outcome for {patientData?.fullName}</DialogTitle>
                         <DialogDescription>Select the appropriate next step for the patient.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-2 gap-3 py-4">
-                        <Button variant="outline" onClick={() => handleOutcome("Send Home")}><Home className="mr-2 h-4 w-4"/>Send Home</Button>
-                        <Button variant="outline" onClick={() => handleOutcome("Send to Pharmacy")}><ArrowRightToLine className="mr-2 h-4 w-4"/>Send to Pharmacy</Button>
-                        <Button variant="outline" onClick={() => handleOutcome("Send to Inpatient (Ward)")}><BedDouble className="mr-2 h-4 w-4"/>Send to Inpatient</Button>
-                        <Button variant="outline" onClick={() => handleOutcome("Refer to Specialist")}><Users2 className="mr-2 h-4 w-4"/>Refer to Specialist</Button>
-                        <Button variant="destructive" onClick={() => handleOutcome("Deceased")}><Skull className="mr-2 h-4 w-4"/>Deceased</Button>
-                        <DialogClose asChild><Button variant="ghost" className="col-span-2">Cancel</Button></DialogClose>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4">
+                        {[
+                          { label: "Send Home", value: "Send Home", icon: Home },
+                          { label: "Send to Pharmacy", value: "Send to Pharmacy", icon: ArrowRightToLine },
+                          { label: "Send to Inpatient", value: "Send to Inpatient (Ward)", icon: BedDouble },
+                          { label: "Refer to Specialist", value: "Refer to Specialist", icon: Users2 },
+                          { label: "Deceased", value: "Deceased", icon: Skull }
+                        ].map(opt => (
+                           <Button 
+                            key={opt.value} 
+                            variant="outline" 
+                            onClick={() => handleOutcome(opt.value)} 
+                            disabled={isSubmittingOutcome}
+                          >
+                            {isSubmittingOutcome ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <opt.icon className="mr-2 h-4 w-4"/>}
+                            {isSubmittingOutcome ? "Processing..." : opt.label}
+                          </Button>
+                        ))}
+                         <DialogClose asChild className="sm:col-span-2">
+                            <Button type="button" variant="ghost" disabled={isSubmittingOutcome}>Cancel</Button>
+                         </DialogClose>
                     </div>
                     </DialogContent>
                 </Dialog>
@@ -600,3 +642,4 @@ ${visitHistoryString || "No recent visit history available."}
     </div>
   );
 }
+
