@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input"; // Added Input
+import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Label } from '@/components/ui/label';
 import { cn } from "@/lib/utils";
@@ -32,15 +32,13 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Separator } from '@/components/ui/separator'; // Added Separator
+import { Separator } from '@/components/ui/separator';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 // --- Data Structures ---
 interface WardSummary {
   id: string;
   name: string;
-  totalBeds?: number; 
-  occupiedBeds?: number;
-  occupancyRate?: number;
 }
 
 interface BedData {
@@ -52,11 +50,11 @@ interface BedData {
 }
 
 interface PatientInWard {
-  admissionId: string; 
+  admissionId: string;
   patientId: string;
   name: string;
   bedNumber: string;
-  admittedDate: string; // YYYY-MM-DD
+  admittedDate: string;
   primaryDiagnosis?: string;
 }
 
@@ -77,13 +75,13 @@ interface MedicationScheduleItem {
   dosage: string;
   time: string;
   status: "Administered" | "Pending" | "Skipped";
-  notes?: string; // Added for reason for change/addition
+  notes?: string;
 }
 
 interface DoctorNote {
-  noteId: string; 
-  date: string; // ISO DateTime string
-  doctor: string; 
+  noteId: string;
+  date: string;
+  doctor: string;
   note: string;
 }
 
@@ -100,10 +98,10 @@ interface AdmittedPatientFullDetails {
 
 // --- Mock Data ---
 const mockWardSummariesData: WardSummary[] = [
-    { id: "W001", name: "General Medicine Ward A", totalBeds: 20, occupiedBeds: 15, occupancyRate: 75 },
-    { id: "W002", name: "Surgical Ward B", totalBeds: 15, occupiedBeds: 10, occupancyRate: 66.6 },
-    { id: "W003", name: "Pediatrics Ward C", totalBeds: 10, occupiedBeds: 5, occupancyRate: 50 },
-    { id: "W004", name: "Maternity Ward D", totalBeds: 12, occupiedBeds: 8, occupancyRate: 66.7 },
+    { id: "W001", name: "General Medicine Ward A" },
+    { id: "W002", name: "Surgical Ward B" },
+    { id: "W003", name: "Pediatrics Ward C" },
+    { id: "W004", name: "Maternity Ward D" },
 ];
 
 const mockWardDetailsData: Record<string, WardDetails> = {
@@ -115,7 +113,7 @@ const mockWardDetailsData: Record<string, WardDetails> = {
     ],
     beds: Array.from({ length: 20 }).map((_, i) => ({
         id: `B001-${i+1}`, bedNumber: `Bed ${i+1}`,
-        status: (i === 2 || i === 4) ? "Occupied" : (Math.random() > 0.95 ? "Cleaning" : "Available"),
+        status: (i === 2 || i === 4) ? "Occupied" : (i === 10 ? "Cleaning" : "Available"),
         patientName: i === 2 ? "Eva Green" : i === 4 ? "Tom Hanks" : undefined,
         patientId: i === 2 ? "P001" : i === 4 ? "P002" : undefined,
     }))
@@ -193,14 +191,21 @@ export default function WardManagementPage() {
   const [medicationScheduleInModal, setMedicationScheduleInModal] = useState<MedicationScheduleItem[]>([]);
   const [isSavingMedicationUpdates, setIsSavingMedicationUpdates] = useState(false);
 
-  // State for adding new medication in modal
   const [newMedName, setNewMedName] = useState("");
   const [newMedDosage, setNewMedDosage] = useState("");
   const [newMedTime, setNewMedTime] = useState("");
   const [newMedNotes, setNewMedNotes] = useState("");
 
   const [isDischarging, setIsDischarging] = useState(false);
-  const [isTransferring, setIsTransferring] = useState(false);
+
+  // State for Transfer Modal
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [transferType, setTransferType] = useState<"internal_ward" | "external_hospital" | "">("");
+  const [targetInternalWardId, setTargetInternalWardId] = useState("");
+  const [externalHospitalName, setExternalHospitalName] = useState("");
+  const [transferReason, setTransferReason] = useState("");
+  const [isProcessingTransfer, setIsProcessingTransfer] = useState(false);
+
 
   useEffect(() => {
     setIsLoadingAllWards(true);
@@ -265,7 +270,7 @@ export default function WardManagementPage() {
   const handleAddNote = async () => {
     if (!newDoctorNote.trim() || !currentAdmittedPatientFullDetails) return;
     setIsAddingNote(true);
-    const payload = { doctorId: "doc-currentUser-mockId", note: newDoctorNote };
+    const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, doctorId: "doc-currentUser-mockId", note: newDoctorNote };
     console.log("Submitting to /api/v1/admissions/{admissionId}/doctor-notes (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
     const newNoteEntry: DoctorNote = { noteId: `DN${Date.now()}`, date: new Date().toISOString(), doctor: "Dr. Current User (Mock)", note: newDoctorNote };
@@ -278,7 +283,6 @@ export default function WardManagementPage() {
   const handleOpenMedicationModal = () => {
     if (!currentAdmittedPatientFullDetails) return;
     setMedicationScheduleInModal(currentAdmittedPatientFullDetails.medicationSchedule.map(med => ({ ...med })));
-    // Reset new medication form fields when opening modal
     setNewMedName("");
     setNewMedDosage("");
     setNewMedTime("");
@@ -300,7 +304,7 @@ export default function WardManagementPage() {
       return;
     }
     const newMedItem: MedicationScheduleItem = {
-      medicationItemId: `temp-${Date.now()}`, // Temporary ID for new items
+      medicationItemId: `temp-${Date.now()}`, 
       medication: newMedName,
       dosage: newMedDosage,
       time: newMedTime,
@@ -308,7 +312,6 @@ export default function WardManagementPage() {
       notes: newMedNotes.trim() || undefined,
     };
     setMedicationScheduleInModal(prev => [...prev, newMedItem]);
-    // Clear new medication form fields
     setNewMedName("");
     setNewMedDosage("");
     setNewMedTime("");
@@ -331,7 +334,7 @@ export default function WardManagementPage() {
   const handleDischarge = async () => {
     if (!currentAdmittedPatientFullDetails || !selectedWardId) return;
     setIsDischarging(true);
-    const payload = { dischargeDate: new Date().toISOString(), dischargeSummary: "Patient stable for discharge.", dischargedBy: "doc-currentUser-mockId" };
+    const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, dischargeDate: new Date().toISOString(), dischargeSummary: "Patient stable for discharge.", dischargedBy: "doc-currentUser-mockId" };
     console.log("Submitting to /api/v1/admissions/{admissionId}/discharge (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({ title: "Patient Discharged (Mock)", description: `${currentAdmittedPatientFullDetails.name} processed for discharge.` });
@@ -351,14 +354,63 @@ export default function WardManagementPage() {
     setIsDischarging(false);
   };
   
-  const handleTransfer = async () => {
+  const handleOpenTransferModal = () => {
     if (!currentAdmittedPatientFullDetails) return;
-    setIsTransferring(true);
-    const payload = { transferDate: new Date().toISOString(), destinationWardId: "WXYZ", transferReason: "Requires specialized monitoring.", transferredBy: "doc-currentUser-mockId" };
+    setTransferType("");
+    setTargetInternalWardId("");
+    setExternalHospitalName("");
+    setTransferReason("");
+    setIsTransferModalOpen(true);
+  };
+
+  const handleConfirmTransfer = async () => {
+    if (!currentAdmittedPatientFullDetails || !selectedWardId || !transferType || !transferReason.trim()) {
+        toast({ variant: "destructive", title: "Missing Information", description: "Please select transfer type, destination (if applicable), and provide a reason." });
+        return;
+    }
+    if (transferType === "internal_ward" && !targetInternalWardId) {
+        toast({ variant: "destructive", title: "Missing Destination", description: "Please select a destination ward." });
+        return;
+    }
+    if (transferType === "external_hospital" && !externalHospitalName.trim()) {
+        toast({ variant: "destructive", title: "Missing Destination", description: "Please enter the destination hospital name." });
+        return;
+    }
+
+    setIsProcessingTransfer(true);
+    const payload = { 
+        admissionId: currentAdmittedPatientFullDetails.admissionId, 
+        transferDate: new Date().toISOString(), 
+        transferType: transferType,
+        destinationWardId: transferType === "internal_ward" ? targetInternalWardId : undefined,
+        destinationFacility: transferType === "external_hospital" ? externalHospitalName : undefined,
+        transferReason: transferReason,
+        transferredBy: "doc-currentUser-mockId" 
+    };
     console.log("Submitting to /api/v1/admissions/{admissionId}/transfer (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
-    toast({ title: "Patient Transfer Initiated (Mock)", description: `Transfer for ${currentAdmittedPatientFullDetails.name} started.` });
-    setIsTransferring(false);
+    const destinationName = transferType === "internal_ward" 
+        ? allWardsData.find(w => w.id === targetInternalWardId)?.name || "Selected Ward" 
+        : externalHospitalName;
+    toast({ title: "Patient Transfer Initiated (Mock)", description: `Transfer for ${currentAdmittedPatientFullDetails.name} to ${destinationName} initiated.` });
+    
+    const admissionIdToTransfer = currentAdmittedPatientFullDetails.admissionId;
+    const patientIdToClearFromBed = currentAdmittedPatientFullDetails.patientId;
+    
+    setSelectedPatientForDetails(null); 
+    setCurrentAdmittedPatientFullDetails(null);
+    setCurrentWardDetails(prevDetails => {
+        if (!prevDetails) return null;
+        const updatedPatients = prevDetails.patients.filter(p => p.admissionId !== admissionIdToTransfer);
+        const updatedBeds = prevDetails.beds.map(bed => 
+            bed.patientId === patientIdToClearFromBed ? { ...bed, status: "Cleaning" as "Cleaning", patientId: undefined, patientName: undefined } : bed
+        );
+         const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
+        return { ...prevDetails, patients: updatedPatients, beds: updatedBeds, occupiedBeds: occupiedBeds, availableBeds: prevDetails.totalBeds - occupiedBeds, occupancyRate: (occupiedBeds / prevDetails.totalBeds) * 100 };
+    });
+    
+    setIsTransferModalOpen(false);
+    setIsProcessingTransfer(false);
   };
 
 
@@ -523,7 +575,7 @@ export default function WardManagementPage() {
                                 <Edit className="mr-2 h-3 w-3" /> Manage Medication Log
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-2xl"> {/* Increased width */}
+                            <DialogContent className="sm:max-w-2xl"> 
                                 <DialogHeader>
                                 <DialogTitle>Manage Medication Log for {currentAdmittedPatientFullDetails.name}</DialogTitle>
                                 <DialogDescription>
@@ -543,7 +595,7 @@ export default function WardManagementPage() {
                                                     <Input id={`medDosage-${index}`} value={med.dosage} onChange={(e) => handleMedicationItemChangeInModal(index, "dosage", e.target.value)} disabled={isSavingMedicationUpdates} />
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_150px] gap-3 items-end">
+                                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
                                                 <div className="space-y-1">
                                                     <Label htmlFor={`medTime-${index}`} className="text-xs">Time</Label>
                                                     <Input id={`medTime-${index}`} value={med.time} onChange={(e) => handleMedicationItemChangeInModal(index, "time", e.target.value)} disabled={isSavingMedicationUpdates} />
@@ -566,7 +618,7 @@ export default function WardManagementPage() {
                                                     </Select>
                                                 </div>
                                             </div>
-                                            <div className="space-y-1">
+                                             <div className="space-y-1">
                                                 <Label htmlFor={`medNotes-${index}`} className="text-xs">Notes/Reason for Change</Label>
                                                 <Textarea id={`medNotes-${index}`} value={med.notes || ""} onChange={(e) => handleMedicationItemChangeInModal(index, "notes", e.target.value)} placeholder="e.g., Administered by Nurse Jane, Patient refused..." rows={2} disabled={isSavingMedicationUpdates} />
                                             </div>
@@ -654,7 +706,7 @@ export default function WardManagementPage() {
                       )}
                     </div>
                     <Textarea placeholder="Add new note..." className="mt-2 text-xs" rows={2} value={newDoctorNote} onChange={(e) => setNewDoctorNote(e.target.value)} disabled={isAddingNote}/>
-                    <Button variant="outline" size="sm" className="mt-2 w-full" onClick={handleAddNote} disabled={isAddingNote || !newDoctorNote.trim()}>
+                    <Button variant="outline" size="sm" className="mt-2 w-full" onClick={handleAddNote} disabled={isAddingNote || !newDoctorNote.trim() || isDischarging || isProcessingTransfer || isSavingMedicationUpdates}>
                        {isAddingNote ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                        {isAddingNote ? "Adding..." : "Add Note"}
                     </Button>
@@ -667,14 +719,72 @@ export default function WardManagementPage() {
             </CardContent>
             {currentAdmittedPatientFullDetails && (
                 <CardFooter className="border-t pt-4 flex-col sm:flex-row gap-2">
-                    <Button variant="outline" className="w-full sm:w-auto" onClick={handleDischarge} disabled={isDischarging || isTransferring || isAddingNote || isSavingMedicationUpdates}>
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={handleDischarge} disabled={isDischarging || isProcessingTransfer || isAddingNote || isSavingMedicationUpdates}>
                         {isDischarging ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogOutIcon className="mr-2 h-4 w-4" />}
                         {isDischarging ? "Discharging..." : `Discharge ${currentAdmittedPatientFullDetails.name.split(' ')[0]}`}
                     </Button>
-                    <Button variant="outline" className="w-full sm:w-auto" onClick={handleTransfer} disabled={isDischarging || isTransferring || isAddingNote || isSavingMedicationUpdates}>
-                        {isTransferring ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ArrowRightLeft className="mr-2 h-4 w-4" />}
-                        {isTransferring ? "Transferring..." : `Transfer ${currentAdmittedPatientFullDetails.name.split(' ')[0]}`}
-                    </Button>
+                    
+                    <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="w-full sm:w-auto" onClick={handleOpenTransferModal} disabled={isDischarging || isProcessingTransfer || isAddingNote || isSavingMedicationUpdates}>
+                                <ArrowRightLeft className="mr-2 h-4 w-4" /> Transfer {currentAdmittedPatientFullDetails.name.split(' ')[0]}
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Transfer Patient: {currentAdmittedPatientFullDetails.name}</DialogTitle>
+                                <DialogDescription>Specify transfer details for the patient.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="space-y-2">
+                                    <Label>Transfer Type <span className="text-destructive">*</span></Label>
+                                    <RadioGroup value={transferType} onValueChange={(value) => setTransferType(value as any)} className="flex space-x-4">
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="internal_ward" id="internal_ward" />
+                                            <Label htmlFor="internal_ward" className="font-normal">Internal Ward</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="external_hospital" id="external_hospital" />
+                                            <Label htmlFor="external_hospital" className="font-normal">External Hospital</Label>
+                                        </div>
+                                    </RadioGroup>
+                                </div>
+                                {transferType === "internal_ward" && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="targetInternalWard">Destination Ward <span className="text-destructive">*</span></Label>
+                                        <Select value={targetInternalWardId} onValueChange={setTargetInternalWardId} disabled={isLoadingAllWards}>
+                                            <SelectTrigger id="targetInternalWard">
+                                                <SelectValue placeholder="Select destination ward" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {allWardsData.filter(ward => ward.id !== selectedWardId).map(ward => (
+                                                    <SelectItem key={ward.id} value={ward.id}>{ward.name}</SelectItem>
+                                                ))}
+                                                {allWardsData.filter(ward => ward.id !== selectedWardId).length === 0 && <SelectItem value="no-other-wards" disabled>No other wards available</SelectItem>}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+                                {transferType === "external_hospital" && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="externalHospitalName">Destination Hospital Name <span className="text-destructive">*</span></Label>
+                                        <Input id="externalHospitalName" value={externalHospitalName} onChange={(e) => setExternalHospitalName(e.target.value)} placeholder="Enter hospital name" />
+                                    </div>
+                                )}
+                                <div className="space-y-2">
+                                    <Label htmlFor="transferReason">Reason for Transfer <span className="text-destructive">*</span></Label>
+                                    <Textarea id="transferReason" value={transferReason} onChange={(e) => setTransferReason(e.target.value)} placeholder="Detailed reason for transfer..." />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="outline" disabled={isProcessingTransfer}>Cancel</Button></DialogClose>
+                                <Button onClick={handleConfirmTransfer} disabled={isProcessingTransfer || !transferType || !transferReason.trim() || (transferType === 'internal_ward' && !targetInternalWardId) || (transferType === 'external_hospital' && !externalHospitalName.trim())}>
+                                    {isProcessingTransfer ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                    Confirm Transfer
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </CardFooter>
             )}
           </Card>
@@ -698,4 +808,3 @@ export default function WardManagementPage() {
     </AppShell>
   );
 }
-
