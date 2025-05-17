@@ -164,24 +164,6 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
       return;
     }
     setIsSearching(true);
-    setPatientData(null);
-    setRecommendation(null);
-    setError(null);
-    form.reset({
-        nationalIdSearch: nationalId,
-        bodyTemperature: "",
-        weight: "",
-        height: "",
-        symptoms: "",
-        labResultsSummary: "",
-        imagingDataSummary: "",
-        specialistComments: "",
-        currentSpecialty: form.getValues("currentSpecialty"),
-    });
-    setBmi(null);
-    setBmiDisplay(getBmiStatusAndColor(null));
-    setSelectedLabTests({});
-
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000)); 
     if (nationalId === "123456789" || nationalId === "987654321") {
@@ -204,7 +186,24 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
       toast({ title: "Patient Found", description: `${fetchedPatientData.fullName}'s details loaded for ${fetchedPatientData.assignedSpecialty} consultation.` });
     } else {
       toast({ variant: "destructive", title: "Not Found", description: "Patient with this National ID not found." });
+      setPatientData(null);
     }
+    setRecommendation(null);
+    setError(null);
+    form.reset({
+        nationalIdSearch: nationalId, // Keep searched ID
+        bodyTemperature: "",
+        weight: "",
+        height: "",
+        symptoms: "",
+        labResultsSummary: "",
+        imagingDataSummary: "",
+        specialistComments: "",
+        currentSpecialty: form.getValues("currentSpecialty"),
+    });
+    setBmi(null);
+    setBmiDisplay(getBmiStatusAndColor(null));
+    setSelectedLabTests({});
     setIsSearching(false);
   };
 
@@ -484,10 +483,10 @@ ${visitHistoryString || "No recent visit history available."}
                 <CardTitle>Diagnostic Orders for Specialist</CardTitle>
                 <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col sm:flex-row gap-2">
+              <CardContent className="flex flex-wrap items-center gap-2"> {/* Use flex-wrap */}
                  <Dialog onOpenChange={(open) => !open && setSelectedLabTests({})}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full sm:w-auto" disabled={isActionDisabled || !patientData}>
+                    <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
                       <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
                     </Button>
                   </DialogTrigger>
@@ -531,7 +530,7 @@ ${visitHistoryString || "No recent visit history available."}
 
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full sm:w-auto" disabled={isActionDisabled || !patientData}>
+                    <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
                       <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
                     </Button>
                   </DialogTrigger>
@@ -573,6 +572,11 @@ ${visitHistoryString || "No recent visit history available."}
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+
+                 <Button variant="outline" className="flex-shrink-0" onClick={handleSaveProgress} disabled={isActionDisabled || !patientData}>
+                    {isSavingProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                    {isSavingProgress ? "Saving..." : "Save Progress"}
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -664,12 +668,6 @@ ${visitHistoryString || "No recent visit history available."}
                         disabled={isActionDisabled}
                         />
                 </CardContent>
-                <CardFooter>
-                     <Button variant="outline" onClick={handleSaveProgress} disabled={isActionDisabled || !patientData}>
-                        {isSavingProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                        {isSavingProgress ? "Saving..." : "Save Progress"}
-                    </Button>
-                </CardFooter>
             </Card>
 
             <div className="flex justify-end mt-6">
@@ -781,3 +779,5 @@ ${visitHistoryString || "No recent visit history available."}
   );
 }
 
+
+    

@@ -161,23 +161,6 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
       return;
     }
     setIsSearching(true);
-    setPatientData(null);
-    setRecommendation(null);
-    setError(null);
-    form.reset({
-        nationalIdSearch: nationalId,
-        bodyTemperature: "",
-        weight: "",
-        height: "",
-        symptoms: "",
-        labResultsSummary: "",
-        imagingDataSummary: "",
-        doctorComments: "",
-    });
-    setBmi(null);
-    setBmiDisplay(getBmiStatusAndColor(null));
-    setSelectedLabTests({});
-
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000)); 
     if (nationalId === "123456789" || nationalId === "987654321") {
@@ -196,7 +179,23 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
       toast({ title: "Patient Found", description: `${fetchedPatientData.fullName}'s details loaded.` });
     } else {
       toast({ variant: "destructive", title: "Not Found", description: "Patient with this National ID not found." });
+      setPatientData(null); // Clear patient data if not found
     }
+    setRecommendation(null);
+    setError(null);
+    form.reset({
+        nationalIdSearch: nationalId, // Keep the searched ID
+        bodyTemperature: "",
+        weight: "",
+        height: "",
+        symptoms: "",
+        labResultsSummary: "",
+        imagingDataSummary: "",
+        doctorComments: "",
+    });
+    setBmi(null);
+    setBmiDisplay(getBmiStatusAndColor(null));
+    setSelectedLabTests({});
     setIsSearching(false);
   };
 
@@ -289,7 +288,7 @@ ${visitHistoryString || "No recent visit history available."}
     console.log("Saving Draft (Mock):", {
       patientId: patientData.nationalId,
       formData: currentFormData,
-      aiRecommendation: recommendation, // Save current AI rec if any
+      aiRecommendation: recommendation, 
     });
     toast({ title: "Progress Saved (Mock)", description: "Consultation draft has been saved." });
     setIsSavingProgress(false);
@@ -309,8 +308,8 @@ ${visitHistoryString || "No recent visit history available."}
         title: "Lab Order Submitted (Mock)", 
         description:`Lab tests ordered for ${patientData?.fullName}: ${orderedTestLabels.length > 0 ? orderedTestLabels.join(', ') : 'No specific tests selected.'}`
     });
-    setSelectedLabTests({}); // Reset selections
-    // Potentially close dialog here
+    setSelectedLabTests({}); 
+    // Potentially close dialog here if it's a separate component
     setIsSubmittingLabOrder(false);
   };
 
@@ -429,10 +428,10 @@ ${visitHistoryString || "No recent visit history available."}
                   <CardTitle>Diagnostic Orders</CardTitle>
                   <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col sm:flex-row gap-2">
+                <CardContent className="flex flex-wrap items-center gap-2"> {/* Use flex-wrap for responsiveness */}
                   <Dialog onOpenChange={(open) => !open && setSelectedLabTests({})}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="w-full sm:w-auto" disabled={isActionDisabled || !patientData}>
+                      <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}> {/* flex-shrink-0 helps button maintain size */}
                         <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
                       </Button>
                     </DialogTrigger>
@@ -476,7 +475,7 @@ ${visitHistoryString || "No recent visit history available."}
 
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="w-full sm:w-auto" disabled={isActionDisabled || !patientData}>
+                      <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
                         <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
                       </Button>
                     </DialogTrigger>
@@ -518,6 +517,11 @@ ${visitHistoryString || "No recent visit history available."}
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
+                  
+                  <Button variant="outline" className="flex-shrink-0" onClick={handleSaveProgress} disabled={isActionDisabled || !patientData}>
+                    {isSavingProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                    {isSavingProgress ? "Saving..." : "Save Progress"}
+                  </Button>
                 </CardContent>
               </Card>
           )}
@@ -610,12 +614,6 @@ ${visitHistoryString || "No recent visit history available."}
                         disabled={isActionDisabled}
                         />
                 </CardContent>
-                <CardFooter>
-                     <Button variant="outline" onClick={handleSaveProgress} disabled={isActionDisabled || !patientData}>
-                        {isSavingProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                        {isSavingProgress ? "Saving..." : "Save Progress"}
-                    </Button>
-                </CardFooter>
             </Card>
 
             <div className="flex justify-end mt-6">
@@ -727,3 +725,5 @@ ${visitHistoryString || "No recent visit history available."}
   );
 }
 
+
+    
