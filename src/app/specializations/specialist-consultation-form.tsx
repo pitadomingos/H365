@@ -102,6 +102,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
   const [patientData, setPatientData] = useState<PatientData | null>(null);
   const [bmi, setBmi] = useState<string | null>(null);
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
+  const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false); // Added
 
 
   const form = useForm<FormValues>({
@@ -164,7 +165,9 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
     });
     setBmi(null);
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Simulate API call: GET /api/v1/patients/search?nationalId={nationalId}
+    // Also needs to fetch referral details if applicable.
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
     if (nationalId === "123456789" || nationalId === "987654321") {
       const fetchedPatientData: PatientData = {
         nationalId: nationalId,
@@ -228,6 +231,7 @@ ${visitHistoryString || "No recent visit history available."}
         labResults: data.labResultsSummary || "Not provided",
         imagingData: data.imagingDataSummary || "Not provided",
       };
+      // Simulate API call to Genkit/AI
       const result = await getRecommendationAction(aiInput);
       if ('error' in result) {
         setError(result.error);
@@ -239,24 +243,42 @@ ${visitHistoryString || "No recent visit history available."}
     });
   };
 
-  const handleOutcome = (outcome: string) => {
-    setIsOutcomeModalOpen(false);
+  const handleOutcome = async (outcome: string) => {
+    if (!patientData) {
+      toast({ variant: "destructive", title: "Error", description: "No patient data loaded." });
+      return;
+    }
+    setIsSubmittingOutcome(true);
+    // Simulate API POST request to /api/v1/specialist-consultations or /api/v1/consultations
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
     toast({ title: "Specialist Consultation Finished", description: `Outcome: ${outcome}. Action (mock): ${outcome} process initiated for ${patientData?.fullName}.` });
 
+    // Reset form and state
     form.reset();
     setPatientData(null);
     setRecommendation(null);
     setError(null);
     setBmi(null);
+    setIsOutcomeModalOpen(false);
+    setIsSubmittingOutcome(false);
   };
 
-  const handleSubmitLabOrder = () => {
+  const handleSubmitLabOrder = async () => {
+     if (!patientData) return;
+    // Simulate API POST to /api/v1/consultations/{id}/lab-orders
+    await new Promise(resolve => setTimeout(resolve, 1000));
     toast({title: "Lab Order Submitted (Mock)", description:`Lab tests ordered for ${patientData?.fullName} by Specialist.`});
   };
 
-  const handleSubmitImagingOrder = () => {
-     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName} by Specialist.`});
+  const handleSubmitImagingOrder = async () => {
+    if (!patientData) return;
+    // Simulate API POST to /api/v1/consultations/{id}/imaging-orders
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName} by Specialist.`});
   };
+
+  const isActionDisabled = isSearching || isAiPending || isSubmittingOutcome;
 
   return (
     <div className="grid lg:grid-cols-3 gap-6 items-start">
@@ -271,8 +293,9 @@ ${visitHistoryString || "No recent visit history available."}
                 <div className="space-y-1">
                     <Label htmlFor="currentSpecialty">Consulting Specialty</Label>
                     <Select
-                        defaultValue={form.getValues("currentSpecialty")}
+                        value={form.watch("currentSpecialty")}
                         onValueChange={(value) => setValue("currentSpecialty", value)}
+                        disabled={isActionDisabled}
                     >
                         <SelectTrigger id="currentSpecialty">
                         <SelectValue placeholder="Select Specialty" />
@@ -294,10 +317,11 @@ ${visitHistoryString || "No recent visit history available."}
                             id="nationalIdSearch"
                             placeholder="Enter National ID"
                             {...form.register('nationalIdSearch')}
+                            disabled={isActionDisabled}
                         />
-                        <Button onClick={handlePatientSearch} disabled={isSearching}>
+                        <Button onClick={handlePatientSearch} disabled={isActionDisabled || !form.watch("nationalIdSearch")}>
                             {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                            Search
+                            {isSearching ? "Searching..." : "Search"}
                         </Button>
                     </div>
                 </div>
@@ -343,15 +367,15 @@ ${visitHistoryString || "No recent visit history available."}
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="bodyTemperature" className="flex items-center"><Thermometer className="mr-1.5 h-4 w-4 text-primary" />Temp (°C)</Label>
-                  <Input id="bodyTemperature" placeholder="e.g., 37.5" {...form.register('bodyTemperature')} />
+                  <Input id="bodyTemperature" placeholder="e.g., 37.5" {...form.register('bodyTemperature')} disabled={isActionDisabled || !patientData}/>
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="weight" className="flex items-center"><Weight className="mr-1.5 h-4 w-4 text-primary" />Weight (kg)</Label>
-                  <Input id="weight" placeholder="e.g., 70" {...form.register('weight')} />
+                  <Input id="weight" placeholder="e.g., 70" {...form.register('weight')} disabled={isActionDisabled || !patientData}/>
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="height" className="flex items-center"><Ruler className="mr-1.5 h-4 w-4 text-primary" />Height (cm)</Label>
-                  <Input id="height" placeholder="e.g., 175" {...form.register('height')} />
+                  <Input id="height" placeholder="e.g., 175" {...form.register('height')} disabled={isActionDisabled || !patientData}/>
                 </div>
                 <div className="space-y-1">
                   <Label className="flex items-center"><Sigma className="mr-1.5 h-4 w-4 text-primary" />BMI</Label>
@@ -366,6 +390,7 @@ ${visitHistoryString || "No recent visit history available."}
                   placeholder="Detailed description of patient's symptoms relevant to the specialty..."
                   {...form.register('symptoms')}
                   className="min-h-[100px]"
+                  disabled={isActionDisabled || !patientData}
                 />
                 {form.formState.errors.symptoms && (
                   <p className="text-sm text-destructive">{form.formState.errors.symptoms.message}</p>
@@ -387,6 +412,7 @@ ${visitHistoryString || "No recent visit history available."}
                   placeholder="e.g., Echo: EF 55%. Troponin: <0.01 ng/mL..."
                   {...form.register('labResultsSummary')}
                   className="min-h-[100px]"
+                  disabled={isActionDisabled || !patientData}
                 />
               </div>
               <div className="space-y-1">
@@ -396,17 +422,18 @@ ${visitHistoryString || "No recent visit history available."}
                   placeholder="e.g., Cardiac MRI: No significant abnormalities. Angiogram: Mild LAD stenosis..."
                   {...form.register('imagingDataSummary')}
                   className="min-h-[100px]"
+                  disabled={isActionDisabled || !patientData}
                 />
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" disabled={isAiPending || !patientData} className="w-full md:w-auto">
+              <Button type="submit" disabled={isActionDisabled || !patientData} className="w-full md:w-auto">
                 {isAiPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Sparkles className="mr-2 h-4 w-4" />
                 )}
-                Get AI Recommendation
+                {isAiPending ? "Getting Recommendation..." : "Get AI Recommendation"}
               </Button>
             </CardFooter>
           </Card>
@@ -421,7 +448,7 @@ ${visitHistoryString || "No recent visit history available."}
               <CardContent className="flex flex-col sm:flex-row gap-2">
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full sm:w-auto" disabled={!patientData}>
+                    <Button variant="outline" className="w-full sm:w-auto" disabled={isActionDisabled || !patientData}>
                       <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
                     </Button>
                   </DialogTrigger>
@@ -457,7 +484,7 @@ ${visitHistoryString || "No recent visit history available."}
 
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full sm:w-auto" disabled={!patientData}>
+                    <Button variant="outline" className="w-full sm:w-auto" disabled={isActionDisabled || !patientData}>
                       <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
                     </Button>
                   </DialogTrigger>
@@ -544,17 +571,18 @@ ${visitHistoryString || "No recent visit history available."}
                         placeholder="Add specialist findings, final diagnosis, treatment plan, and any adjustments..."
                         {...form.register('specialistComments')}
                         className="min-h-[100px]"
+                        disabled={isActionDisabled}
                         />
                 </CardContent>
                 <CardFooter>
-                     <Button variant="secondary" onClick={() => toast({title: "Notes Saved (Mock)"})}>Save Notes & Plan</Button>
+                     <Button variant="secondary" onClick={() => toast({title: "Notes Saved (Mock)"})} disabled={isActionDisabled}>Save Notes & Plan</Button>
                 </CardFooter>
             </Card>
 
             <div className="flex justify-end mt-6">
                 <Dialog open={isOutcomeModalOpen} onOpenChange={setIsOutcomeModalOpen}>
                     <DialogTrigger asChild>
-                    <Button variant="default" disabled={!patientData} size="lg">
+                    <Button variant="default" disabled={isActionDisabled || !patientData} size="lg">
                         <Send className="mr-2 h-4 w-4" /> Finish Specialist Consultation & Select Outcome
                     </Button>
                     </DialogTrigger>
@@ -563,13 +591,23 @@ ${visitHistoryString || "No recent visit history available."}
                         <DialogTitle>Specialist Consultation Outcome for {patientData?.fullName}</DialogTitle>
                         <DialogDescription>Select the appropriate next step for the patient.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-2 gap-3 py-4">
-                        <Button variant="outline" onClick={() => handleOutcome("Schedule Specialist Follow-up")}><FileClock className="mr-2 h-4 w-4"/>Schedule Follow-up</Button>
-                        <Button variant="outline" onClick={() => handleOutcome("Return to Referring Doctor")}><ArrowRightToLine className="mr-2 h-4 w-4"/>Return to Referrer</Button>
-                        <Button variant="outline" onClick={() => handleOutcome("Admit to Ward")}><BedDouble className="mr-2 h-4 w-4"/>Admit to Ward</Button>
-                        <Button variant="outline" onClick={() => handleOutcome("Refer to Sub-specialist")}><Users2 className="mr-2 h-4 w-4"/>Refer Sub-specialist</Button>
-                        <Button variant="outline" onClick={() => handleOutcome("Discharge from Specialist Care")}><Home className="mr-2 h-4 w-4"/>Discharge Specialist Care</Button>
-                        <DialogClose asChild><Button variant="ghost" className="col-span-2">Cancel</Button></DialogClose>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4">
+                        {[
+                          { label: "Schedule Follow-up", value: "Schedule Specialist Follow-up", icon: FileClock },
+                          { label: "Return to Referrer", value: "Return to Referring Doctor", icon: ArrowRightToLine },
+                          { label: "Admit to Ward", value: "Admit to Ward", icon: BedDouble },
+                          { label: "Refer Sub-specialist", value: "Refer to Sub-specialist", icon: Users2 },
+                          { label: "Discharge Specialist Care", value: "Discharge from Specialist Care", icon: Home },
+                        ].map(opt => (
+                          <Button key={opt.value} variant="outline" onClick={() => handleOutcome(opt.value)} disabled={isSubmittingOutcome}>
+                            {isSubmittingOutcome && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            <opt.icon className="mr-2 h-4 w-4"/>
+                            {isSubmittingOutcome ? "Processing..." : opt.label}
+                          </Button>
+                        ))}
+                        <DialogClose asChild className="sm:col-span-2">
+                          <Button type="button" variant="ghost" disabled={isSubmittingOutcome}>Cancel</Button>
+                        </DialogClose>
                     </div>
                     </DialogContent>
                 </Dialog>
