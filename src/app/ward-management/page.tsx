@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { BedDouble, Users, ListFilter, PlusCircle, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed } from "lucide-react"; // Added Bed
+import { BedDouble, Users, ListFilter, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -19,18 +19,19 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { cn } from "@/lib/utils";
 
-
-// --- Data Structures ---
+// --- Data Structures (aligned with API thinking) ---
 interface WardSummary {
   id: string;
   name: string;
+  totalBeds?: number; // Made optional as it might not be in the initial summary list always
+  occupiedBeds?: number;
+  occupancyRate?: number;
 }
 
-interface BedData { // Renamed from Bed to BedData to avoid conflict with lucide-react Bed icon
+interface BedData {
     id: string;
     bedNumber: string;
     status: "Available" | "Occupied" | "Cleaning";
@@ -43,7 +44,7 @@ interface PatientInWard {
   patientId: string;
   name: string;
   bedNumber: string;
-  admittedDate: string;
+  admittedDate: string; // YYYY-MM-DD
   primaryDiagnosis?: string;
 }
 
@@ -59,6 +60,7 @@ interface WardDetails {
 }
 
 interface MedicationScheduleItem {
+  medicationItemId: string; // Added unique ID for the item
   medication: string;
   dosage: string;
   time: string;
@@ -66,8 +68,9 @@ interface MedicationScheduleItem {
 }
 
 interface DoctorNote {
-  date: string;
-  doctor: string;
+  noteId: string; // Added unique ID for the note
+  date: string; // ISO DateTime string
+  doctor: string; // Doctor's name or ID
   note: string;
 }
 
@@ -84,10 +87,10 @@ interface AdmittedPatientFullDetails {
 
 // --- Mock Data ---
 const mockWardSummariesData: WardSummary[] = [
-    { id: "W001", name: "General Medicine Ward A" },
-    { id: "W002", name: "Surgical Ward B" },
-    { id: "W003", name: "Pediatrics Ward C" },
-    { id: "W004", name: "Maternity Ward D" },
+    { id: "W001", name: "General Medicine Ward A", totalBeds: 20, occupiedBeds: 15, occupancyRate: 75 },
+    { id: "W002", name: "Surgical Ward B", totalBeds: 15, occupiedBeds: 10, occupancyRate: 66.6 },
+    { id: "W003", name: "Pediatrics Ward C", totalBeds: 10, occupiedBeds: 5, occupancyRate: 50 },
+    { id: "W004", name: "Maternity Ward D", totalBeds: 12, occupiedBeds: 8, occupancyRate: 66.7 },
 ];
 
 const mockWardDetailsData: Record<string, WardDetails> = {
@@ -99,46 +102,26 @@ const mockWardDetailsData: Record<string, WardDetails> = {
     ],
     beds: Array.from({ length: 20 }).map((_, i) => ({
         id: `B001-${i+1}`, bedNumber: `Bed ${i+1}`,
-        status: i < 15 ? (Math.random() > 0.9 ? "Cleaning" : "Occupied") : "Available",
+        status: i < 15 ? (i === 2 ? "Occupied" : i === 4 ? "Occupied" : (Math.random() > 0.9 ? "Cleaning" : "Occupied")) : "Available",
         patientName: i < 15 ? (i === 2 ? "Eva Green" : i === 4 ? "Tom Hanks" : `Patient ${String.fromCharCode(65+i)}`) : undefined,
         patientId: i < 15 ? (i === 2 ? "P001" : i === 4 ? "P002" : `P${String.fromCharCode(65+i)}`) : undefined,
     }))
   },
-  "W002": {
+  // Add more mock details for W002, W003, W004 if needed, following the structure above
+   "W002": {
     id: "W002", name: "Surgical Ward B", totalBeds: 15, occupiedBeds: 10, availableBeds: 5, occupancyRate: 66.6,
-    patients: [
-      { admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", bedNumber: "Bed 1", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Appendectomy" },
-    ],
-     beds: Array.from({ length: 15 }).map((_, i) => ({
-        id: `B002-${i+1}`, bedNumber: `Bed ${i+1}`,
-        status: i < 10 ? "Occupied" : (Math.random() > 0.8 ? "Cleaning" : "Available"),
-        patientName: i < 10 ? (i === 0 ? "Lucy Liu" : `Patient S${String.fromCharCode(65+i)}`) : undefined,
-        patientId: i < 10 ? (i === 0 ? "P003" : `PS${String.fromCharCode(65+i)}`) : undefined,
-    }))
+    patients: [ { admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", bedNumber: "Bed 1", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Appendectomy" } ],
+    beds: Array.from({ length: 15 }).map((_, i) => ({ id: `B002-${i+1}`, bedNumber: `Bed ${i+1}`, status: i < 10 ? "Occupied" : "Available", patientName: i < 10 ? "Patient S" + i : undefined, patientId: i < 10 ? "PS" + i : undefined }))
   },
    "W003": {
     id: "W003", name: "Pediatrics Ward C", totalBeds: 10, occupiedBeds: 5, availableBeds: 5, occupancyRate: 50,
-    patients: [
-      { admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", bedNumber: "Bed 2", admittedDate: "2024-07-31", primaryDiagnosis: "Asthma Attack" },
-    ],
-     beds: Array.from({ length: 10 }).map((_, i) => ({
-        id: `B003-${i+1}`, bedNumber: `Bed ${i+1}`,
-        status: i < 5 ? "Occupied" : "Available",
-        patientName: i < 5 ? (i === 1 ? "Kevin McCallister" : `Child ${String.fromCharCode(65+i)}`) : undefined,
-        patientId: i < 5 ? (i === 1 ? "P004" : `PC${String.fromCharCode(65+i)}`) : undefined,
-    }))
+    patients: [ { admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", bedNumber: "Bed 2", admittedDate: "2024-07-31", primaryDiagnosis: "Asthma Attack" } ],
+    beds: Array.from({ length: 10 }).map((_, i) => ({ id: `B003-${i+1}`, bedNumber: `Bed ${i+1}`, status: i < 5 ? "Occupied" : "Available", patientName: i < 5 ? "Patient C" + i : undefined, patientId: i < 5 ? "PC" + i : undefined }))
   },
    "W004": {
     id: "W004", name: "Maternity Ward D", totalBeds: 12, occupiedBeds: 8, availableBeds: 4, occupancyRate: 66.7,
-    patients: [
-      { admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", bedNumber: "Bed 7", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Partum Observation" },
-    ],
-     beds: Array.from({ length: 12 }).map((_, i) => ({
-        id: `B004-${i+1}`, bedNumber: `Bed ${i+1}`,
-        status: i < 8 ? "Occupied" : "Available",
-        patientName: i < 8 ? (i === 6 ? "Sarah Connor" : `Mother ${String.fromCharCode(65+i)}`) : undefined,
-        patientId: i < 8 ? (i === 6 ? "P005" : `PM${String.fromCharCode(65+i)}`) : undefined,
-    }))
+    patients: [ { admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", bedNumber: "Bed 7", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Partum Observation" } ],
+    beds: Array.from({ length: 12 }).map((_, i) => ({ id: `B004-${i+1}`, bedNumber: `Bed ${i+1}`, status: i < 8 ? "Occupied" : "Available", patientName: i < 8 ? "Patient M" + i : undefined, patientId: i < 8 ? "PM" + i : undefined }))
   }
 };
 
@@ -147,34 +130,34 @@ const mockAdmittedPatientFullDetailsData: Record<string, AdmittedPatientFullDeta
     admissionId: "ADM001", patientId: "P001", name: "Eva Green", wardName: "General Medicine Ward A", bedNumber: "Bed 3",
     treatmentPlan: "IV Ceftriaxone 1g OD. Oxygen support PRN. Monitor vitals Q4H. Chest physiotherapy BID.",
     medicationSchedule: [
-      { medication: "Ceftriaxone 1g IV", dosage: "1g", time: "08:00", status: "Administered" },
-      { medication: "Paracetamol 500mg PO", dosage: "500mg", time: "12:00", status: "Pending" },
+      { medicationItemId: "MEDSCH001", medication: "Ceftriaxone 1g IV", dosage: "1g", time: "08:00", status: "Administered" },
+      { medicationItemId: "MEDSCH002", medication: "Paracetamol 500mg PO", dosage: "500mg", time: "12:00", status: "Pending" },
     ],
-    doctorNotes: [{ date: "2024-07-30", doctor: "Dr. Smith", note: "Patient responding well. Continue plan." }],
+    doctorNotes: [{ noteId: "DN001", date: new Date().toISOString(), doctor: "Dr. Smith", note: "Patient responding well. Continue plan." }],
   },
   "ADM002": {
     admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", wardName: "General Medicine Ward A", bedNumber: "Bed 5",
     treatmentPlan: "Furosemide 40mg IV BD. Fluid restriction 1.5L/day. Daily weights. Monitor electrolytes.",
-    medicationSchedule: [{ medication: "Furosemide 40mg IV", dosage: "40mg", time: "09:00", status: "Administered" }],
-    doctorNotes: [{ date: "2024-07-30", doctor: "Dr. House", note: "Mild improvement in edema." }],
+    medicationSchedule: [{ medicationItemId: "MEDSCH003", medication: "Furosemide 40mg IV", dosage: "40mg", time: "09:00", status: "Administered" }],
+    doctorNotes: [{ noteId: "DN002", date: new Date().toISOString(), doctor: "Dr. House", note: "Mild improvement in edema." }],
   },
-  "ADM003": {
+   "ADM003": {
     admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", wardName: "Surgical Ward B", bedNumber: "Bed 1",
     treatmentPlan: "Post-op day 1. Pain management with Tramadol 50mg PO Q6H PRN. Wound care. Encourage mobilization.",
-    medicationSchedule: [{ medication: "Tramadol 50mg PO", dosage: "50mg", time: "PRN", status: "Pending" }],
-    doctorNotes: [{ date: "2024-07-30", doctor: "Dr. Grey", note: "Surgical site clean. Patient ambulating." }],
+    medicationSchedule: [{ medicationItemId: "MEDSCH004", medication: "Tramadol 50mg PO", dosage: "50mg", time: "PRN", status: "Pending" }],
+    doctorNotes: [{ noteId: "DN003", date: new Date().toISOString(), doctor: "Dr. Grey", note: "Surgical site clean. Patient ambulating." }],
   },
   "ADM004": {
     admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", wardName: "Pediatrics Ward C", bedNumber: "Bed 2",
     treatmentPlan: "Nebulized Salbutamol Q4H. Prednisolone PO. Monitor oxygen saturation.",
-    medicationSchedule: [{ medication: "Salbutamol Neb", dosage: "2.5mg", time: "10:00", status: "Administered" }],
-    doctorNotes: [{ date: "2024-07-31", doctor: "Dr. Carter", note: "Wheezing reduced. Stable." }],
+    medicationSchedule: [{ medicationItemId: "MEDSCH005", medication: "Salbutamol Neb", dosage: "2.5mg", time: "10:00", status: "Administered" }],
+    doctorNotes: [{ noteId: "DN004", date: new Date().toISOString(), doctor: "Dr. Carter", note: "Wheezing reduced. Stable." }],
   },
   "ADM005": {
     admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", wardName: "Maternity Ward D", bedNumber: "Bed 7",
     treatmentPlan: "Routine post-natal care. Monitor for bleeding. Pain relief PRN.",
-    medicationSchedule: [{ medication: "Ibuprofen 400mg PO", dosage: "400mg", time: "PRN", status: "Pending" }],
-    doctorNotes: [{ date: "2024-07-30", doctor: "Dr. Greene", note: "Patient and baby doing well." }],
+    medicationSchedule: [{ medicationItemId: "MEDSCH006", medication: "Ibuprofen 400mg PO", dosage: "400mg", time: "PRN", status: "Pending" }],
+    doctorNotes: [{ noteId: "DN005", date: new Date().toISOString(), doctor: "Dr. Greene", note: "Patient and baby doing well." }],
   },
 };
 
@@ -192,7 +175,7 @@ export default function WardManagementPage() {
   
   const [newDoctorNote, setNewDoctorNote] = useState("");
   const [isAddingNote, setIsAddingNote] = useState(false);
-  const [isUpdatingMedication, setIsUpdatingMedication] = useState(false);
+  const [isUpdatingMedication, setIsUpdatingMedication] = useState(false); // Simplified, real app might need per-item state
   const [isDischarging, setIsDischarging] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
 
@@ -215,7 +198,14 @@ export default function WardManagementPage() {
       setCurrentAdmittedPatientFullDetails(null);
       // Simulate API call: GET /api/v1/wards/{selectedWardId}/details
       setTimeout(() => {
-        setCurrentWardDetails(mockWardDetailsData[selectedWardId] || null);
+        const details = mockWardDetailsData[selectedWardId];
+        setCurrentWardDetails(details ? {
+            ...details,
+            // Recalculate dynamic parts for mock
+            occupiedBeds: details.patients.length,
+            availableBeds: details.totalBeds - details.patients.length,
+            occupancyRate: (details.patients.length / details.totalBeds) * 100,
+        } : null);
         setIsLoadingCurrentWardDetails(false);
       }, 1000);
     } else {
@@ -244,10 +234,17 @@ export default function WardManagementPage() {
   const handleAddNote = async () => {
     if (!newDoctorNote.trim() || !currentAdmittedPatientFullDetails) return;
     setIsAddingNote(true);
-    // Simulate API call: POST /api/v1/admissions/{admissionId}/doctor-notes
+    const payload = {
+        doctorId: "doc-currentUser-mockId", // Would be dynamic in real app
+        note: newDoctorNote
+    };
+    // Simulate API call: POST /api/v1/admissions/{currentAdmittedPatientFullDetails.admissionId}/doctor-notes
+    console.log("Submitting to /api/v1/admissions/{admissionId}/doctor-notes (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
+    
     const newNoteEntry: DoctorNote = {
-        date: new Date().toISOString().split('T')[0],
+        noteId: `DN${Date.now()}`,
+        date: new Date().toISOString(),
         doctor: "Dr. Current User (Mock)",
         note: newDoctorNote
     };
@@ -261,18 +258,49 @@ export default function WardManagementPage() {
   };
 
   const handleUpdateMedication = async () => {
+    // This is simplified. A real app would need to know which medication item is being updated.
+    // For now, we'll just simulate a general update.
+    if (!currentAdmittedPatientFullDetails) return;
     setIsUpdatingMedication(true);
-     // Simulate API call: PUT /api/v1/admissions/{admissionId}/medication-schedule
+    const payload = {
+        // Example: update first pending medication to administered for demo
+        medicationItemId: currentAdmittedPatientFullDetails.medicationSchedule.find(m => m.status === "Pending")?.medicationItemId,
+        status: "Administered",
+        administeredBy: "nurse-currentUser-mockId",
+        administrationTime: new Date().toISOString()
+    };
+     // Simulate API call: PUT /api/v1/admissions/{admissionId}/medication-schedule/{medicationItemId}
+    console.log("Submitting to /api/v1/admissions/{admissionId}/medication-schedule/{itemId} (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({title: "Medication Log Updated (Mock)", description: "Status of medications updated."});
+    
+    // Mock update locally
+    if (payload.medicationItemId) {
+        setCurrentAdmittedPatientFullDetails(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                medicationSchedule: prev.medicationSchedule.map(med => 
+                    med.medicationItemId === payload.medicationItemId ? {...med, status: "Administered"} : med
+                )
+            };
+        });
+    }
+    toast({title: "Medication Log Updated (Mock)", description: "Status of a medication updated."});
     setIsUpdatingMedication(false);
   };
 
   const handleDischarge = async () => {
     if (!currentAdmittedPatientFullDetails || !selectedWardId) return;
     setIsDischarging(true);
-    // Simulate API call: PUT /api/v1/admissions/{admissionId}/discharge
+    const payload = {
+        dischargeDate: new Date().toISOString(),
+        dischargeSummary: "Patient stable for discharge. Follow up with GP.",
+        dischargedBy: "doc-currentUser-mockId"
+    };
+    // Simulate API call: PUT /api/v1/admissions/{currentAdmittedPatientFullDetails.admissionId}/discharge
+    console.log("Submitting to /api/v1/admissions/{admissionId}/discharge (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
+    
     toast({ title: "Patient Discharged (Mock)", description: `${currentAdmittedPatientFullDetails.name} has been processed for discharge.` });
     
     const admissionIdToDischarge = currentAdmittedPatientFullDetails.admissionId;
@@ -306,7 +334,14 @@ export default function WardManagementPage() {
   const handleTransfer = async () => {
     if (!currentAdmittedPatientFullDetails) return;
     setIsTransferring(true);
-    // Simulate API call: PUT /api/v1/admissions/{admissionId}/transfer
+    const payload = {
+        transferDate: new Date().toISOString(),
+        destinationWardId: "WXYZ", // Mock destination
+        transferReason: "Requires specialized cardiac monitoring.",
+        transferredBy: "doc-currentUser-mockId"
+    };
+    // Simulate API call: PUT /api/v1/admissions/{currentAdmittedPatientFullDetails.admissionId}/transfer
+    console.log("Submitting to /api/v1/admissions/{admissionId}/transfer (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({ title: "Patient Transfer Initiated (Mock)", description: `Transfer process for ${currentAdmittedPatientFullDetails.name} has started.` });
     setIsTransferring(false);
@@ -320,9 +355,9 @@ export default function WardManagementPage() {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <BedDouble className="h-8 w-8" /> Ward Management
           </h1>
-          <Button variant="outline" disabled>
+          {/* <Button variant="outline" disabled>
             <ListFilter className="mr-2 h-4 w-4" /> Filter Options
-          </Button>
+          </Button> */}
         </div>
 
         <Card className="shadow-sm">
@@ -342,7 +377,7 @@ export default function WardManagementPage() {
                   <SelectValue placeholder="Select a ward..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoadingAllWards && <SelectItem value="loading" disabled>Loading wards...</SelectItem>}
+                  {isLoadingAllWards && <SelectItem value="loading" disabled><Loader2 className="inline mr-2 h-4 w-4 animate-spin"/>Loading wards...</SelectItem>}
                   {!isLoadingAllWards && allWardsData.length === 0 && <SelectItem value="no-wards" disabled>No wards found.</SelectItem>}
                   {!isLoadingAllWards && allWardsData.map(ward => (
                     <SelectItem key={ward.id} value={ward.id}>{ward.name}</SelectItem>
@@ -351,9 +386,9 @@ export default function WardManagementPage() {
               </Select>
             </div>
 
-            {isLoadingCurrentWardDetails && (
+            {isLoadingCurrentWardDetails && selectedWardId && (
                  <div className="flex items-center justify-center py-6 text-muted-foreground">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" /> Loading ward details...
+                    <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" /> Loading details for {allWardsData.find(w => w.id === selectedWardId)?.name || 'selected ward'}...
                 </div>
             )}
 
@@ -426,7 +461,7 @@ export default function WardManagementPage() {
                         key={bed.id} 
                         variant={
                             bed.status === 'Occupied' ? 'destructive' : 
-                            bed.status === 'Cleaning' ? 'secondary' : 'default' // default (teal) for Available
+                            bed.status === 'Cleaning' ? 'secondary' : 'default'
                         } 
                         className="h-16 w-full flex flex-col items-center justify-center p-1 text-center shadow-sm hover:shadow-md transition-shadow"
                         title={bed.status === 'Occupied' && bed.patientName ? `Occupied by: ${bed.patientName}` : bed.status}
@@ -450,7 +485,7 @@ export default function WardManagementPage() {
         )}
 
         {selectedPatientForDetails && (
-          <Card className="lg:col-span-full shadow-sm mt-6">
+          <Card className="lg:col-span-full shadow-sm mt-2">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><UserCheck className="h-6 w-6 text-primary"/>In-Patient Care: {currentAdmittedPatientFullDetails?.name || selectedPatientForDetails.name}</CardTitle>
                 <CardDescription>Details for {currentAdmittedPatientFullDetails?.bedNumber || selectedPatientForDetails.bedNumber} in {currentWardDetails?.name}.</CardDescription>
@@ -470,29 +505,33 @@ export default function WardManagementPage() {
 
                   <div>
                     <h4 className="text-md font-semibold mb-2 flex items-center"><Pill className="mr-2 h-4 w-4 text-primary" /> Medication Schedule</h4>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs">Medication</TableHead>
-                          <TableHead className="text-xs">Time</TableHead>
-                          <TableHead className="text-xs text-right">Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {currentAdmittedPatientFullDetails.medicationSchedule.map((med, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="text-xs font-medium">{med.medication} <span className="text-muted-foreground">({med.dosage})</span></TableCell>
-                            <TableCell className="text-xs">{med.time}</TableCell>
-                            <TableCell className="text-xs text-right">
-                              <Badge variant={med.status === "Administered" ? "default" : med.status === "Pending" ? "secondary" : "outline"} className="text-xs">
-                                {med.status}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                    <Button variant="outline" size="sm" className="mt-2 w-full" onClick={handleUpdateMedication} disabled={isUpdatingMedication}>
+                    {currentAdmittedPatientFullDetails.medicationSchedule.length > 0 ? (
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead className="text-xs">Medication</TableHead>
+                            <TableHead className="text-xs">Time</TableHead>
+                            <TableHead className="text-xs text-right">Status</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {currentAdmittedPatientFullDetails.medicationSchedule.map((med) => (
+                            <TableRow key={med.medicationItemId}>
+                                <TableCell className="text-xs font-medium">{med.medication} <span className="text-muted-foreground">({med.dosage})</span></TableCell>
+                                <TableCell className="text-xs">{med.time}</TableCell>
+                                <TableCell className="text-xs text-right">
+                                <Badge variant={med.status === "Administered" ? "default" : med.status === "Pending" ? "secondary" : "outline"} className="text-xs">
+                                    {med.status}
+                                </Badge>
+                                </TableCell>
+                            </TableRow>
+                            ))}
+                        </TableBody>
+                        </Table>
+                    ) : (
+                        <p className="text-xs text-muted-foreground text-center py-2">No medication schedule found.</p>
+                    )}
+                    <Button variant="outline" size="sm" className="mt-2 w-full" onClick={handleUpdateMedication} disabled={isUpdatingMedication || currentAdmittedPatientFullDetails.medicationSchedule.length === 0}>
                         {isUpdatingMedication ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                         {isUpdatingMedication ? "Updating..." : "Log/Update Medications"}
                     </Button>
@@ -501,13 +540,16 @@ export default function WardManagementPage() {
                   <div>
                     <h4 className="text-md font-semibold mb-2 flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-primary" /> Doctor's Notes</h4>
                     <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                      {currentAdmittedPatientFullDetails.doctorNotes.map((note, index) => (
-                        <div key={index} className="text-xs p-2 border rounded-md bg-muted/30">
-                          <p className="font-medium">{note.doctor} - <span className="text-muted-foreground">{new Date(note.date).toLocaleDateString()}</span></p>
-                          <p className="mt-0.5">{note.note}</p>
-                        </div>
-                      ))}
-                      {currentAdmittedPatientFullDetails.doctorNotes.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">No notes recorded yet.</p>}
+                      {currentAdmittedPatientFullDetails.doctorNotes.length > 0 ? (
+                        currentAdmittedPatientFullDetails.doctorNotes.map((note) => (
+                            <div key={note.noteId} className="text-xs p-2 border rounded-md bg-muted/30">
+                            <p className="font-medium">{note.doctor} - <span className="text-muted-foreground">{new Date(note.date).toLocaleDateString()}</span></p>
+                            <p className="mt-0.5">{note.note}</p>
+                            </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-muted-foreground text-center py-2">No notes recorded yet.</p>
+                      )}
                     </div>
                     <Textarea placeholder="Add new note..." className="mt-2 text-xs" rows={2} value={newDoctorNote} onChange={(e) => setNewDoctorNote(e.target.value)} disabled={isAddingNote}/>
                     <Button variant="outline" size="sm" className="mt-2 w-full" onClick={handleAddNote} disabled={isAddingNote || !newDoctorNote.trim()}>
@@ -523,11 +565,11 @@ export default function WardManagementPage() {
             </CardContent>
             {currentAdmittedPatientFullDetails && (
                 <CardFooter className="border-t pt-4 flex-col sm:flex-row gap-2">
-                    <Button variant="outline" className="w-full sm:w-auto" onClick={handleDischarge} disabled={isDischarging || isTransferring}>
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={handleDischarge} disabled={isDischarging || isTransferring || isAddingNote || isUpdatingMedication}>
                         {isDischarging ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogOutIcon className="mr-2 h-4 w-4" />}
                         {isDischarging ? "Discharging..." : `Discharge ${currentAdmittedPatientFullDetails.name.split(' ')[0]}`}
                     </Button>
-                    <Button variant="outline" className="w-full sm:w-auto" onClick={handleTransfer} disabled={isDischarging || isTransferring}>
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={handleTransfer} disabled={isDischarging || isTransferring || isAddingNote || isUpdatingMedication}>
                         {isTransferring ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ArrowRightLeft className="mr-2 h-4 w-4" />}
                         {isTransferring ? "Transferring..." : `Transfer ${currentAdmittedPatientFullDetails.name.split(' ')[0]}`}
                     </Button>
