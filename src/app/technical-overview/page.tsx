@@ -213,6 +213,10 @@ export default function TechnicalOverviewPage() {
               {renderListItem('techOverview.section5.itemI18nFull', 'techOverview.section5.itemI18nFull.desc')}
               {renderListItem('techOverview.section5.itemPatientPortal', 'techOverview.section5.itemPatientPortal.desc')}
               {renderListItem('techOverview.section5.itemMedicationAdherence', 'techOverview.section5.itemMedicationAdherence.desc')}
+              {renderListItem('techOverview.section5.itemBilling', 'techOverview.section5.itemBilling.desc')}
+              {renderListItem('techOverview.section5.itemTelemedicine', 'techOverview.section5.itemTelemedicine.desc')}
+              {renderListItem('techOverview.section5.itemAdvancedAnalyticsBI', 'techOverview.section5.itemAdvancedAnalyticsBI.desc')}
+              {renderListItem('techOverview.section5.itemBloodBank', 'techOverview.section5.itemBloodBank.desc')}
             </ul>
           </CardContent>
         </Card>
