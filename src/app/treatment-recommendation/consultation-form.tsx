@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useTransition, useEffect } from 'react';
@@ -28,6 +29,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { COMMON_ORDERABLE_LAB_TESTS, type OrderableLabTest } from '@/lib/constants';
 
 const FormSchema = z.object({
   nationalIdSearch: z.string().optional(),
@@ -73,17 +75,6 @@ const mockVisitHistory: VisitHistoryItem[] = [
   { id: "v5", date: "2023-01-30", department: "Outpatient", doctor: "Dr. Smith", reason: "Flu Symptoms" },
 ];
 
-const generalLabTests = [
-  { id: "cbc", label: "Complete Blood Count (CBC)" },
-  { id: "bmp", label: "Basic Metabolic Panel (BMP)" },
-  { id: "cmp", label: "Comprehensive Metabolic Panel (CMP)" },
-  { id: "lipid", label: "Lipid Panel" },
-  { id: "ua", label: "Urinalysis (U/A)" },
-  { id: "tsh", label: "Thyroid Stimulating Hormone (TSH)" },
-  { id: "crp", label: "C-Reactive Protein (CRP)" },
-  { id: "esr", label: "Erythrocyte Sedimentation Rate (ESR)" },
-];
-
 interface ConsultationFormProps {
   getRecommendationAction: (input: TreatmentRecommendationInput) => Promise<TreatmentRecommendationOutput | { error: string }>;
 }
@@ -97,6 +88,10 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
   const [bmi, setBmi] = useState<string | null>(null);
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
   const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false);
+  
+  const [selectedLabTests, setSelectedLabTests] = useState<Record<string, boolean>>({});
+  const [isSubmittingLabOrder, setIsSubmittingLabOrder] = useState(false);
+  const [isSubmittingImagingOrder, setIsSubmittingImagingOrder] = useState(false);
 
 
   const form = useForm<FormValues>({
@@ -156,8 +151,9 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
         doctorComments: "",
     });
     setBmi(null);
+    setSelectedLabTests({});
 
-    // Simulate API call: GET /api/v1/patients/search?nationalId={nationalId}
+
     await new Promise(resolve => setTimeout(resolve, 1000)); 
     if (nationalId === "123456789" || nationalId === "987654321") {
       const fetchedPatientData: PatientData = {
@@ -231,8 +227,7 @@ ${visitHistoryString || "No recent visit history available."}
         return;
     }
     setIsSubmittingOutcome(true);
-    // Simulate API POST request to /api/v1/consultations
-    // Payload would include patientData.nationalId, form.getValues(), recommendation (if any), and selected outcome
+    
     await new Promise(resolve => setTimeout(resolve, 1500)); 
 
     toast({ title: "Consultation Finished", description: `Outcome: ${outcome}. Action (mock): ${outcome} process initiated for ${patientData?.fullName}.` });
@@ -241,31 +236,48 @@ ${visitHistoryString || "No recent visit history available."}
         console.log(`Prescription for ${patientData.fullName} to be sent to pharmacy: ${recommendation.prescription}`);
     }
     
-    // Reset form and state
     form.reset();
     setPatientData(null);
     setRecommendation(null);
     setError(null);
     setBmi(null);
+    setSelectedLabTests({});
     setIsOutcomeModalOpen(false);
     setIsSubmittingOutcome(false);
   };
 
   const handleSubmitLabOrder = async () => {
      if (!patientData) return;
-    // Simulate API POST to /api/v1/consultations/{id}/lab-orders
+     setIsSubmittingLabOrder(true);
+     const orderedTestLabels = COMMON_ORDERABLE_LAB_TESTS
+        .filter(test => selectedLabTests[test.id])
+        .map(test => test.label);
+
     await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({title: "Lab Order Submitted (Mock)", description:`Lab tests ordered for ${patientData?.fullName}.`});
+    toast({
+        title: "Lab Order Submitted (Mock)", 
+        description:`Lab tests ordered for ${patientData?.fullName}: ${orderedTestLabels.length > 0 ? orderedTestLabels.join(', ') : 'No specific tests selected.'}`
+    });
+    setSelectedLabTests({}); // Reset selections
+    // Potentially close dialog here, DialogClose will handle it if used properly
+    setIsSubmittingLabOrder(false);
   };
 
   const handleSubmitImagingOrder = async () => {
     if (!patientData) return;
-    // Simulate API POST to /api/v1/consultations/{id}/imaging-orders
+    setIsSubmittingImagingOrder(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName}.`});
+    setIsSubmittingImagingOrder(false);
+    // Potentially close dialog here
   };
   
-  const isActionDisabled = isSearching || isAiPending || isSubmittingOutcome;
+  const isActionDisabled = isSearching || isAiPending || isSubmittingOutcome || isSubmittingLabOrder || isSubmittingImagingOrder;
+
+  const handleLabTestSelection = (testId: string, checked: boolean) => {
+    setSelectedLabTests(prev => ({ ...prev, [testId]: checked }));
+  };
+
 
   return (
     <div className="grid lg:grid-cols-3 gap-6 items-start">
@@ -360,7 +372,7 @@ ${visitHistoryString || "No recent visit history available."}
                   <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col sm:flex-row gap-2">
-                  <Dialog>
+                  <Dialog onOpenChange={(open) => !open && setSelectedLabTests({})}>
                     <DialogTrigger asChild>
                       <Button variant="outline" className="w-full sm:w-auto" disabled={isActionDisabled || !patientData}>
                         <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
@@ -371,12 +383,17 @@ ${visitHistoryString || "No recent visit history available."}
                         <DialogTitle>Order Lab Tests for {patientData?.fullName}</DialogTitle>
                         <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
                       </DialogHeader>
-                      <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                      <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                         <Label className="text-base font-semibold">Common Lab Tests:</Label>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                          {generalLabTests.map((test) => (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                          {COMMON_ORDERABLE_LAB_TESTS.map((test) => (
                             <div key={test.id} className="flex items-center space-x-2">
-                              <Checkbox id={`consult-test-${test.id}`} />
+                              <Checkbox 
+                                id={`consult-test-${test.id}`} 
+                                checked={!!selectedLabTests[test.id]}
+                                onCheckedChange={(checked) => handleLabTestSelection(test.id, !!checked)}
+                                disabled={isSubmittingLabOrder}
+                              />
                               <Label htmlFor={`consult-test-${test.id}`} className="text-sm font-normal">
                                 {test.label}
                               </Label>
@@ -386,12 +403,15 @@ ${visitHistoryString || "No recent visit history available."}
                         <Separator className="my-2" />
                         <div className="space-y-2">
                           <Label htmlFor="consultLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
-                          <Textarea id="consultLabClinicalNotes" placeholder="e.g., Routine screening, specific concerns..." />
+                          <Textarea id="consultLabClinicalNotes" placeholder="e.g., Routine screening, specific concerns..." disabled={isSubmittingLabOrder} />
                         </div>
                       </div>
                       <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                        <Button type="submit" onClick={handleSubmitLabOrder}>Submit Lab Order</Button>
+                        <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingLabOrder}>Cancel</Button></DialogClose>
+                        <Button type="button" onClick={handleSubmitLabOrder} disabled={isSubmittingLabOrder || Object.values(selectedLabTests).every(v => !v)}>
+                           {isSubmittingLabOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                           {isSubmittingLabOrder ? "Submitting..." : "Submit Lab Order"}
+                        </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -410,7 +430,7 @@ ${visitHistoryString || "No recent visit history available."}
                       <div className="grid gap-4 py-4">
                         <div className="space-y-2">
                           <Label htmlFor="consultImagingType">Imaging Type</Label>
-                          <Select>
+                          <Select disabled={isSubmittingImagingOrder}>
                             <SelectTrigger id="consultImagingType">
                               <SelectValue placeholder="Select imaging type" />
                             </SelectTrigger>
@@ -424,16 +444,19 @@ ${visitHistoryString || "No recent visit history available."}
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="consultImagingRegionDetails">Region / Details of Study</Label>
-                          <Textarea id="consultImagingRegionDetails" placeholder="e.g., Abdominal Ultrasound, Chest X-ray PA view, MRI Brain..." />
+                          <Textarea id="consultImagingRegionDetails" placeholder="e.g., Abdominal Ultrasound, Chest X-ray PA view, MRI Brain..." disabled={isSubmittingImagingOrder}/>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="consultImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
-                          <Textarea id="consultImagingClinicalNotes" placeholder="e.g., Rule out appendicitis, check for pneumonia..." />
+                          <Textarea id="consultImagingClinicalNotes" placeholder="e.g., Rule out appendicitis, check for pneumonia..." disabled={isSubmittingImagingOrder}/>
                         </div>
                       </div>
                       <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                        <Button type="submit" onClick={handleSubmitImagingOrder}>Submit Imaging Order</Button>
+                        <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingImagingOrder}>Cancel</Button></DialogClose>
+                        <Button type="button" onClick={handleSubmitImagingOrder} disabled={isSubmittingImagingOrder}>
+                            {isSubmittingImagingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                            {isSubmittingImagingOrder ? "Submitting..." : "Submit Imaging Order"}
+                        </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -564,7 +587,7 @@ ${visitHistoryString || "No recent visit history available."}
                             {isSubmittingOutcome ? "Processing..." : opt.label}
                           </Button>
                         ))}
-                         <DialogClose asChild className="sm:col-span-2">
+                         <DialogClose asChild>
                             <Button type="button" variant="ghost" disabled={isSubmittingOutcome}>Cancel</Button>
                          </DialogClose>
                     </div>

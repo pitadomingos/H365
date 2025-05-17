@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useTransition, useEffect } from 'react';
@@ -28,6 +29,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { COMMON_ORDERABLE_LAB_TESTS, type OrderableLabTest } from '@/lib/constants';
 
 
 const FormSchema = z.object({
@@ -77,17 +79,6 @@ const mockVisitHistory: VisitHistoryItem[] = [
   { id: "v3", date: "2023-11-05", department: "Cardiology", doctor: "Dr. Eve", reason: "Follow-up: Post MI" },
 ];
 
-const generalLabTests = [
-  { id: "cbc", label: "Complete Blood Count (CBC)" },
-  { id: "bmp", label: "Basic Metabolic Panel (BMP)" },
-  { id: "cmp", label: "Comprehensive Metabolic Panel (CMP)" },
-  { id: "lipid", label: "Lipid Panel" },
-  { id: "ua", label: "Urinalysis (U/A)" },
-  { id: "tsh", label: "Thyroid Stimulating Hormone (TSH)" },
-  { id: "crp", label: "C-Reactive Protein (CRP)" },
-  { id: "esr", label: "Erythrocyte Sedimentation Rate (ESR)" },
-];
-
 
 interface SpecialistConsultationFormProps {
   getRecommendationAction: (input: TreatmentRecommendationInput) => Promise<TreatmentRecommendationOutput | { error: string }>;
@@ -102,6 +93,10 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
   const [bmi, setBmi] = useState<string | null>(null);
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
   const [isSubmittingOutcome, setIsSubmittingOutcome] = useState(false); 
+  
+  const [selectedLabTests, setSelectedLabTests] = useState<Record<string, boolean>>({});
+  const [isSubmittingLabOrder, setIsSubmittingLabOrder] = useState(false);
+  const [isSubmittingImagingOrder, setIsSubmittingImagingOrder] = useState(false);
 
 
   const form = useForm<FormValues>({
@@ -163,9 +158,8 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
         currentSpecialty: form.getValues("currentSpecialty"),
     });
     setBmi(null);
+    setSelectedLabTests({});
 
-    // Simulate API call: GET /api/v1/patients/search?nationalId={nationalId}
-    // Also needs to fetch referral details if applicable.
     await new Promise(resolve => setTimeout(resolve, 1000)); 
     if (nationalId === "123456789" || nationalId === "987654321") {
       const fetchedPatientData: PatientData = {
@@ -230,7 +224,7 @@ ${visitHistoryString || "No recent visit history available."}
         labResults: data.labResultsSummary || "Not provided",
         imagingData: data.imagingDataSummary || "Not provided",
       };
-      // Simulate API call to Genkit/AI
+      
       const result = await getRecommendationAction(aiInput);
       if ('error' in result) {
         setError(result.error);
@@ -248,36 +242,50 @@ ${visitHistoryString || "No recent visit history available."}
       return;
     }
     setIsSubmittingOutcome(true);
-    // Simulate API POST request to /api/v1/specialist-consultations or /api/v1/consultations
+    
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     toast({ title: "Specialist Consultation Finished", description: `Outcome: ${outcome}. Action (mock): ${outcome} process initiated for ${patientData?.fullName}.` });
 
-    // Reset form and state
     form.reset();
     setPatientData(null);
     setRecommendation(null);
     setError(null);
     setBmi(null);
+    setSelectedLabTests({});
     setIsOutcomeModalOpen(false);
     setIsSubmittingOutcome(false);
   };
 
   const handleSubmitLabOrder = async () => {
      if (!patientData) return;
-    // Simulate API POST to /api/v1/consultations/{id}/lab-orders
+     setIsSubmittingLabOrder(true);
+     const orderedTestLabels = COMMON_ORDERABLE_LAB_TESTS
+        .filter(test => selectedLabTests[test.id])
+        .map(test => test.label);
+     
     await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({title: "Lab Order Submitted (Mock)", description:`Lab tests ordered for ${patientData?.fullName} by Specialist.`});
+    toast({
+        title: "Lab Order Submitted (Mock)", 
+        description:`Lab tests ordered for ${patientData?.fullName} by Specialist: ${orderedTestLabels.length > 0 ? orderedTestLabels.join(', ') : 'No specific tests selected.'}`
+    });
+    setSelectedLabTests({});
+    setIsSubmittingLabOrder(false);
   };
 
   const handleSubmitImagingOrder = async () => {
     if (!patientData) return;
-    // Simulate API POST to /api/v1/consultations/{id}/imaging-orders
+    setIsSubmittingImagingOrder(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName} by Specialist.`});
+    setIsSubmittingImagingOrder(false);
   };
 
-  const isActionDisabled = isSearching || isAiPending || isSubmittingOutcome;
+  const isActionDisabled = isSearching || isAiPending || isSubmittingOutcome || isSubmittingLabOrder || isSubmittingImagingOrder;
+
+  const handleLabTestSelection = (testId: string, checked: boolean) => {
+    setSelectedLabTests(prev => ({ ...prev, [testId]: checked }));
+  };
 
   return (
     <div className="grid lg:grid-cols-3 gap-6 items-start">
@@ -405,7 +413,7 @@ ${visitHistoryString || "No recent visit history available."}
                 <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col sm:flex-row gap-2">
-                <Dialog>
+                 <Dialog onOpenChange={(open) => !open && setSelectedLabTests({})}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full sm:w-auto" disabled={isActionDisabled || !patientData}>
                       <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
@@ -416,12 +424,17 @@ ${visitHistoryString || "No recent visit history available."}
                       <DialogTitle>Order Lab Tests for {patientData?.fullName}</DialogTitle>
                       <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                       <Label className="text-base font-semibold">Common Lab Tests:</Label>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                        {generalLabTests.map((test) => (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                        {COMMON_ORDERABLE_LAB_TESTS.map((test) => (
                           <div key={test.id} className="flex items-center space-x-2">
-                            <Checkbox id={`specialist-test-${test.id}`} />
+                            <Checkbox 
+                                id={`specialist-test-${test.id}`} 
+                                checked={!!selectedLabTests[test.id]}
+                                onCheckedChange={(checked) => handleLabTestSelection(test.id, !!checked)}
+                                disabled={isSubmittingLabOrder}
+                            />
                             <Label htmlFor={`specialist-test-${test.id}`} className="text-sm font-normal">
                               {test.label}
                             </Label>
@@ -431,12 +444,15 @@ ${visitHistoryString || "No recent visit history available."}
                       <Separator className="my-2" />
                       <div className="space-y-2">
                         <Label htmlFor="specialistLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
-                        <Textarea id="specialistLabClinicalNotes" placeholder="e.g., Specialist screening, follow-up..." />
+                        <Textarea id="specialistLabClinicalNotes" placeholder="e.g., Specialist screening, follow-up..." disabled={isSubmittingLabOrder}/>
                       </div>
                     </div>
                     <DialogFooter>
-                      <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                      <Button type="submit" onClick={handleSubmitLabOrder}>Submit Lab Order</Button>
+                      <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingLabOrder}>Cancel</Button></DialogClose>
+                      <Button type="button" onClick={handleSubmitLabOrder} disabled={isSubmittingLabOrder || Object.values(selectedLabTests).every(v => !v)}>
+                        {isSubmittingLabOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        {isSubmittingLabOrder ? "Submitting..." : "Submit Lab Order"}
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -455,7 +471,7 @@ ${visitHistoryString || "No recent visit history available."}
                     <div className="grid gap-4 py-4">
                       <div className="space-y-2">
                         <Label htmlFor="specialistImagingType">Imaging Type</Label>
-                        <Select>
+                        <Select disabled={isSubmittingImagingOrder}>
                           <SelectTrigger id="specialistImagingType">
                             <SelectValue placeholder="Select imaging type" />
                           </SelectTrigger>
@@ -469,16 +485,19 @@ ${visitHistoryString || "No recent visit history available."}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="specialistImagingRegionDetails">Region / Details of Study</Label>
-                        <Textarea id="specialistImagingRegionDetails" placeholder="e.g., Echocardiogram, MRI Knee, CT Angio..." />
+                        <Textarea id="specialistImagingRegionDetails" placeholder="e.g., Echocardiogram, MRI Knee, CT Angio..." disabled={isSubmittingImagingOrder}/>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="specialistImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
-                        <Textarea id="specialistImagingClinicalNotes" placeholder="e.g., Assess cardiac function, rule out ligament tear..." />
+                        <Textarea id="specialistImagingClinicalNotes" placeholder="e.g., Assess cardiac function, rule out ligament tear..." disabled={isSubmittingImagingOrder}/>
                       </div>
                     </div>
                     <DialogFooter>
-                      <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                      <Button type="submit" onClick={handleSubmitImagingOrder}>Submit Imaging Order</Button>
+                      <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingImagingOrder}>Cancel</Button></DialogClose>
+                      <Button type="button" onClick={handleSubmitImagingOrder} disabled={isSubmittingImagingOrder}>
+                        {isSubmittingImagingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        {isSubmittingImagingOrder ? "Submitting..." : "Submit Imaging Order"}
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -599,12 +618,11 @@ ${visitHistoryString || "No recent visit history available."}
                           { label: "Discharge Specialist Care", value: "Discharge from Specialist Care", icon: Home },
                         ].map(opt => (
                           <Button key={opt.value} variant="outline" onClick={() => handleOutcome(opt.value)} disabled={isSubmittingOutcome}>
-                            {isSubmittingOutcome && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            <opt.icon className="mr-2 h-4 w-4"/>
+                            {isSubmittingOutcome ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <opt.icon className="mr-2 h-4 w-4"/>}
                             {isSubmittingOutcome ? "Processing..." : opt.label}
                           </Button>
                         ))}
-                        <DialogClose asChild className="sm:col-span-2">
+                        <DialogClose asChild>
                           <Button type="button" variant="ghost" disabled={isSubmittingOutcome}>Cancel</Button>
                         </DialogClose>
                     </div>
