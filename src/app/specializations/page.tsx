@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react'; // Added useState and useEffect
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, Briefcase, Users, Loader2 } from "lucide-react"; // Added Loader2
+import { Bell, Briefcase, Users, Loader2, Star } from "lucide-react"; // Added Star icon
 import { SpecialistConsultationForm } from "./specialist-consultation-form";
 import { getTreatmentRecommendationAction } from "../treatment-recommendation/actions";
 import Image from "next/image";
