@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Baby, Search, CalendarPlus, FileText, ShieldAlert, Microscope, ScanSearch, FlaskConical, RadioTower, Loader2, CalendarIcon } from "lucide-react";
+import { Baby, Search, CalendarPlus, FileText, ShieldAlert, Microscope, ScanSearch, FlaskConical, RadioTower, Loader2, CalendarIcon, Save } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -180,10 +180,18 @@ export default function MaternityCarePage() {
   const handleSubmitLabOrder = async () => {
     if (!selectedPatient) return;
     setIsOrderingLabs(true);
-    const orderedTestLabels = COMMON_ORDERABLE_LAB_TESTS
-        .filter(test => selectedLabTests[test.id])
-        .map(test => test.label);
+    const orderedTests = COMMON_ORDERABLE_LAB_TESTS.filter(test => selectedLabTests[test.id]);
+    const orderedTestLabels = orderedTests.map(test => test.label);
+    const orderedTestIds = orderedTests.map(test => test.id);
 
+    const payload = {
+      patientId: selectedPatient.id,
+      maternityContext: true, // Example additional context
+      testIds: orderedTestIds,
+      clinicalNotes: (document.getElementById('maternityLabClinicalNotes') as HTMLTextAreaElement)?.value || ""
+    };
+
+    console.log("Submitting Maternity Lab Order to /api/v1/maternity/patients/{patientId}/lab-orders (mock):", payload);
     // Simulate API POST to /api/v1/maternity/patients/{patientId}/lab-orders
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({
@@ -198,9 +206,18 @@ export default function MaternityCarePage() {
   const handleSubmitImagingOrder = async () => {
      if (!selectedPatient) return;
     setIsOrderingImaging(true);
+
+    const payload = {
+        patientId: selectedPatient.id,
+        maternityContext: true, // Example additional context
+        imagingType: (document.getElementById('maternityImagingType') as HTMLSelectElement)?.value || "",
+        regionDetails: (document.getElementById('maternityImagingRegionDetails') as HTMLTextAreaElement)?.value || "",
+        clinicalNotes: (document.getElementById('maternityImagingClinicalNotes') as HTMLTextAreaElement)?.value || ""
+    };
+    console.log("Submitting Maternity Imaging Order to /api/v1/maternity/patients/{patientId}/imaging-orders (mock):", payload);
     // Simulate API POST to /api/v1/maternity/patients/{patientId}/imaging-orders
     await new Promise(resolve => setTimeout(resolve, 1500));
-    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${selectedPatient?.fullName}.`});
+    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${selectedPatient?.fullName}. Details: ${payload.imagingType} - ${payload.regionDetails}`});
     setIsOrderingImaging(false);
     // Potentially close dialog here
   }
@@ -331,8 +348,9 @@ export default function MaternityCarePage() {
                  <CardFooter className="flex-col items-start gap-2">
                     <Dialog open={isScheduleNextVisitModalOpen} onOpenChange={setIsScheduleNextVisitModalOpen}>
                         <DialogTrigger asChild>
-                            <Button variant="outline" className="w-full" disabled={!selectedPatient}>
-                                <CalendarPlus className="mr-2 h-4 w-4"/>Schedule Next ANC Visit
+                            <Button variant="outline" className="w-full" disabled={!selectedPatient || isSchedulingNextVisit}>
+                                {isSchedulingNextVisit ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CalendarPlus className="mr-2 h-4 w-4"/>}
+                                {isSchedulingNextVisit ? "Scheduling..." : "Schedule Next ANC Visit"}
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
@@ -360,7 +378,7 @@ export default function MaternityCarePage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="nextScheduledNotes">Notes (Optional)</Label>
-                                    <Textarea id="nextScheduledNotes" value={nextScheduledNotes} onChange={(e) => setNextScheduledNotes(e.target.value)} placeholder="e.g., Discuss scan results, GTT reminder."/>
+                                    <Textarea id="nextScheduledNotes" value={nextScheduledNotes} onChange={(e) => setNextScheduledNotes(e.target.value)} placeholder="e.g., Discuss scan results, GTT reminder." disabled={isSchedulingNextVisit}/>
                                 </div>
                             </div>
                             <DialogFooter>
@@ -416,8 +434,9 @@ export default function MaternityCarePage() {
                 <CardFooter>
                     <Dialog open={isNewVisitModalOpen} onOpenChange={setIsNewVisitModalOpen}>
                         <DialogTrigger asChild>
-                            <Button disabled={!selectedPatient}>
-                                <CalendarPlus className="mr-2 h-4 w-4" /> Log New Visit
+                            <Button disabled={!selectedPatient || isLoggingVisit}>
+                                {isLoggingVisit ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CalendarPlus className="mr-2 h-4 w-4" />}
+                                {isLoggingVisit ? "Logging..." : "Log New Visit"}
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-lg">
@@ -434,6 +453,7 @@ export default function MaternityCarePage() {
                                             <Button
                                                 variant={"outline"}
                                                 className={cn("w-full justify-start text-left font-normal",!newVisitForm.visitDate && "text-muted-foreground")}
+                                                disabled={isLoggingVisit}
                                             >
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                                 {newVisitForm.visitDate ? format(newVisitForm.visitDate, "PPP") : <span>Pick a date</span>}
@@ -447,30 +467,30 @@ export default function MaternityCarePage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="gestationalAge">Gestational Age (weeks+days)</Label>
-                                            <Input id="gestationalAge" name="gestationalAge" value={newVisitForm.gestationalAge} onChange={handleNewVisitFormChange} placeholder="e.g., 12w 3d"/>
+                                            <Input id="gestationalAge" name="gestationalAge" value={newVisitForm.gestationalAge} onChange={handleNewVisitFormChange} placeholder="e.g., 12w 3d" disabled={isLoggingVisit}/>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="weightKg">Weight (kg)</Label>
-                                            <Input id="weightKg" name="weightKg" type="number" value={newVisitForm.weightKg} onChange={handleNewVisitFormChange} placeholder="e.g., 65.5"/>
+                                            <Input id="weightKg" name="weightKg" type="number" value={newVisitForm.weightKg} onChange={handleNewVisitFormChange} placeholder="e.g., 65.5" disabled={isLoggingVisit}/>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="bp">Blood Pressure (mmHg)</Label>
-                                            <Input id="bp" name="bp" value={newVisitForm.bp} onChange={handleNewVisitFormChange} placeholder="e.g., 120/80"/>
+                                            <Input id="bp" name="bp" value={newVisitForm.bp} onChange={handleNewVisitFormChange} placeholder="e.g., 120/80" disabled={isLoggingVisit}/>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="fhrBpm">Fetal Heart Rate (bpm)</Label>
-                                            <Input id="fhrBpm" name="fhrBpm" type="number" value={newVisitForm.fhrBpm} onChange={handleNewVisitFormChange} placeholder="e.g., 140"/>
+                                            <Input id="fhrBpm" name="fhrBpm" type="number" value={newVisitForm.fhrBpm} onChange={handleNewVisitFormChange} placeholder="e.g., 140" disabled={isLoggingVisit}/>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="fundalHeightCm">Fundal Height (cm)</Label>
-                                        <Input id="fundalHeightCm" name="fundalHeightCm" type="number" value={newVisitForm.fundalHeightCm} onChange={handleNewVisitFormChange} placeholder="e.g., 20"/>
+                                        <Input id="fundalHeightCm" name="fundalHeightCm" type="number" value={newVisitForm.fundalHeightCm} onChange={handleNewVisitFormChange} placeholder="e.g., 20" disabled={isLoggingVisit}/>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="notes">Clinical Notes</Label>
-                                        <Textarea id="notes" name="notes" value={newVisitForm.notes} onChange={handleNewVisitFormChange} placeholder="Observations, advice given, etc."/>
+                                        <Textarea id="notes" name="notes" value={newVisitForm.notes} onChange={handleNewVisitFormChange} placeholder="Observations, advice given, etc." disabled={isLoggingVisit}/>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="nextAppointmentDate">Next Appointment Date (Optional)</Label>
@@ -479,6 +499,7 @@ export default function MaternityCarePage() {
                                             <Button
                                                 variant={"outline"}
                                                 className={cn("w-full justify-start text-left font-normal",!newVisitForm.nextAppointmentDate && "text-muted-foreground")}
+                                                disabled={isLoggingVisit}
                                             >
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                                 {newVisitForm.nextAppointmentDate ? format(newVisitForm.nextAppointmentDate, "PPP") : <span>Pick a date</span>}
@@ -519,7 +540,7 @@ export default function MaternityCarePage() {
                     </div>
                 </CardContent>
                  <CardFooter className="gap-2">
-                    <Dialog onOpenChange={(open) => !open && setSelectedLabTests({})}>
+                    <Dialog onOpenChange={(open) => { if (!open) setSelectedLabTests({}); }}>
                       <DialogTrigger asChild>
                         <Button variant="outline" disabled={!selectedPatient || isOrderingLabs}>
                             {isOrderingLabs ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FlaskConical className="mr-2 h-4 w-4"/>}
@@ -534,7 +555,7 @@ export default function MaternityCarePage() {
                         <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                           <Label className="text-base font-semibold">Common Prenatal Tests:</Label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                            {COMMON_ORDERABLE_LAB_TESTS.map((test) => ( // Changed from maternity specific to common for now
+                            {COMMON_ORDERABLE_LAB_TESTS.map((test) => ( 
                               <div key={test.id} className="flex items-center space-x-2">
                                 <Checkbox 
                                     id={`maternity-test-${test.id}`} 
@@ -578,9 +599,9 @@ export default function MaternityCarePage() {
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                           <div className="space-y-2">
-                            <Label htmlFor="imagingType">Imaging Type</Label>
+                            <Label htmlFor="maternityImagingType">Imaging Type</Label>
                             <Select disabled={isOrderingImaging}>
-                              <SelectTrigger id="imagingType">
+                              <SelectTrigger id="maternityImagingType">
                                 <SelectValue placeholder="Select imaging type" />
                               </SelectTrigger>
                               <SelectContent>
@@ -592,12 +613,12 @@ export default function MaternityCarePage() {
                             </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="imagingRegionDetails">Region / Details of Study</Label>
-                            <Textarea id="imagingRegionDetails" placeholder="e.g., Anomaly Scan, Pelvic Ultrasound, Fetal Growth Scan, Chest X-ray PA view, MRI Brain..." disabled={isOrderingImaging} />
+                            <Label htmlFor="maternityImagingRegionDetails">Region / Details of Study</Label>
+                            <Textarea id="maternityImagingRegionDetails" placeholder="e.g., Anomaly Scan, Pelvic Ultrasound, Fetal Growth Scan, Chest X-ray PA view, MRI Brain..." disabled={isOrderingImaging} />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="imagingClinicalNotes">Clinical Notes / Reason for Study</Label>
-                            <Textarea id="imagingClinicalNotes" placeholder="e.g., Routine 20-week scan, assess fetal well-being, rule out pneumonia..." disabled={isOrderingImaging}/>
+                            <Label htmlFor="maternityImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
+                            <Textarea id="maternityImagingClinicalNotes" placeholder="e.g., Routine 20-week scan, assess fetal well-being, rule out pneumonia..." disabled={isOrderingImaging}/>
                           </div>
                         </div>
                         <DialogFooter>
@@ -632,3 +653,4 @@ export default function MaternityCarePage() {
   );
 }
 
+    
