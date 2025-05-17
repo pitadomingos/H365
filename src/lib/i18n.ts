@@ -106,13 +106,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'techOverview.section3.subsectionWard.itemFeatures.desc': "Manages ward occupancy, pending admissions, and bed assignments. For admitted patients, it allows viewing and updating treatment plans, medication schedules, and doctor's notes, along with (mocked) discharge and transfer operations.",
     'techOverview.section3.subsectionLab.title': "3.9. Laboratory Management",
     'techOverview.section3.subsectionLab.itemFeatures': "Lab Workflow & Inventory",
-    'techOverview.section3.subsectionLab.itemFeatures.desc': "Handles incoming lab requests, allows status updates, and provides a modal for result entry. Includes a daily lab report summary and a (mocked) reagent inventory management system with low-stock alerts.",
+    'techOverview.section3.subsectionLab.itemFeatures.desc': "Handles incoming lab requests, allows status updates, and provides a modal for result entry. Includes a daily lab report summary and a (mocked) reagent inventory management system with low-stock alerts and requisition history.",
     'techOverview.section3.subsectionImaging.title': "3.10. Imaging & Radiology Management",
     'techOverview.section3.subsectionImaging.itemFeatures': "Radiology Workflow Management",
-    'techOverview.section3.subsectionImaging.itemFeatures.desc': "Manages imaging requests (X-Ray, MRI, etc.), allows status updates, and features a modal for radiologists to enter reports. Includes a daily imaging summary and (mocked) equipment status.",
+    'techOverview.section3.subsectionImaging.itemFeatures.desc': "Manages imaging requests (X-Ray, MRI, etc.), allows status updates, and features a modal for radiologists to enter reports. Includes a daily imaging summary and notes about future biomedical engineering integration for equipment status.",
     'techOverview.section3.subsectionPharmacy.title': "3.11. Drug Dispensing Pharmacy",
     'techOverview.section3.subsectionPharmacy.itemFeatures': "Pharmacy Operations & Stock Control",
-    'techOverview.section3.subsectionPharmacy.itemFeatures.desc': "Facilitates processing of pending prescriptions, (mocked) dispensing of medications, and managing pharmacy stock levels with low-stock alerts. Includes a daily dispensing report.",
+    'techOverview.section3.subsectionPharmacy.itemFeatures.desc': "Facilitates processing of pending prescriptions, (mocked) dispensing of medications, managing pharmacy stock levels with low-stock alerts, requisition options (single/bulk), and requisition history. Includes a daily dispensing report.",
     'techOverview.section3.subsectionER.title': "3.12. Emergency Room (Placeholder)",
     'techOverview.section3.subsectionER.itemFeatures': "Critical Care Management",
     'techOverview.section3.subsectionER.itemFeatures.desc': "This module is planned to provide an ER dashboard for real-time patient triage, tracking of patient status and location within the ER, management of ER resources, and critical event alerts.",
@@ -141,7 +141,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'techOverview.section4.itemTheme.desc': "Offers user-selectable themes (Dark, Light, and System preference) to cater to individual visual comfort and reduce eye strain, enhancing accessibility.",
     'techOverview.section4.itemIcons': "Icons: lucide-react",
     'techOverview.section4.itemIcons.desc': "Uses the `lucide-react` icon library for simple, recognizable, and consistent iconography throughout the application, aiding in quick comprehension of actions and information.",
-
+    
     'techOverview.section5.title': "5. Future Considerations (Beyond Prototype)",
     'techOverview.section5.itemBackend': "Backend Development",
     'techOverview.section5.itemBackend.desc': "Comprehensive backend development including database design, robust APIs for data management, and secure authentication/authorization mechanisms to support all application functionalities.",
@@ -168,7 +168,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'techOverview.section5.itemPatientPortal': "Patient Portal & Mobile Engagement",
     'techOverview.section5.itemPatientPortal.desc': "Development of a patient-facing portal and mobile application. Patients would be able to securely access their own medical information using their National ID or Passport number. Features would include viewing appointments, lab results, medical history, and educational materials.",
     'techOverview.section5.itemMedicationAdherence': "Medication Adherence & Reminders",
-    'techOverview.section5.itemMedicationAdherence.desc': "Integration of in-app notifications and reminders sent directly to patients for medication administration. Patients would be able to confirm medication intake, providing valuable data for adherence tracking and allowing healthcare providers to monitor compliance (e.g., confirming each dose for a medication prescribed three times a day)."
+    'techOverview.section5.itemMedicationAdherence.desc': "Integration of in-app notifications and reminders sent directly to patients for medication administration. Patients would be able to confirm medication intake, providing valuable data for adherence tracking and allowing healthcare providers to monitor compliance (e.g., confirming each dose for a medication prescribed three times a day).",
+    'techOverview.section5.itemWarehouseManagement': "Dedicated Warehouse Management Module",
+    'techOverview.section5.itemWarehouseManagement.desc': "Implementation of a centralized warehouse module to manage stock levels for both pharmacy and laboratory supplies across hierarchical levels (hospital, district, provincial, national). This includes automated replenishment requests, stock tracking, expiry date management, and distribution logistics.",
 
   },
   pt: {
@@ -271,13 +273,13 @@ export const translations: Record<Locale, Record<string, string>> = {
     'techOverview.section3.subsectionWard.itemFeatures.desc': "Gerencia a ocupação de enfermarias, admissões pendentes e atribuições de leitos. Para pacientes admitidos, permite visualizar e atualizar planos de tratamento, cronogramas de medicação e anotações de médicos, juntamente com operações de (simulação) alta e transferência.",
     'techOverview.section3.subsectionLab.title': "3.9. Gestão de Laboratório",
     'techOverview.section3.subsectionLab.itemFeatures': "Fluxo de Trabalho e Inventário de Laboratório",
-    'techOverview.section3.subsectionLab.itemFeatures.desc': "Gerencia pedidos de laboratório recebidos, permite atualizações de status e fornece um modal para entrada de resultados. Inclui um resumo diário de relatórios de laboratório e um sistema de gerenciamento de inventário de reagentes (simulados) com alertas de baixo estoque.",
+    'techOverview.section3.subsectionLab.itemFeatures.desc': "Gerencia pedidos de laboratório recebidos, permite atualizações de status e fornece um modal para entrada de resultados. Inclui um resumo diário de relatórios de laboratório e um sistema de gerenciamento de inventário de reagentes (simulados) com alertas de baixo estoque e histórico de requisições.",
     'techOverview.section3.subsectionImaging.title': "3.10. Gestão de Imagem e Radiologia",
     'techOverview.section3.subsectionImaging.itemFeatures': "Gestão de Fluxo de Trabalho de Radiologia",
-    'techOverview.section3.subsectionImaging.itemFeatures.desc': "Gerencia pedidos de imagem (Raio-X, MRI, etc.), permite atualizações de status e apresenta um modal para radiologistas inserirem relatórios. Inclui um resumo diário de imagens e status de equipamentos (simulados).",
+    'techOverview.section3.subsectionImaging.itemFeatures.desc': "Gerencia pedidos de imagem (Raio-X, MRI, etc.), permite atualizações de status e apresenta um modal para radiologistas inserirem relatórios. Inclui um resumo diário de imagens e notas sobre a futura integração com engenharia biomédica para status de equipamentos.",
     'techOverview.section3.subsectionPharmacy.title': "3.11. Farmácia de Dispensação de Medicamentos",
     'techOverview.section3.subsectionPharmacy.itemFeatures': "Operações e Controle de Estoque da Farmácia",
-    'techOverview.section3.subsectionPharmacy.itemFeatures.desc': "Facilita o processamento de prescrições pendentes, (simulados) dispensação de medicamentos e gerenciamento dos níveis de estoque da farmácia com alertas de baixo estoque. Inclui um relatório diário de dispensação.",
+    'techOverview.section3.subsectionPharmacy.itemFeatures.desc': "Facilita o processamento de prescrições pendentes, (simulados) dispensação de medicamentos, gerenciamento dos níveis de estoque da farmácia com alertas de baixo estoque, opções de requisição (individual/em lote) e histórico de requisições. Inclui um relatório diário de dispensação.",
     'techOverview.section3.subsectionER.title': "3.12. Sala de Emergência (Placeholder)",
     'techOverview.section3.subsectionER.itemFeatures': "Gestão de Cuidados Críticos",
     'techOverview.section3.subsectionER.itemFeatures.desc': "Este módulo está planejado para fornecer um painel de emergência para triagem de pacientes em tempo real, rastreamento do status e localização dos pacientes dentro da emergência, gerenciamento de recursos da emergência e alertas de eventos críticos.",
@@ -306,7 +308,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     'techOverview.section4.itemTheme.desc': "Oferece temas selecionáveis pelo usuário (Escuro, Claro e preferência do Sistema) para atender ao conforto visual individual e reduzir a fadiga ocular, melhorando a acessibilidade.",
     'techOverview.section4.itemIcons': "Ícones: lucide-react",
     'techOverview.section4.itemIcons.desc': "Utiliza a biblioteca de ícones `lucide-react` para uma iconografia simples, reconhecível e consistente em toda a aplicação, auxiliando na rápida compreensão de ações e informações.",
-
+    
     'techOverview.section5.title': "5. Considerações Futuras (Além do Protótipo)",
     'techOverview.section5.itemBackend': "Desenvolvimento de Backend",
     'techOverview.section5.itemBackend.desc': "Desenvolvimento abrangente de backend, incluindo design de banco de dados, APIs robustas para gerenciamento de dados e mecanismos seguros de autenticação/autorização para suportar todas as funcionalidades da aplicação.",
@@ -333,7 +335,10 @@ export const translations: Record<Locale, Record<string, string>> = {
     'techOverview.section5.itemPatientPortal': "Portal do Paciente e Envolvimento Móvel",
     'techOverview.section5.itemPatientPortal.desc': "Desenvolvimento de um portal e aplicativo móvel voltado para o paciente. Os pacientes poderiam acessar com segurança suas próprias informações médicas usando seu número de Bilhete de Identidade ou Passaporte. Os recursos incluiriam visualização de consultas, resultados de laboratório, histórico médico e materiais educativos.",
     'techOverview.section5.itemMedicationAdherence': "Adesão à Medicação e Lembretes",
-    'techOverview.section5.itemMedicationAdherence.desc': "Integração de notificações e lembretes no aplicativo enviados diretamente aos pacientes para administração de medicamentos. Os pacientes poderiam confirmar a toma da medicação, fornecendo dados valiosos para o rastreamento da adesão e permitindo que os profissionais de saúde monitorem a conformidade (ex: confirmando cada dose para uma medicação prescrita três vezes ao dia)."
+    'techOverview.section5.itemMedicationAdherence.desc': "Integração de notificações e lembretes no aplicativo enviados diretamente aos pacientes para administração de medicamentos. Os pacientes poderiam confirmar a toma da medicação, fornecendo dados valiosos para o rastreamento da adesão e permitindo que os profissionais de saúde monitorem a conformidade (ex: confirmando cada dose para uma medicação prescrita três vezes ao dia).",
+    'techOverview.section5.itemWarehouseManagement': "Módulo Dedicado de Gestão de Armazém",
+    'techOverview.section5.itemWarehouseManagement.desc': "Implementação de um módulo de armazém centralizado para gerir os níveis de stock de consumíveis de farmácia e laboratório em níveis hierárquicos (hospitalar, distrital, provincial, nacional). Isto inclui pedidos de reposição automatizados, rastreamento de stock, gestão de datas de validade e logística de distribuição.",
+
   },
   it: { 
     'dashboard.welcomeMessage': 'Benvenuto in H365',
@@ -497,7 +502,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'techOverview.section5.itemPatientPortal': "[IT] Portal do Paciente e Envolvimento Móvel",
     'techOverview.section5.itemPatientPortal.desc': "[IT] Desenvolvimento de um portal e aplicativo móvel...",
     'techOverview.section5.itemMedicationAdherence': "[IT] Adesão à Medicação e Lembretes",
-    'techOverview.section5.itemMedicationAdherence.desc': "[IT] Integração de notificações e lembretes no aplicativo..."
+    'techOverview.section5.itemMedicationAdherence.desc': "[IT] Integração de notificações e lembretes no aplicativo...",
+    'techOverview.section5.itemWarehouseManagement': "[IT] Módulo Dedicado de Gestão de Armazém",
+    'techOverview.section5.itemWarehouseManagement.desc': "[IT] Implementação de um módulo de armazém centralizado...",
   },
   es: { 
     'dashboard.welcomeMessage': 'Bienvenido a H365',
@@ -661,7 +668,9 @@ export const translations: Record<Locale, Record<string, string>> = {
     'techOverview.section5.itemPatientPortal': "[ES] Portal do Paciente e Envolvimento Móvel",
     'techOverview.section5.itemPatientPortal.desc': "[ES] Desenvolvimento de um portal e aplicativo móvel...",
     'techOverview.section5.itemMedicationAdherence': "[ES] Adesão à Medicação e Lembretes",
-    'techOverview.section5.itemMedicationAdherence.desc': "[ES] Integração de notificações e lembretes no aplicativo..."
+    'techOverview.section5.itemMedicationAdherence.desc': "[ES] Integração de notificações e lembretes no aplicativo...",
+    'techOverview.section5.itemWarehouseManagement': "[ES] Módulo Dedicado de Gestão de Armazém",
+    'techOverview.section5.itemWarehouseManagement.desc': "[ES] Implementação de um módulo de armazém centralizado...",
   },
 };
 

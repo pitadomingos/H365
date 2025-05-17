@@ -206,6 +206,7 @@ export default function TechnicalOverviewPage() {
               {renderListItem('techOverview.section5.itemBiomedicalEngineering', 'techOverview.section5.itemBiomedicalEngineering.desc')}
               {renderListItem('techOverview.section5.itemAdvancedReporting', 'techOverview.section5.itemAdvancedReporting.desc')}
               {renderListItem('techOverview.section5.itemCampaignManagement', 'techOverview.section5.itemCampaignManagement.desc')}
+              {renderListItem('techOverview.section5.itemWarehouseManagement', 'techOverview.section5.itemWarehouseManagement.desc')}
               {renderListItem('techOverview.section5.itemSecurityCompliance', 'techOverview.section5.itemSecurityCompliance.desc')}
               {renderListItem('techOverview.section5.itemUserRoles', 'techOverview.section5.itemUserRoles.desc')}
               {renderListItem('techOverview.section5.itemOffline', 'techOverview.section5.itemOffline.desc')}
