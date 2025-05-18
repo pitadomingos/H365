@@ -5,7 +5,9 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from "@/components/ui/toaster";
 import { LocaleProvider } from '@/context/locale-context';
-import { AppShell } from '@/components/layout/app-shell'; // Import AppShell
+import { AppShell } from '@/components/layout/app-shell';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils'; 
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -22,6 +24,10 @@ export const metadata: Metadata = {
   description: 'Comprehensive Hospital Management System',
 };
 
+const SIDEBAR_WIDTH = "16rem";
+const SIDEBAR_WIDTH_MOBILE = "18rem";
+const SIDEBAR_WIDTH_ICON = "3rem";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -37,9 +43,22 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <AppShell> {/* AppShell now wraps the page children here */}
-              {children}
-            </AppShell>
+            <div
+              style={
+                {
+                  "--sidebar-width": SIDEBAR_WIDTH,
+                  "--sidebar-width-mobile": SIDEBAR_WIDTH_MOBILE, // Added this variable definition
+                  "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
+                } as React.CSSProperties
+              }
+              className={cn(
+                "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar"
+              )}
+            >
+              <SidebarProvider collapsible="icon" defaultOpen={true}>
+                <AppShell>{children}</AppShell>
+              </SidebarProvider>
+            </div>
             <Toaster />
           </ThemeProvider>
         </LocaleProvider>
