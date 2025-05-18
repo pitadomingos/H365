@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets } from 'lucide-react';
+import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks } from 'lucide-react';
 
 export type NavItem = {
   href: string;
@@ -30,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/analytics-bi', label: 'Analytics & BI', icon: BrainCircuit },
   { href: '/blood-bank', label: 'Blood Bank', icon: Droplets },
   { href: '/technical-overview', label: 'Technical Overview', icon: Info },
+  { href: '/todo-list', label: 'To-Do List', icon: ListChecks },
 ];
 
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
