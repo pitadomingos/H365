@@ -1,20 +1,19 @@
 
-"use client"; // Required for state and interactions
+"use client"; 
 
-import React, { useState } from 'react';
+import React from 'react';
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { useLocale } from '@/context/locale-context'; // Import useLocale
 import { getTranslator, type Locale } from '@/lib/i18n';
 
 export default function TechnicalOverviewPage() {
-  const [currentLocale, setCurrentLocale] = useState<Locale>('en');
+  const { currentLocale } = useLocale(); // Use global locale
   const t = getTranslator(currentLocale);
 
   const renderListItem = (titleKey: string, descKey: string) => (
-    <li className="mb-2">
+    <li className="mb-3">
       <strong className="text-primary/90">{t(titleKey)}:</strong>
       <p className="text-base text-muted-foreground mt-0.5 ml-1">{t(descKey)}</p>
     </li>
@@ -27,20 +26,8 @@ export default function TechnicalOverviewPage() {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Info className="h-8 w-8" /> {t('techOverview.pageTitle')}
           </h1>
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="language-toggle" className={currentLocale === 'en' ? 'font-semibold text-primary' : 'text-muted-foreground'}>
-              {t('techOverview.langToggle.en')}
-            </Label>
-            <Switch
-              id="language-toggle"
-              checked={currentLocale === 'pt'}
-              onCheckedChange={(checked) => setCurrentLocale(checked ? 'pt' : 'en')}
-              aria-label="Toggle language between English and Portuguese"
-            />
-            <Label htmlFor="language-toggle" className={currentLocale === 'pt' ? 'font-semibold text-primary' : 'text-muted-foreground'}>
-              {t('techOverview.langToggle.pt')}
-            </Label>
-          </div>
+          {/* Global toggle is now in the header, so local toggle can be removed if desired */}
+          {/* If you want to keep a local toggle just for this page for some reason, it would need its own state */}
         </div>
 
         <Card className="shadow-sm">
@@ -225,5 +212,3 @@ export default function TechnicalOverviewPage() {
     </AppShell>
   );
 }
-
-    

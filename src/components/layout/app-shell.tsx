@@ -4,7 +4,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Stethoscope, Menu } from "lucide-react"; // Added Menu icon
+import { Stethoscope, Menu } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS, BOTTOM_NAV_ITEMS } from "@/lib/constants";
@@ -21,8 +21,8 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-  useSidebar, // Import useSidebar
-} from "@/components/ui/sidebar"; 
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -32,32 +32,31 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-
+} from "@/components/ui/dropdown-menu";
+import { LocaleProvider } from "@/context/locale-context"; // Import LocaleProvider
+import { LocaleToggle } from "@/components/locale-toggle"; // Import LocaleToggle
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  // Get sidebar context here if SidebarProvider wraps AppShell, or pass down if AppShell wraps SidebarProvider.
-  // Assuming AppShell is inside SidebarProvider, so useSidebar can be called here.
 
   return (
-    <SidebarProvider defaultOpen>
-      <AppShellInternal pathname={pathname}>
-        {children}
-      </AppShellInternal>
-    </SidebarProvider>
+    <LocaleProvider> {/* Wrap with LocaleProvider */}
+      <SidebarProvider defaultOpen>
+        <AppShellInternal pathname={pathname}>
+          {children}
+        </AppShellInternal>
+      </SidebarProvider>
+    </LocaleProvider>
   );
 }
 
-
-// Create an internal component to use the hook, as SidebarProvider is at the top level of AppShell's return
 function AppShellInternal({ children, pathname }: { children: React.ReactNode, pathname: string }) {
   const { toggleSidebar, isMobile } = useSidebar();
   const currentYear = new Date().getFullYear();
 
   return (
     <>
-      <Sidebar collapsible="icon"> {/* Explicitly set collapsible to "icon" */}
+      <Sidebar collapsible="icon">
         <SidebarHeader className="p-4">
           <div className="flex items-center justify-between w-full">
             <Link href="/" className="flex items-center gap-2">
@@ -69,7 +68,7 @@ function AppShellInternal({ children, pathname }: { children: React.ReactNode, p
                 variant="ghost"
                 size="icon"
                 onClick={toggleSidebar}
-                className="h-7 w-7 group-data-[collapsible=icon]:hidden" // Hide when sidebar is icon-only
+                className="h-7 w-7 group-data-[collapsible=icon]:hidden"
                 aria-label="Toggle sidebar"
               >
                 <Menu className="h-5 w-5" />
@@ -84,7 +83,7 @@ function AppShellInternal({ children, pathname }: { children: React.ReactNode, p
                 <SidebarMenuButton
                   asChild
                   isActive={pathname === item.href}
-                  tooltip={item.label}
+                  tooltip={item.label} // For icon-only mode, label is used as tooltip
                   disabled={item.disabled}
                   className={cn(item.disabled && "cursor-not-allowed opacity-50")}
                 >
@@ -120,11 +119,12 @@ function AppShellInternal({ children, pathname }: { children: React.ReactNode, p
       </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
-          <SidebarTrigger className="md:hidden" /> {/* This is the standard mobile toggle */}
+          <SidebarTrigger className="md:hidden" />
           <div className="flex-1">
             {/* Breadcrumbs or page title can go here */}
           </div>
           <div className="flex items-center gap-4">
+            <LocaleToggle /> {/* Add LocaleToggle here */}
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
