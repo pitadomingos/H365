@@ -2,13 +2,13 @@
 "use client"; 
 
 import React, { useState, useEffect } from 'react';
-import { AppShell } from "@/components/layout/app-shell";
+// AppShell is no longer imported or rendered here, it's part of the layout
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useLocale } from '@/context/locale-context'; // Import useLocale
-import { getTranslator, type Locale } from '@/lib/i18n';
+import { useLocale } from '@/context/locale-context';
+import { getTranslator, type Locale, defaultLocale } from '@/lib/i18n';
 import { PieChart, Pie, Cell, Legend as RechartsLegend, Tooltip as RechartsTooltip, ResponsiveContainer, Bar, BarChart as RechartsBarChart, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 
@@ -52,7 +52,7 @@ const ICONS_MAP: { [key: string]: React.ElementType } = {
 
 
 export default function DashboardPage() {
-  const { currentLocale } = useLocale(); // Use global locale
+  const { currentLocale } = useLocale();
   const t = getTranslator(currentLocale);
 
   const [summaryCardsData, setSummaryCardsData] = useState<SummaryCardData[]>([]);
@@ -70,9 +70,7 @@ export default function DashboardPage() {
   const [dailyAttendanceData, setDailyAttendanceData] = useState<DailyAttendanceItem[]>([]);
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
 
-
   useEffect(() => {
-    // Simulate fetching summary cards
     setIsLoadingSummary(true);
     setTimeout(() => {
       const fetchedSummary: SummaryCardData[] = [
@@ -88,7 +86,6 @@ export default function DashboardPage() {
       setIsLoadingSummary(false);
     }, 1000);
 
-    // Simulate fetching quick actions
     setIsLoadingQuickActions(true);
     setTimeout(() => {
         const fetchedQuickActions: QuickActionData[] = [
@@ -103,7 +100,6 @@ export default function DashboardPage() {
         setIsLoadingQuickActions(false);
     }, 800);
 
-    // Simulate fetching recent activity
     setIsLoadingActivity(true);
     setTimeout(() => {
         const fetchedActivity: RecentActivityItem[] = [
@@ -117,7 +113,6 @@ export default function DashboardPage() {
         setIsLoadingActivity(false);
     }, 1200);
     
-    // Simulate fetching chart data
     setIsLoadingEntryPoints(true);
     setTimeout(() => {
         const fetchedEntryPoints: ChartDataItem[] = [
@@ -144,7 +139,7 @@ export default function DashboardPage() {
         setIsLoadingAttendance(false);
     }, 1600);
 
-  }, [t]); // Add t to dependency array for entry points chart as it uses t() for names
+  }, [t, currentLocale]); 
 
 
   const chartConfig = {
@@ -156,7 +151,6 @@ export default function DashboardPage() {
 
 
   return (
-    <AppShell>
       <div className="flex flex-col gap-6">
         <div className="mb-2">
           <h1 className="text-3xl font-bold tracking-tight">{t('dashboard.welcomeMessage')}</h1>
@@ -392,6 +386,5 @@ export default function DashboardPage() {
         </div>
 
       </div>
-    </AppShell>
   );
 }

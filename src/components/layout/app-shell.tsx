@@ -1,5 +1,5 @@
 
-"use client";
+"use client"; 
 
 import * as React from "react";
 import Link from "next/link";
@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { Stethoscope, Menu } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS, BOTTOM_NAV_ITEMS } from "@/lib/constants";
+import { NAV_ITEMS, BOTTOM_NAV_ITEMS, type NavItem } from "@/lib/constants"; 
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +23,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"; 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -33,29 +33,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LocaleProvider } from "@/context/locale-context"; // Import LocaleProvider
-import { LocaleToggle } from "@/components/locale-toggle"; // Import LocaleToggle
+import { LocaleToggle } from "@/components/locale-toggle";
 
+
+// This component is now part of RootLayout and wraps the page {children}
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-
-  return (
-    <LocaleProvider> {/* Wrap with LocaleProvider */}
-      <SidebarProvider defaultOpen>
-        <AppShellInternal pathname={pathname}>
-          {children}
-        </AppShellInternal>
-      </SidebarProvider>
-    </LocaleProvider>
-  );
-}
-
-function AppShellInternal({ children, pathname }: { children: React.ReactNode, pathname: string }) {
-  const { toggleSidebar, isMobile } = useSidebar();
+  const { toggleSidebar, isMobile } = useSidebar(); // useSidebar can be called here as SidebarProvider is a parent
   const currentYear = new Date().getFullYear();
 
   return (
-    <>
+    <SidebarProvider defaultOpen collapsible="icon"> {/* SidebarProvider can be here if AppShell is always the direct child under LocaleProvider */}
       <Sidebar collapsible="icon">
         <SidebarHeader className="p-4">
           <div className="flex items-center justify-between w-full">
@@ -78,12 +66,12 @@ function AppShellInternal({ children, pathname }: { children: React.ReactNode, p
         </SidebarHeader>
         <SidebarContent className="flex-1 p-2">
           <SidebarMenu>
-            {NAV_ITEMS.map((item) => (
+            {NAV_ITEMS.map((item: NavItem) => ( 
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
                   isActive={pathname === item.href}
-                  tooltip={item.label} // For icon-only mode, label is used as tooltip
+                  tooltip={item.label}
                   disabled={item.disabled}
                   className={cn(item.disabled && "cursor-not-allowed opacity-50")}
                 >
@@ -98,7 +86,7 @@ function AppShellInternal({ children, pathname }: { children: React.ReactNode, p
         </SidebarContent>
         <SidebarFooter className="p-2">
            <SidebarMenu>
-            {BOTTOM_NAV_ITEMS.map((item) => (
+            {BOTTOM_NAV_ITEMS.map((item: NavItem) => ( 
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
@@ -124,7 +112,7 @@ function AppShellInternal({ children, pathname }: { children: React.ReactNode, p
             {/* Breadcrumbs or page title can go here */}
           </div>
           <div className="flex items-center gap-4">
-            <LocaleToggle /> {/* Add LocaleToggle here */}
+            <LocaleToggle />
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -155,13 +143,13 @@ function AppShellInternal({ children, pathname }: { children: React.ReactNode, p
           </div>
         </header>
         <main className="flex-1 overflow-auto p-4 sm:p-6 bg-muted/40 dark:bg-transparent">
-          {children}
+          {children} {/* Page components are rendered here */}
         </main>
         <footer className="border-t bg-background p-4 text-center text-xs text-muted-foreground">
           <p>&copy; {currentYear} H365. All rights reserved.</p>
           <p>Version 0.1.0 (Prototype)</p>
         </footer>
       </SidebarInset>
-    </>
+    </SidebarProvider>
   );
 }
