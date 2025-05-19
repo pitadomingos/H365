@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -26,7 +25,7 @@ interface Patient {
   id: string;
   nationalId: string;
   fullName: string;
-  dob: string;
+  dob: string; // Assuming YYYY-MM-DD string from backend
   gender: "Male" | "Female" | "Other";
 }
 
@@ -35,43 +34,26 @@ interface WaitingListItem {
   patientName: string;
   photoUrl: string;
   timeAdded: string;
-  location: string;
-  status: string;
+  location: string; // Department
+  status: string; // Reason for visit
   gender?: "Male" | "Female" | "Other";
 }
 
 const initialVisitChartData = [
-  { department: "Outpatient", visits: 12, fill: "hsl(var(--chart-1))" },
-  { department: "Lab", visits: 8, fill: "hsl(var(--chart-2))" },
-  { department: "Pharmacy", visits: 5, fill: "hsl(var(--chart-3))" },
-  { department: "Specialist", visits: 3, fill: "hsl(var(--chart-4))" },
-  { department: "Emergency", visits: 2, fill: "hsl(var(--chart-5))" },
+  { department: "Outpatient", visits: 0, fill: "hsl(var(--chart-1))" },
+  { department: "Lab", visits: 0, fill: "hsl(var(--chart-2))" },
+  { department: "Pharmacy", visits: 0, fill: "hsl(var(--chart-3))" },
+  { department: "Specialist", visits: 0, fill: "hsl(var(--chart-4))" },
+  { department: "Emergency", visits: 0, fill: "hsl(var(--chart-5))" },
 ];
 
 const chartConfig = {
-  visits: {
-    label: "Visits",
-  },
-  outpatient: {
-    label: "Outpatient",
-    color: "hsl(var(--chart-1))",
-  },
-  lab: {
-    label: "Laboratory",
-    color: "hsl(var(--chart-2))",
-  },
-  pharmacy: {
-    label: "Pharmacy",
-    color: "hsl(var(--chart-3))",
-  },
-  specialist: {
-    label: "Specialist",
-    color: "hsl(var(--chart-4))",
-  },
-  emergency: {
-    label: "Emergency",
-    color: "hsl(var(--chart-5))",
-  },
+  visits: { label: "Visits" },
+  outpatient: { label: "Outpatient", color: "hsl(var(--chart-1))" },
+  lab: { label: "Laboratory", color: "hsl(var(--chart-2))" },
+  pharmacy: { label: "Pharmacy", color: "hsl(var(--chart-3))" },
+  specialist: { label: "Specialist", color: "hsl(var(--chart-4))" },
+  emergency: { label: "Emergency", color: "hsl(var(--chart-5))" },
 } satisfies ChartConfig;
 
 
@@ -87,7 +69,7 @@ export default function VisitingPatientsPage() {
   const [isAddingToWaitingList, setIsAddingToWaitingList] = useState(false);
 
   const [currentDate, setCurrentDate] = useState('');
-  const hospitalName = "HealthFlow Central Hospital";
+  const hospitalName = "HealthFlow Central Hospital"; // This could come from config/context later
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalNationalId, setModalNationalId] = useState("");
@@ -99,7 +81,7 @@ export default function VisitingPatientsPage() {
   const [waitingList, setWaitingList] = useState<WaitingListItem[]>([]);
   const [isWaitingListLoading, setIsWaitingListLoading] = useState(true);
 
-  const [visitChartData, setVisitChartData] = useState<any[]>([]);
+  const [visitChartData, setVisitChartData] = useState<any[]>(initialVisitChartData);
   const [analyticsStats, setAnalyticsStats] = useState({
     avgWaitTime: "0",
     totalProcessed: "0",
@@ -110,29 +92,54 @@ export default function VisitingPatientsPage() {
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
 
-    setIsWaitingListLoading(true);
-    setTimeout(() => {
-      const initialWaitingList: WaitingListItem[] = [
-        { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
-        { id: "WL002", patientName: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
-        { id: "WL003", patientName: "Charlie Brown", gender: "Male", timeAdded: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
-        { id: "WL004", patientName: "Diana Prince", gender: "Female", timeAdded: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
-      ];
-      setWaitingList(initialWaitingList);
-      setIsWaitingListLoading(false);
-    }, 1500);
+    const fetchWaitingListData = async () => {
+      setIsWaitingListLoading(true);
+      try {
+        // Simulate API call
+        // const response = await fetch('/api/v1/visits/waiting-list');
+        // if (!response.ok) throw new Error('Failed to fetch waiting list');
+        // const data = await response.json();
+        // setWaitingList(data);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Mock delay
+        const mockData: WaitingListItem[] = [
+          { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
+          { id: "WL002", patientName: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
+        ];
+        setWaitingList(mockData);
+      } catch (error) {
+        console.error("Error fetching waiting list:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load waiting list." });
+      } finally {
+        setIsWaitingListLoading(false);
+      }
+    };
 
-    setIsAnalyticsLoading(true);
-    setTimeout(() => {
-        setVisitChartData(initialVisitChartData);
+    const fetchAnalyticsData = async () => {
+      setIsAnalyticsLoading(true);
+      try {
+        // Simulate API call
+        // const response = await fetch('/api/v1/visits/stats');
+        // if (!response.ok) throw new Error('Failed to fetch visit stats');
+        // const data = await response.json();
+        // setVisitChartData(data.chartData);
+        // setAnalyticsStats(data.summaryStats);
+        await new Promise(resolve => setTimeout(resolve, 1200)); // Mock delay
+        setVisitChartData(initialVisitChartData.map(d => ({...d, visits: Math.floor(Math.random()*20)})));
         setAnalyticsStats({
-            avgWaitTime: "25",
-            totalProcessed: (initialWaitingList.length + 15).toString(), // Example dynamic calculation
-            peakHour: "11:00 AM"
+            avgWaitTime: "22",
+            totalProcessed: "37",
+            peakHour: "10:00 AM"
         });
+      } catch (error) {
+        console.error("Error fetching analytics:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load visit analytics." });
+      } finally {
         setIsAnalyticsLoading(false);
-    }, 1800);
+      }
+    };
 
+    fetchWaitingListData();
+    fetchAnalyticsData();
   }, []);
 
   const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
@@ -153,30 +160,26 @@ export default function VisitingPatientsPage() {
     setReasonForVisit("");
     setAssignedDoctor("");
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    if (searchNationalId === "123456789") {
-      setSearchedPatient({
-        id: "P001",
-        nationalId: "123456789",
-        fullName: "Demo Patient One",
-        dob: "1990-01-01",
-        gender: "Male",
-      });
-      setPatientNotFound(false);
-    } else if (searchNationalId === "987654321") {
-        setSearchedPatient({
-        id: "P002",
-        nationalId: "987654321",
-        fullName: "Jane Sample Doe",
-        dob: "1985-05-15",
-        gender: "Female",
-      });
-      setPatientNotFound(false);
+    try {
+      const response = await fetch(`/api/v1/patients/search?nationalId=${searchNationalId.trim()}`);
+      if (response.status === 404) {
+        setPatientNotFound(true);
+        toast({ variant: "default", title: "Not Found", description: "Patient with this National ID not found. You can register them." });
+      } else if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      } else {
+        const data: Patient = await response.json();
+        setSearchedPatient(data);
+        setPatientNotFound(false);
+        toast({ title: "Patient Found", description: `${data.fullName}'s details loaded.` });
+      }
+    } catch (error: any) {
+      console.error("Error searching patient:", error);
+      toast({ variant: "destructive", title: "Search Error", description: error.message || "Could not search for patient. Is the backend running?" });
+      setPatientNotFound(true); // Assume not found on error too
+    } finally {
+      setIsLoadingSearch(false);
     }
-    else {
-      setPatientNotFound(true);
-    }
-    setIsLoadingSearch(false);
   };
 
   const handleAddToWaitingList = async () => {
@@ -189,28 +192,55 @@ export default function VisitingPatientsPage() {
         return;
     }
     setIsAddingToWaitingList(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const newWaitingListItem: WaitingListItem = {
-        id: `WL${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        patientName: searchedPatient.fullName,
-        photoUrl: `https://placehold.co/40x40.png`, 
-        gender: searchedPatient.gender,
-        location: department,
-        status: reasonForVisit,
-        timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    const payload = {
+      patientId: searchedPatient.id,
+      department: department,
+      reasonForVisit: reasonForVisit,
+      assignedDoctor: assignedDoctor || null,
+      visitDate: new Date().toISOString()
     };
-    setWaitingList(prev => [newWaitingListItem, ...prev]);
 
-    toast({ title: "Patient Added to Visit List", description: `${newWaitingListItem.patientName} recorded for ${department}. They are now in the waiting list.`});
+    try {
+      const response = await fetch('/api/v1/visits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-    setSearchedPatient(null);
-    setSearchNationalId("");
-    setDepartment("");
-    setReasonForVisit("");
-    setAssignedDoctor("");
-    setPatientNotFound(false);
-    setIsAddingToWaitingList(false);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Failed to add to waiting list. API error."}));
+        throw new Error(errorData.error || `API error: ${response.statusText}`);
+      }
+      
+      // const newVisit = await response.json(); // Backend would return the created visit item
+
+      // Optimistic update for UI
+      const newWaitingListItem: WaitingListItem = {
+          id: `WL${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, // Use ID from backend in real app
+          patientName: searchedPatient.fullName,
+          photoUrl: `https://placehold.co/40x40.png`,
+          gender: searchedPatient.gender,
+          location: department,
+          status: reasonForVisit,
+          timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setWaitingList(prev => [newWaitingListItem, ...prev]);
+
+      toast({ title: "Patient Added to Visit List", description: `${newWaitingListItem.patientName} recorded for ${department}.`});
+
+      setSearchedPatient(null);
+      setSearchNationalId("");
+      setDepartment("");
+      setReasonForVisit("");
+      setAssignedDoctor("");
+      setPatientNotFound(false);
+    } catch (error: any) {
+        console.error("Error adding to waiting list:", error);
+        toast({ variant: "destructive", title: "Submission Error", description: error.message || "Could not add patient to waiting list." });
+    } finally {
+        setIsAddingToWaitingList(false);
+    }
   };
 
   const handleModalRegister = async () => {
@@ -219,23 +249,47 @@ export default function VisitingPatientsPage() {
       return;
     }
     setIsRegisteringInModal(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast({
-      title: "Patient Registered (Mock)",
-      description: `${modalFullName} has been registered. You can now search for them using ID: ${modalNationalId}.`,
-    });
-    setSearchNationalId(modalNationalId);
-    setIsModalOpen(false);
-    setPatientNotFound(false);
 
-    setModalNationalId("");
-    setModalFullName("");
-    setModalDob(undefined);
-    setModalGender("");
-    setIsRegisteringInModal(false);
+    const payload = {
+      nationalId: modalNationalId,
+      fullName: modalFullName,
+      dateOfBirth: format(modalDob, "yyyy-MM-dd"),
+      gender: modalGender,
+      // Add other minimal fields if your backend requires them for initial registration
+    };
+
+    try {
+      const response = await fetch('/api/v1/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Registration failed. API error."}));
+        throw new Error(errorData.error || `API error: ${response.statusText}`);
+      }
+      
+      // const newPatient = await response.json(); // Backend returns created patient
+      toast({
+        title: "Patient Registered (Mock)",
+        description: `${payload.fullName} has been registered. You can now search for them using ID: ${payload.nationalId}.`,
+      });
+      setSearchNationalId(payload.nationalId); // Pre-fill search
+      setIsModalOpen(false);
+      setPatientNotFound(false);
+
+      setModalNationalId("");
+      setModalFullName("");
+      setModalDob(undefined);
+      setModalGender("");
+    } catch (error: any) {
+      console.error("Error registering patient in modal:", error);
+      toast({ variant: "destructive", title: "Registration Error", description: error.message || "Could not register patient." });
+    } finally {
+      setIsRegisteringInModal(false);
+    }
   };
-
 
   return (
       <div className="flex flex-col gap-8">
@@ -259,7 +313,7 @@ export default function VisitingPatientsPage() {
                 <div className="flex gap-2 mt-1">
                   <Input
                     id="searchNationalId"
-                    placeholder="Enter National ID (e.g., 123456789 or 987654321 for demo)"
+                    placeholder="Enter National ID (e.g., 123456789 for demo)"
                     value={searchNationalId}
                     onChange={(e) => setSearchNationalId(e.target.value)}
                     disabled={isLoadingSearch}
@@ -339,7 +393,7 @@ export default function VisitingPatientsPage() {
                            <DialogClose asChild>
                             <Button type="button" variant="outline" disabled={isRegisteringInModal}>Cancel</Button>
                            </DialogClose>
-                          <Button onClick={handleModalRegister} disabled={isRegisteringInModal}>
+                          <Button onClick={handleModalRegister} disabled={isRegisteringInModal || !modalNationalId || !modalFullName || !modalDob || !modalGender}>
                             {isRegisteringInModal ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                             {isRegisteringInModal ? "Registering..." : "Register Patient"}
                             </Button>
@@ -460,7 +514,26 @@ export default function VisitingPatientsPage() {
                   <p className="text-sm">No patients currently in the waiting list.</p>
                 </div>
               )}
-               <Button variant="outline" className="w-full mt-4 text-sm" onClick={() => {setIsWaitingListLoading(true); setTimeout(() => { setWaitingList([...waitingList].sort(() => 0.5 - Math.random())); setIsWaitingListLoading(false); toast({title: "List Refreshed (Mock)"})}, 700) }} disabled={isWaitingListLoading}>
+               <Button variant="outline" className="w-full mt-4 text-sm" onClick={async () => {
+                    setIsWaitingListLoading(true); 
+                    try {
+                        // const response = await fetch('/api/v1/visits/waiting-list');
+                        // if (!response.ok) throw new Error('Failed to refresh waiting list');
+                        // const data = await response.json();
+                        // setWaitingList(data);
+                        await new Promise(resolve => setTimeout(resolve, 700)); // Mock delay
+                        const mockData: WaitingListItem[] = [ // Replace with actual fetched data
+                          { id: "WLREF001", patientName: "Refreshed Alice", gender: "Female", timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), location: "Outpatient", status: "Waiting", photoUrl: "https://placehold.co/40x40.png" },
+                          { id: "WLREF002", patientName: "Refreshed Bob", gender: "Male", timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), location: "Lab", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
+                        ];
+                        setWaitingList(mockData);
+                        toast({title: "List Refreshed (Mock)"});
+                    } catch (error) {
+                        toast({variant: "destructive", title: "Error", description: "Could not refresh waiting list."});
+                    } finally {
+                        setIsWaitingListLoading(false);
+                    }
+                }} disabled={isWaitingListLoading}>
                 {isWaitingListLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                 Refresh List
               </Button>
@@ -530,12 +603,16 @@ export default function VisitingPatientsPage() {
                      <RechartsLegend content={({ payload }) => {
                         return (
                         <div className="flex items-center justify-center gap-3 mt-3">
-                            {payload?.map((entry: any) => (
-                            <div key={`item-${entry.value}`} className="flex items-center space-x-1">
-                                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                <span className="text-xs text-muted-foreground">{entry.payload.label}</span>
-                            </div>
-                            ))}
+                            {payload?.map((entry: any, index: number) => {
+                                const departmentKey = entry.payload.department.toLowerCase().replace(/\s+/g, '');
+                                const chartItemConfig = chartConfig[departmentKey as keyof typeof chartConfig] || { label: entry.payload.department, color: entry.color };
+                                return (
+                                    <div key={`item-${index}`} className="flex items-center space-x-1">
+                                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: chartItemConfig.color }} />
+                                        <span className="text-xs text-muted-foreground">{chartItemConfig.label}</span>
+                                    </div>
+                                );
+                            })}
                         </div>
                         )
                     }} />
@@ -548,4 +625,7 @@ export default function VisitingPatientsPage() {
           </CardContent>
         </Card>
       </div>
-  )
+  );
+}
+
+    
