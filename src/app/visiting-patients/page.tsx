@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2 } from "lucide-react";
+import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2, Cell } from "lucide-react"; // Added Cell
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid } from "recharts"
@@ -20,12 +20,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
-
 interface Patient {
   id: string;
   nationalId: string;
   fullName: string;
-  dob: string; // Assuming YYYY-MM-DD string from backend
+  dob: string; 
   gender: "Male" | "Female" | "Other";
 }
 
@@ -34,10 +33,16 @@ interface WaitingListItem {
   patientName: string;
   photoUrl: string;
   timeAdded: string;
-  location: string; // Department
-  status: string; // Reason for visit
+  location: string; 
+  status: string; 
   gender?: "Male" | "Female" | "Other";
 }
+
+const initialWaitingListData: WaitingListItem[] = [
+    { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
+    { id: "WL002", patientName: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
+];
+
 
 const initialVisitChartData = [
   { department: "Outpatient", visits: 0, fill: "hsl(var(--chart-1))" },
@@ -69,7 +74,7 @@ export default function VisitingPatientsPage() {
   const [isAddingToWaitingList, setIsAddingToWaitingList] = useState(false);
 
   const [currentDate, setCurrentDate] = useState('');
-  const hospitalName = "HealthFlow Central Hospital"; // This could come from config/context later
+  const hospitalName = "HealthFlow Central Hospital"; 
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalNationalId, setModalNationalId] = useState("");
@@ -81,7 +86,7 @@ export default function VisitingPatientsPage() {
   const [waitingList, setWaitingList] = useState<WaitingListItem[]>([]);
   const [isWaitingListLoading, setIsWaitingListLoading] = useState(true);
 
-  const [visitChartData, setVisitChartData] = useState<any[]>(initialVisitChartData);
+  const [visitChartData, setVisitChartData] = useState<typeof initialVisitChartData>(initialVisitChartData);
   const [analyticsStats, setAnalyticsStats] = useState({
     avgWaitTime: "0",
     totalProcessed: "0",
@@ -95,17 +100,12 @@ export default function VisitingPatientsPage() {
     const fetchWaitingListData = async () => {
       setIsWaitingListLoading(true);
       try {
-        // Simulate API call
         // const response = await fetch('/api/v1/visits/waiting-list');
         // if (!response.ok) throw new Error('Failed to fetch waiting list');
         // const data = await response.json();
         // setWaitingList(data);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Mock delay
-        const mockData: WaitingListItem[] = [
-          { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
-          { id: "WL002", patientName: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
-        ];
-        setWaitingList(mockData);
+        await new Promise(resolve => setTimeout(resolve, 1000)); 
+        setWaitingList(initialWaitingListData);
       } catch (error) {
         console.error("Error fetching waiting list:", error);
         toast({ variant: "destructive", title: "Error", description: "Could not load waiting list." });
@@ -117,18 +117,18 @@ export default function VisitingPatientsPage() {
     const fetchAnalyticsData = async () => {
       setIsAnalyticsLoading(true);
       try {
-        // Simulate API call
         // const response = await fetch('/api/v1/visits/stats');
         // if (!response.ok) throw new Error('Failed to fetch visit stats');
         // const data = await response.json();
         // setVisitChartData(data.chartData);
         // setAnalyticsStats(data.summaryStats);
-        await new Promise(resolve => setTimeout(resolve, 1200)); // Mock delay
-        setVisitChartData(initialVisitChartData.map(d => ({...d, visits: Math.floor(Math.random()*20)})));
+        await new Promise(resolve => setTimeout(resolve, 1200)); 
+        const dynamicChartData = initialVisitChartData.map(d => ({...d, visits: Math.floor(Math.random()*50) + 5})); // Ensure some visits
+        setVisitChartData(dynamicChartData);
         setAnalyticsStats({
-            avgWaitTime: "22",
-            totalProcessed: "37",
-            peakHour: "10:00 AM"
+            avgWaitTime: "25",
+            totalProcessed: (initialWaitingListData.length + 15).toString(), // Example dynamic calculation
+            peakHour: "11:00 AM"
         });
       } catch (error) {
         console.error("Error fetching analytics:", error);
@@ -161,22 +161,31 @@ export default function VisitingPatientsPage() {
     setAssignedDoctor("");
 
     try {
-      const response = await fetch(`/api/v1/patients/search?nationalId=${searchNationalId.trim()}`);
-      if (response.status === 404) {
+      // const response = await fetch(`/api/v1/patients/search?nationalId=${searchNationalId.trim()}`);
+      // if (response.status === 404) {
+      //   setPatientNotFound(true);
+      //   toast({ variant: "default", title: "Not Found", description: "Patient with this National ID not found. You can register them." });
+      // } else if (!response.ok) {
+      //   throw new Error(`API error: ${response.statusText}`);
+      // } else {
+      //   const data: Patient = await response.json();
+      //   setSearchedPatient(data);
+      //   setPatientNotFound(false);
+      //   toast({ title: "Patient Found", description: `${data.fullName}'s details loaded.` });
+      // }
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Mock delay
+      if (searchNationalId.trim() === "12345") {
+         setSearchedPatient({ id: "P001", nationalId: "12345", fullName: "Demo Patient Searched", dob: "1990-01-01", gender: "Female" });
+         setPatientNotFound(false);
+         toast({ title: "Patient Found", description: `Demo Patient Searched's details loaded.` });
+      } else {
         setPatientNotFound(true);
         toast({ variant: "default", title: "Not Found", description: "Patient with this National ID not found. You can register them." });
-      } else if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
-      } else {
-        const data: Patient = await response.json();
-        setSearchedPatient(data);
-        setPatientNotFound(false);
-        toast({ title: "Patient Found", description: `${data.fullName}'s details loaded.` });
       }
     } catch (error: any) {
       console.error("Error searching patient:", error);
       toast({ variant: "destructive", title: "Search Error", description: error.message || "Could not search for patient. Is the backend running?" });
-      setPatientNotFound(true); // Assume not found on error too
+      setPatientNotFound(true); 
     } finally {
       setIsLoadingSearch(false);
     }
@@ -202,22 +211,22 @@ export default function VisitingPatientsPage() {
     };
 
     try {
-      const response = await fetch('/api/v1/visits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      // const response = await fetch('/api/v1/visits', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(payload),
+      // });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Failed to add to waiting list. API error."}));
-        throw new Error(errorData.error || `API error: ${response.statusText}`);
-      }
+      // if (!response.ok) {
+      //   const errorData = await response.json().catch(() => ({ error: "Failed to add to waiting list. API error."}));
+      //   throw new Error(errorData.error || `API error: ${response.statusText}`);
+      // }
       
-      // const newVisit = await response.json(); // Backend would return the created visit item
+      // const newVisit = await response.json();
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Optimistic update for UI
       const newWaitingListItem: WaitingListItem = {
-          id: `WL${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, // Use ID from backend in real app
+          id: `WL${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, 
           patientName: searchedPatient.fullName,
           photoUrl: `https://placehold.co/40x40.png`,
           gender: searchedPatient.gender,
@@ -255,27 +264,27 @@ export default function VisitingPatientsPage() {
       fullName: modalFullName,
       dateOfBirth: format(modalDob, "yyyy-MM-dd"),
       gender: modalGender,
-      // Add other minimal fields if your backend requires them for initial registration
     };
 
     try {
-      const response = await fetch('/api/v1/patients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      // const response = await fetch('/api/v1/patients', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(payload),
+      // });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Registration failed. API error."}));
-        throw new Error(errorData.error || `API error: ${response.statusText}`);
-      }
+      // if (!response.ok) {
+      //   const errorData = await response.json().catch(() => ({ error: "Registration failed. API error."}));
+      //   throw new Error(errorData.error || `API error: ${response.statusText}`);
+      // }
       
-      // const newPatient = await response.json(); // Backend returns created patient
+      // const newPatient = await response.json();
+      await new Promise(resolve => setTimeout(resolve, 1000));
       toast({
         title: "Patient Registered (Mock)",
         description: `${payload.fullName} has been registered. You can now search for them using ID: ${payload.nationalId}.`,
       });
-      setSearchNationalId(payload.nationalId); // Pre-fill search
+      setSearchNationalId(payload.nationalId); 
       setIsModalOpen(false);
       setPatientNotFound(false);
 
@@ -313,7 +322,7 @@ export default function VisitingPatientsPage() {
                 <div className="flex gap-2 mt-1">
                   <Input
                     id="searchNationalId"
-                    placeholder="Enter National ID (e.g., 123456789 for demo)"
+                    placeholder="Enter National ID (e.g., 12345 for demo)"
                     value={searchNationalId}
                     onChange={(e) => setSearchNationalId(e.target.value)}
                     disabled={isLoadingSearch}
@@ -521,8 +530,8 @@ export default function VisitingPatientsPage() {
                         // if (!response.ok) throw new Error('Failed to refresh waiting list');
                         // const data = await response.json();
                         // setWaitingList(data);
-                        await new Promise(resolve => setTimeout(resolve, 700)); // Mock delay
-                        const mockData: WaitingListItem[] = [ // Replace with actual fetched data
+                        await new Promise(resolve => setTimeout(resolve, 700)); 
+                        const mockData: WaitingListItem[] = [ 
                           { id: "WLREF001", patientName: "Refreshed Alice", gender: "Female", timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), location: "Outpatient", status: "Waiting", photoUrl: "https://placehold.co/40x40.png" },
                           { id: "WLREF002", patientName: "Refreshed Bob", gender: "Male", timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), location: "Lab", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
                         ];
@@ -599,23 +608,34 @@ export default function VisitingPatientsPage() {
                         cursor={false}
                         content={<ChartTooltipContent indicator="dot" hideLabel />}
                     />
-                    <Bar dataKey="visits" radius={4} />
-                     <RechartsLegend content={({ payload }) => {
-                        return (
-                        <div className="flex items-center justify-center gap-3 mt-3">
-                            {payload?.map((entry: any, index: number) => {
-                                const departmentKey = entry.payload.department.toLowerCase().replace(/\s+/g, '');
-                                const chartItemConfig = chartConfig[departmentKey as keyof typeof chartConfig] || { label: entry.payload.department, color: entry.color };
+                    <Bar dataKey="visits" radius={4}>
+                      {visitChartData.map((_entry, index) => (
+                        <Cell key={`cell-${index}`} fill={_entry.fill || chartConfig[_entry.department?.toLowerCase().replace(/\s+/g, '') as keyof typeof chartConfig]?.color || '#8884d8'} />
+                      ))}
+                    </Bar>
+                     <RechartsLegend
+                        content={() => {
+                          if (!visitChartData || visitChartData.length === 0) return null;
+                          return (
+                            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-3">
+                              {visitChartData.map((dataEntry, index) => {
+                                const departmentName = dataEntry.department || "Unknown Department";
+                                const departmentKey = departmentName.toLowerCase().replace(/\s+/g, '') as keyof typeof chartConfig;
+                                const chartItem = chartConfig[departmentKey];
+                                const label = chartItem?.label || departmentName;
+                                const color = dataEntry.fill || chartItem?.color || '#8884d8'; 
+                    
                                 return (
-                                    <div key={`item-${index}`} className="flex items-center space-x-1">
-                                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: chartItemConfig.color }} />
-                                        <span className="text-xs text-muted-foreground">{chartItemConfig.label}</span>
-                                    </div>
+                                  <div key={`legend-item-${index}`} className="flex items-center space-x-1">
+                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+                                    <span className="text-xs text-muted-foreground">{label}</span>
+                                  </div>
                                 );
-                            })}
-                        </div>
-                        )
-                    }} />
+                              })}
+                            </div>
+                          );
+                        }}
+                     />
                   </RechartsBarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -627,5 +647,3 @@ export default function VisitingPatientsPage() {
       </div>
   );
 }
-
-    
