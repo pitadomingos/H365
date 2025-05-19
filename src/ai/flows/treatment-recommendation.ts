@@ -49,8 +49,15 @@ const treatmentRecommendationFlow = ai.defineFlow(
     inputSchema: TreatmentRecommendationInputSchema,
     outputSchema: TreatmentRecommendationOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
+  async (input): Promise<TreatmentRecommendationOutput> => {
+    const { output } = await prompt(input);
+    if (!output) {
+      console.error('AI prompt did not return the expected output structure for treatment recommendation.');
+      // Consider returning a more structured error or a default object matching TreatmentRecommendationOutputSchema
+      // For now, throwing an error that will be caught by the server action wrapper.
+      throw new Error('AI failed to generate a valid recommendation structure.');
+    }
+    return output;
   }
 );
+

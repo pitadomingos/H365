@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -24,7 +24,7 @@ import { z } from 'zod';
 interface WaitingListItem {
   id: number | string;
   name: string;
-  time: string;
+  timeAdded: string;
   location: string;
   status: string;
   photoUrl: string;
@@ -92,63 +92,32 @@ export default function PatientRegistrationPage() {
     setIsWaitingListLoading(true);
     setTimeout(() => {
       const initialWaitingList: WaitingListItem[] = [
-        { id: 1, name: "Alice Wonderland", gender: "Female", time: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
-        { id: 2, name: "Bob The Builder", gender: "Male", time: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
-        { id: 3, name: "Charlie Brown", gender: "Male", time: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
-        { id: 4, name: "Diana Prince", gender: "Female", time: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
-        { id: 5, name: "Edward Scissorhands", gender: "Male", time: "11:30 AM", location: "Specialized Dentist", status: "Procedure Complete", photoUrl: "https://placehold.co/40x40.png" },
-        { id: 6, name: "Fiona Gallagher", gender: "Female", time: "11:45 AM", location: "Outpatient", status: "Dispatched to Homecare", photoUrl: "https://placehold.co/40x40.png" },
+        { id: 1, name: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
+        { id: 2, name: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
+        { id: 3, name: "Charlie Brown", gender: "Male", timeAdded: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
+        { id: 4, name: "Diana Prince", gender: "Female", timeAdded: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
+        { id: 5, name: "Edward Scissorhands", gender: "Male", timeAdded: "11:30 AM", location: "Specialized Dentist", status: "Procedure Complete", photoUrl: "https://placehold.co/40x40.png" },
+        { id: 6, name: "Fiona Gallagher", gender: "Female", timeAdded: "11:45 AM", location: "Outpatient", status: "Dispatched to Homecare", photoUrl: "https://placehold.co/40x40.png" },
       ];
       setWaitingList(initialWaitingList);
       setIsWaitingListLoading(false);
     }, 1500);
+  }, []);
 
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [stream]);
-
-  const enableCamera = async () => {
-    if (hasCameraPermission === false && !stream) {
+  const enableCamera = useCallback(async () => {
+    if (hasCameraPermission === false && !stream) { // If denied, allow retrying by resetting state
       setHasCameraPermission(null); 
     }
-
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        setStream(mediaStream);
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current?.play().catch(err => {
-              console.error("Error playing video:", err);
-              toast({
-                variant: "destructive",
-                title: "Video Playback Error",
-                description: "Could not start the camera preview.",
-              });
-            });
-          };
-        } else {
-            console.error("videoRef.current is not available when setting srcObject");
-            toast({
-                variant: "destructive",
-                title: "Camera Error",
-                description: "Camera preview element not ready. Please try again.",
-            });
-            mediaStream.getTracks().forEach(track => track.stop());
-            setStream(null);
-            setHasCameraPermission(false);
-            return;
-        }
         setHasCameraPermission(true);
-        setCapturedImage(null);
+        setStream(mediaStream); // Set the stream state here
+        setCapturedImage(null); // Ensure any previous image is cleared
       } catch (err) {
         console.error("Error accessing camera:", err);
         setHasCameraPermission(false);
+        setStream(null);
         toast({
           variant: "destructive",
           title: "Camera Access Denied",
@@ -157,13 +126,33 @@ export default function PatientRegistrationPage() {
       }
     } else {
       setHasCameraPermission(false);
+      setStream(null);
       toast({
         variant: "destructive",
         title: "Camera Not Supported",
         description: "Your browser does not support camera access.",
       });
     }
-  };
+  }, [hasCameraPermission, stream]);
+
+  useEffect(() => {
+    if (videoRef.current && stream && !capturedImage) {
+      videoRef.current.srcObject = stream;
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('Error attempting to play video:', error);
+          toast({ variant: "destructive", title: "Camera Error", description: "Could not start video preview." });
+        });
+      }
+    }
+    // Cleanup function to stop tracks when stream changes or component unmounts
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream, capturedImage]);
 
 
   const capturePhoto = () => {
@@ -193,23 +182,18 @@ export default function PatientRegistrationPage() {
         context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
         const dataUrl = canvas.toDataURL('image/png');
         setCapturedImage(dataUrl);
-        stream.getTracks().forEach(track => track.stop());
-        setStream(null);
+        // Stream is stopped by the useEffect cleanup when capturedImage changes
+        setStream(null); 
       }
     }
   };
 
   const discardPhoto = () => {
-    setCapturedImage(null);
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    if (hasCameraPermission) {
-        enableCamera();
+    setCapturedImage(null); // This will trigger the stream useEffect if stream was previously active or enableCamera can be called
+    if (hasCameraPermission !== false) { // Allow attempting to re-enable if not explicitly denied
+       enableCamera(); // Or rely on a button click to re-enable
     }
   };
-
 
   const downloadCSVTemplate = () => {
     const headers = [
@@ -274,7 +258,7 @@ export default function PatientRegistrationPage() {
       ...data,
       dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, "yyyy-MM-dd") : undefined,
       photoDataUri: capturedImage,
-      allergies: data.allergies || "", 
+      allergies: data.allergies || "None reported", 
     };
 
     console.log("Submitting to /api/v1/patients (mock):", payload);
@@ -287,15 +271,15 @@ export default function PatientRegistrationPage() {
         const patientAge = data.dateOfBirth ? new Date().getFullYear() - new Date(data.dateOfBirth).getFullYear() : 'N/A';
         toast({ 
             title: "Patient Registered (Mock API)", 
-            description: `${data.fullName} (ID: ${data.nationalId}) registered. Age: ${patientAge}, Gender: ${data.gender}, Address: ${data.address}, Home Clinic: ${data.homeHospital || 'N/A'}. Allergies: ${data.allergies || 'None'}` 
+            description: `${data.fullName} (ID: ${data.nationalId}) registered. Age: ${patientAge}, Gender: ${data.gender}, Address: ${data.address}, Home Clinic: ${data.homeHospital || 'N/A'}. Allergies: ${payload.allergies}` 
         });
         form.reset();
         setCapturedImage(null);
-        if (stream) {
+        if (stream) { // Ensure stream is stopped if somehow still active
             stream.getTracks().forEach(track => track.stop());
             setStream(null);
         }
-        setHasCameraPermission(null); 
+        setHasCameraPermission(null); // Reset permission to allow re-enabling for next patient
       } else {
         const mockErrorResult = { error: "Failed to register patient (Mock API Error - e.g. National ID already exists)" };
         toast({
@@ -345,6 +329,7 @@ export default function PatientRegistrationPage() {
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <CardContent className="py-6">
                 <div className="grid lg:grid-cols-3 gap-x-6 gap-y-4 items-start">
+                  {/* Photo Column */}
                   <div className="lg:col-span-1">
                     <div className="relative w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden border border-dashed border-primary/50">
                        {capturedImage ? (
@@ -360,14 +345,14 @@ export default function PatientRegistrationPage() {
                           <>
                             <video
                                 ref={videoRef}
-                                className={cn("w-full h-full object-cover", !stream && "hidden")}
-                                autoPlay
-                                muted
-                                playsInline
+                                className={cn("w-full h-full object-cover", !stream && "bg-muted")} // Show bg if no stream
+                                muted // Muted is important for autoplay without user gesture
+                                playsInline // Important for mobile
                             />
-                            {!(hasCameraPermission && stream) && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                                    <UserCircle className="w-24 h-24 text-muted-foreground" />
+                            {!(stream && hasCameraPermission) && ( // Show placeholder if no stream OR no permission
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted text-muted-foreground">
+                                    <UserCircle className="w-24 h-24" />
+                                    {hasCameraPermission === false && <p className="text-xs mt-2 text-center">Camera access denied. Please allow in browser settings.</p>}
                                 </div>
                             )}
                           </>
@@ -375,7 +360,8 @@ export default function PatientRegistrationPage() {
                     </div>
                     <canvas ref={canvasRef} className="hidden"></canvas>
                   </div>
-
+                  
+                  {/* Info Column */}
                   <div className="lg:col-span-2 space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -446,7 +432,9 @@ export default function PatientRegistrationPage() {
                         <Textarea id="allergies" placeholder="e.g., Penicillin, Dust mites, Peanuts" {...form.register("allergies")} />
                         {form.formState.errors.allergies && <p className="text-xs text-destructive">{form.formState.errors.allergies.message}</p>}
                     </div>
-                     <div className="pt-2">
+
+                    {/* Photo Capture Section - Now below Personal Info */}
+                    <div className="pt-2">
                         <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
                             <Camera className="h-5 w-5" /> Patient Photo Capture <span className="text-destructive">*</span>
                         </h3>
@@ -468,7 +456,7 @@ export default function PatientRegistrationPage() {
                             </Button>
                         )}
                         </div>
-                        {hasCameraPermission === false && !stream && (
+                         {hasCameraPermission === false && ( // Show if denied
                             <Alert variant="destructive" className="w-full mt-2">
                                 <AlertTitle>Camera Access Denied</AlertTitle>
                                 <AlertDescription>
@@ -484,6 +472,7 @@ export default function PatientRegistrationPage() {
                   </div>
                 </div>
                 
+                {/* Remaining form sections - below the photo and personal info */}
                 <div className="space-y-6 pt-4">
                   <div className="space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
@@ -616,7 +605,7 @@ export default function PatientRegistrationPage() {
                         <div className="flex-1">
                             <div className="flex justify-between items-start mb-1">
                             <p className="font-semibold">{patient.name}</p>
-                            <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full whitespace-nowrap">{patient.time}</span>
+                            <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full whitespace-nowrap">{patient.timeAdded}</span>
                             </div>
                             <p className="text-sm text-muted-foreground flex items-center">
                             <MapPin className="h-3.5 w-3.5 mr-1.5 shrink-0" />
@@ -660,4 +649,6 @@ export default function PatientRegistrationPage() {
           </div>
         </div>
       </div>
-  )
+  );
+}
+
