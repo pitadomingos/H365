@@ -11,7 +11,7 @@ import { NAV_ITEMS, BOTTOM_NAV_ITEMS, type NavItem } from "@/lib/constants";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
-  SidebarProvider,
+  // SidebarProvider, // No longer provided here, moved to RootLayout
   Sidebar,
   SidebarHeader,
   SidebarContent,
@@ -34,17 +34,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LocaleToggle } from "@/components/locale-toggle";
+import { useLocale } from "@/context/locale-context"; // For the key prop on children
 
 
-// This component is now part of RootLayout and wraps the page {children}
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { toggleSidebar, isMobile } = useSidebar(); // useSidebar can be called here as SidebarProvider is a parent
+  const { toggleSidebar, isMobile } = useSidebar();
+  const { currentLocale } = useLocale(); 
   const currentYear = new Date().getFullYear();
 
+  const cssVariables = {
+    "--sidebar-width": "16rem",
+    "--sidebar-width-mobile": "18rem",
+    "--sidebar-width-icon": "3rem",
+  } as React.CSSProperties;
+
+
   return (
-    <SidebarProvider defaultOpen collapsible="icon"> {/* SidebarProvider can be here if AppShell is always the direct child under LocaleProvider */}
-      <Sidebar collapsible="icon">
+    // The main div with group/sidebar-wrapper and CSS variables is now in RootLayout
+    // SidebarProvider is also in RootLayout, wrapping this AppShell
+    <>
+      <Sidebar> {/* Removed explicit collapsible="icon" to inherit from Provider */}
         <SidebarHeader className="p-4">
           <div className="flex items-center justify-between w-full">
             <Link href="/" className="flex items-center gap-2">
@@ -143,13 +153,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="flex-1 overflow-auto p-4 sm:p-6 bg-muted/40 dark:bg-transparent">
-          {children} {/* Page components are rendered here */}
+          {/* Re-keying children with currentLocale to force re-render on locale change */}
+          {React.cloneElement(children as React.ReactElement, { key: currentLocale })}
         </main>
         <footer className="border-t bg-background p-4 text-center text-xs text-muted-foreground">
           <p>&copy; {currentYear} H365. All rights reserved.</p>
           <p>Version 0.1.0 (Prototype)</p>
         </footer>
       </SidebarInset>
-    </SidebarProvider>
+    </>
   );
 }
