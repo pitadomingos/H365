@@ -1,8 +1,7 @@
 
 "use client"; 
 
-import React, { useState, useEffect } from 'react';
-// AppShell is no longer imported or rendered here, it's part of the layout
+import React, { useState, useEffect, useContext } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2 } from "lucide-react";
@@ -70,8 +69,10 @@ export default function DashboardPage() {
   const [dailyAttendanceData, setDailyAttendanceData] = useState<DailyAttendanceItem[]>([]);
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
 
+  // Fetch Summary Cards Data
   useEffect(() => {
     setIsLoadingSummary(true);
+    const currentT = getTranslator(currentLocale); // Use locale-specific translator for data generation if needed
     setTimeout(() => {
       const fetchedSummary: SummaryCardData[] = [
         { id: "sc1", titleKey: "dashboard.card.totalPatients.title", value: "156", iconName: "TrendingUp", color: "text-green-500", descriptionKey: "dashboard.card.totalPatients.description", link: "#" },
@@ -85,8 +86,12 @@ export default function DashboardPage() {
       setSummaryCardsData(fetchedSummary);
       setIsLoadingSummary(false);
     }, 1000);
+  }, [currentLocale]); // Re-fetch if locale changes, as titleKey/descriptionKey might change presentation
 
+  // Fetch Quick Actions Data
+  useEffect(() => {
     setIsLoadingQuickActions(true);
+    // Quick actions labels are translated in JSX, so data itself is not locale-dependent
     setTimeout(() => {
         const fetchedQuickActions: QuickActionData[] = [
             { labelKey: "dashboard.quickActions.registerPatient", href: "/patient-registration", iconName: "Users" },
@@ -99,8 +104,12 @@ export default function DashboardPage() {
         setQuickActionsData(fetchedQuickActions);
         setIsLoadingQuickActions(false);
     }, 800);
+  }, []); // Runs once on mount
 
+  // Fetch Recent Activity Data
+  useEffect(() => {
     setIsLoadingActivity(true);
+    // Recent activity data is usually language-agnostic strings from backend/logs
     setTimeout(() => {
         const fetchedActivity: RecentActivityItem[] = [
             {user: "Dr. Smith", action: "updated patient chart for Alice Johnson.", time: "2 min ago"},
@@ -112,19 +121,27 @@ export default function DashboardPage() {
         setRecentActivity(fetchedActivity);
         setIsLoadingActivity(false);
     }, 1200);
-    
+  }, []); // Runs once on mount
+  
+  // Fetch Patient Entry Points Data
+  useEffect(() => {
     setIsLoadingEntryPoints(true);
+    const currentT = getTranslator(currentLocale); // Get translator for current locale
     setTimeout(() => {
         const fetchedEntryPoints: ChartDataItem[] = [
-            { name: t('dashboard.charts.entryPoints.outpatient'), value: 400, fill: "hsl(var(--chart-1))" },
-            { name: t('dashboard.charts.entryPoints.emergency'), value: 150, fill: "hsl(var(--chart-2))" },
-            { name: t('dashboard.charts.entryPoints.epidemic'), value: 25, fill: "hsl(var(--chart-3))" },
+            { name: currentT('dashboard.charts.entryPoints.outpatient'), value: 400, fill: "hsl(var(--chart-1))" },
+            { name: currentT('dashboard.charts.entryPoints.emergency'), value: 150, fill: "hsl(var(--chart-2))" },
+            { name: currentT('dashboard.charts.entryPoints.epidemic'), value: 25, fill: "hsl(var(--chart-3))" },
         ];
         setPatientEntryPointsData(fetchedEntryPoints);
         setIsLoadingEntryPoints(false);
     }, 1500);
+  }, [currentLocale]); // Re-fetch if locale changes because 'name' in data is translated
 
+  // Fetch Daily Attendance Data
+  useEffect(() => {
     setIsLoadingAttendance(true);
+    // Day labels are static, patient count is numeric - not directly locale-dependent for data generation
     setTimeout(() => {
         const fetchedAttendanceData: DailyAttendanceItem[] = [
             { day: "Mon", patients: 120, fill: "hsl(var(--chart-4))" },
@@ -138,9 +155,7 @@ export default function DashboardPage() {
         setDailyAttendanceData(fetchedAttendanceData);
         setIsLoadingAttendance(false);
     }, 1600);
-
-  }, [t, currentLocale]); 
-
+  }, []); // Runs once on mount
 
   const chartConfig = {
     outpatient: { label: t('dashboard.charts.entryPoints.outpatient'), color: "hsl(var(--chart-1))" },
@@ -388,3 +403,4 @@ export default function DashboardPage() {
       </div>
   );
 }
+
