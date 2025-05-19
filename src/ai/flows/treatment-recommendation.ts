@@ -35,7 +35,7 @@ const prompt = ai.definePrompt({
   name: 'treatmentRecommendationPrompt',
   input: {schema: TreatmentRecommendationInputSchema},
   output: {schema: TreatmentRecommendationOutputSchema},
-  prompt: \`You are an expert medical doctor specializing in providing treatment recommendations.
+  prompt: `You are an expert medical doctor specializing in providing treatment recommendations.
 Based on the comprehensive patient information provided below, including symptoms, medical history, lab results, and imaging data, please generate a response with the following distinct sections:
 1.  **Potential Diagnoses**: Provide a ranked list of potential diagnoses.
 2.  **Draft Prescription**: Suggest a draft prescription, including medication names, dosages, and frequencies.
@@ -44,7 +44,7 @@ Based on the comprehensive patient information provided below, including symptom
 Patient Information:
 Symptoms & History: {{{symptoms}}}
 Lab Results: {{{labResults}}}
-Imaging Data: {{{imagingData}}}\`,
+Imaging Data: {{{imagingData}}}`,
 });
 
 const treatmentRecommendationFlow = ai.defineFlow(
