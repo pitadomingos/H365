@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { LocaleProvider } from '@/context/locale-context';
 import { AppShell } from '@/components/layout/app-shell';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import { cn } from '@/lib/utils'; 
+import { cn } from '@/lib/utils';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -43,22 +43,22 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <div
-              style={
-                {
-                  "--sidebar-width": SIDEBAR_WIDTH,
-                  "--sidebar-width-mobile": SIDEBAR_WIDTH_MOBILE, // Added this variable definition
-                  "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-                } as React.CSSProperties
-              }
-              className={cn(
-                "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar"
-              )}
-            >
-              <SidebarProvider collapsible="icon" defaultOpen={true}>
+            <SidebarProvider collapsible="icon" defaultOpen={true}>
+              <div
+                style={
+                  {
+                    "--sidebar-width": SIDEBAR_WIDTH,
+                    "--sidebar-width-mobile": SIDEBAR_WIDTH_MOBILE,
+                    "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
+                  } as React.CSSProperties
+                }
+                className={cn(
+                  "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar"
+                )}
+              >
                 <AppShell>{children}</AppShell>
-              </SidebarProvider>
-            </div>
+              </div>
+            </SidebarProvider>
             <Toaster />
           </ThemeProvider>
         </LocaleProvider>
