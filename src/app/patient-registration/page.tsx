@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import Link from "next/link";
+// Link component is not used on this page directly after AppShell removal
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Link from "next/link"; // Added for the link to visiting patients
 
 interface WaitingListItem {
   id: number | string;
@@ -90,15 +91,11 @@ export default function PatientRegistrationPage() {
     setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
     
     setIsWaitingListLoading(true);
-    // Simulate fetching waiting list
     setTimeout(() => {
       const initialWaitingList: WaitingListItem[] = [
         { id: 1, name: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
         { id: 2, name: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
         { id: 3, name: "Charlie Brown", gender: "Male", timeAdded: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
-        { id: 4, name: "Diana Prince", gender: "Female", timeAdded: "11:15 AM", location: "Pharmacy", status: "Collecting Medication", photoUrl: "https://placehold.co/40x40.png" },
-        { id: 5, name: "Edward Scissorhands", gender: "Male", timeAdded: "11:30 AM", location: "Specialized Dentist", status: "Procedure Complete", photoUrl: "https://placehold.co/40x40.png" },
-        { id: 6, name: "Fiona Gallagher", gender: "Female", timeAdded: "11:45 AM", location: "Outpatient", status: "Dispatched to Homecare", photoUrl: "https://placehold.co/40x40.png" },
       ];
       setWaitingList(initialWaitingList);
       setIsWaitingListLoading(false);
@@ -107,14 +104,14 @@ export default function PatientRegistrationPage() {
 
   const enableCamera = useCallback(async () => {
     if (hasCameraPermission === false && !stream) {
-      setHasCameraPermission(null);
+      setHasCameraPermission(null); // Allow re-requesting if previously denied and stream is gone
     }
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { width: 300, height: 385 } });
         setHasCameraPermission(true);
         setStream(mediaStream);
-        setCapturedImage(null);
+        setCapturedImage(null); // Clear any previously captured image
       } catch (err) {
         console.error("Error accessing camera:", err);
         setHasCameraPermission(false);
@@ -146,6 +143,7 @@ export default function PatientRegistrationPage() {
         });
       };
     }
+    // Cleanup function
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -170,10 +168,10 @@ export default function PatientRegistrationPage() {
         
         let sx = 0, sy = 0, sWidth = video.videoWidth, sHeight = video.videoHeight;
 
-        if (videoAspectRatio > targetAspectRatio) {
+        if (videoAspectRatio > targetAspectRatio) { // Video is wider than target
             sWidth = video.videoHeight * targetAspectRatio;
             sx = (video.videoWidth - sWidth) / 2;
-        } else {
+        } else { // Video is taller than target or same aspect ratio
             sHeight = video.videoWidth / targetAspectRatio;
             sy = (video.videoHeight - sHeight) / 2;
         }
@@ -181,16 +179,18 @@ export default function PatientRegistrationPage() {
         context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
         const dataUrl = canvas.toDataURL('image/png');
         setCapturedImage(dataUrl);
-        stream.getTracks().forEach(track => track.stop());
-        setStream(null); 
+        stream.getTracks().forEach(track => track.stop()); // Stop stream after capture
+        setStream(null); // Clear stream state
       }
     }
   };
 
   const discardPhoto = () => {
     setCapturedImage(null);
-    if (hasCameraPermission !== false) {
-       enableCamera();
+    // No need to call enableCamera directly here, user can click "Enable Camera" if needed
+    if (hasCameraPermission !== false) { // Only if not permanently denied
+      // Optionally, re-enable camera preview immediately
+      // enableCamera(); 
     }
   };
 
@@ -222,7 +222,6 @@ export default function PatientRegistrationPage() {
   const handleFileUpload = async () => {
     if (selectedFile) {
       setIsUploading(true);
-      // Simulate file processing
       await new Promise(resolve => setTimeout(resolve, 1500)); 
       toast({
         title: "File Upload (Mock)",
@@ -257,13 +256,11 @@ export default function PatientRegistrationPage() {
     const payload = {
       ...data,
       dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, "yyyy-MM-dd") : undefined,
-      allergies: data.allergies || "", // Send empty string if not provided
+      allergies: data.allergies || "",
       photoDataUri: capturedImage, 
     };
 
     try {
-      // This will attempt to call your backend. 
-      // It will fail with a network error until your backend is running at /api/v1/patients
       const response = await fetch('/api/v1/patients', {
         method: 'POST',
         headers: {
@@ -273,7 +270,6 @@ export default function PatientRegistrationPage() {
       });
 
       if (!response.ok) {
-        // Try to parse error from backend if available, otherwise use status text
         let errorData;
         try {
             errorData = await response.json();
@@ -283,20 +279,17 @@ export default function PatientRegistrationPage() {
         throw new Error(errorData.error || `API request failed with status: ${response.status}`);
       }
 
-      const result = await response.json(); // Assuming backend returns { message: "...", patient: { ... } }
+      const result = await response.json();
       
       const patientAge = result.patient.dateOfBirth ? new Date().getFullYear() - new Date(result.patient.dateOfBirth).getFullYear() : 'N/A';
       toast({ 
           title: "Patient Registered", 
-          description: `${result.patient.fullName} (ID: ${result.patient.nationalId}) registered successfully. Age: ${patientAge}, Gender: ${result.patient.gender}. Backend will return address and home clinic.` 
+          description: `${result.patient.fullName} (ID: ${result.patient.nationalId}) registered. Age: ${patientAge}, Gender: ${result.patient.gender}. Allergies: ${result.patient.allergies || 'None'}. Backend returns address/clinic.` 
       });
       form.reset();
       setCapturedImage(null);
-      if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-          setStream(null);
-      }
-      setHasCameraPermission(null);
+      // Stream is already stopped in capturePhoto
+      setHasCameraPermission(null); // Reset to allow re-enabling
     } catch (error: any) {
       console.error("API submission error:", error);
       toast({
@@ -357,7 +350,7 @@ export default function PatientRegistrationPage() {
                                 className={cn("w-full h-full object-cover", !stream && "bg-muted")}
                                 muted
                                 playsInline
-                                autoPlay={false} // Autoplay can be problematic, controlled by useEffect
+                                autoPlay={false} // Autoplay handled by useEffect
                             />
                             {!(stream && hasCameraPermission) && (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted text-muted-foreground p-2">
@@ -373,75 +366,78 @@ export default function PatientRegistrationPage() {
                   
                   {/* Info Column */}
                   <div className="space-y-4">
-                    <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="nationalId">National ID Number <span className="text-destructive">*</span></Label>
-                        <Input id="nationalId" placeholder="e.g., 1234567890" {...form.register("nationalId")} />
-                        {form.formState.errors.nationalId && <p className="text-xs text-destructive">{form.formState.errors.nationalId.message}</p>}
-                        <p className="text-xs text-muted-foreground">Patient's National ID must be unique.</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="fullName">Full Name <span className="text-destructive">*</span></Label>
-                        <Input id="fullName" placeholder="e.g., John Michael Doe" {...form.register("fullName")} />
-                         {form.formState.errors.fullName && <p className="text-xs text-destructive">{form.formState.errors.fullName.message}</p>}
-                      </div>
+                     <div className="space-y-4">
+                        <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="nationalId">National ID Number <span className="text-destructive">*</span></Label>
+                            <Input id="nationalId" placeholder="e.g., 1234567890" {...form.register("nationalId")} />
+                            {form.formState.errors.nationalId && <p className="text-xs text-destructive">{form.formState.errors.nationalId.message}</p>}
+                            <p className="text-xs text-muted-foreground">Patient's National ID must be unique.</p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="fullName">Full Name <span className="text-destructive">*</span></Label>
+                            <Input id="fullName" placeholder="e.g., John Michael Doe" {...form.register("fullName")} />
+                            {form.formState.errors.fullName && <p className="text-xs text-destructive">{form.formState.errors.fullName.message}</p>}
+                          </div>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="dob">Date of Birth <span className="text-destructive">*</span></Label>
+                            <Controller
+                              control={form.control}
+                              name="dateOfBirth"
+                              render={({ field }) => (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant={"outline"}
+                                      className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !field.value && "text-muted-foreground"
+                                      )}
+                                    >
+                                      <CalendarIcon className="mr-2 h-4 w-4" />
+                                      {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0">
+                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
+                                  </PopoverContent>
+                                </Popover>
+                              )}
+                            />
+                            {form.formState.errors.dateOfBirth && <p className="text-xs text-destructive">{form.formState.errors.dateOfBirth.message}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="gender">Gender <span className="text-destructive">*</span></Label>
+                            <Controller
+                              control={form.control}
+                              name="gender"
+                              render={({ field }) => (
+                                <Select onValueChange={field.onChange} value={field.value} >
+                                  <SelectTrigger id="gender">
+                                    <SelectValue placeholder="Select gender" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Male">Male</SelectItem>
+                                    <SelectItem value="Female">Female</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
+                            {form.formState.errors.gender && <p className="text-xs text-destructive">{form.formState.errors.gender.message}</p>}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="allergies">Allergies (comma-separated if multiple)</Label>
+                            <Textarea id="allergies" placeholder="e.g., Penicillin, Dust mites, Peanuts" {...form.register("allergies")} />
+                            {form.formState.errors.allergies && <p className="text-xs text-destructive">{form.formState.errors.allergies.message}</p>}
+                        </div>
                     </div>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="dob">Date of Birth <span className="text-destructive">*</span></Label>
-                        <Controller
-                          control={form.control}
-                          name="dateOfBirth"
-                          render={({ field }) => (
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
-                              </PopoverContent>
-                            </Popover>
-                          )}
-                        />
-                         {form.formState.errors.dateOfBirth && <p className="text-xs text-destructive">{form.formState.errors.dateOfBirth.message}</p>}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="gender">Gender <span className="text-destructive">*</span></Label>
-                        <Controller
-                          control={form.control}
-                          name="gender"
-                          render={({ field }) => (
-                            <Select onValueChange={field.onChange} value={field.value} >
-                              <SelectTrigger id="gender">
-                                <SelectValue placeholder="Select gender" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Male">Male</SelectItem>
-                                <SelectItem value="Female">Female</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                        {form.formState.errors.gender && <p className="text-xs text-destructive">{form.formState.errors.gender.message}</p>}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="allergies">Allergies (comma-separated if multiple)</Label>
-                        <Textarea id="allergies" placeholder="e.g., Penicillin, Dust mites, Peanuts" {...form.register("allergies")} />
-                        {form.formState.errors.allergies && <p className="text-xs text-destructive">{form.formState.errors.allergies.message}</p>}
-                    </div>
-                     <div className="pt-2">
+                    
+                    <div className="pt-2">
                         <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
                             <Camera className="h-5 w-5" /> Patient Photo Capture <span className="text-destructive">*</span>
                         </h3>
@@ -541,15 +537,8 @@ export default function PatientRegistrationPage() {
                        {form.formState.errors.nextOfKinAddress && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinAddress.message}</p>}
                     </div>
                   </div>
-                </div>
-              </CardContent>
-              <CardFooter className="border-t px-6 py-4 flex-col items-start gap-4">
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {isSubmitting ? "Registering..." : "Register Patient"}
-                </Button>
-                  <div className="space-y-4 pt-4 border-t w-full">
-                     <h3 className="text-md font-semibold flex items-center gap-2 pt-2">
+                   <div className="space-y-4 pt-4 border-t">
+                     <h3 className="text-md font-semibold flex items-center gap-2">
                         <UploadCloud className="h-6 w-6" /> Bulk Patient Registration
                     </h3>
                     <p className="text-sm text-muted-foreground">
@@ -574,6 +563,13 @@ export default function PatientRegistrationPage() {
                       {isUploading ? "Uploading..." : "Upload and Process File"}
                     </Button>
                   </div>
+                </div>
+              </CardContent>
+              <CardFooter className="border-t px-6 py-4 flex-col items-start gap-4">
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {isSubmitting ? "Registering..." : "Register Patient"}
+                </Button>
               </CardFooter>
             </Card>
           </form>
@@ -656,3 +652,4 @@ export default function PatientRegistrationPage() {
       </div>
   );
 }
+

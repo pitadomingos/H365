@@ -38,4 +38,5 @@ export default function BillingPage() {
           </CardContent>
         </Card>
       </div>
-  )
+  );
+}

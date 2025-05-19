@@ -11,7 +11,6 @@ import { NAV_ITEMS, BOTTOM_NAV_ITEMS, type NavItem } from "@/lib/constants";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
-  // SidebarProvider, // No longer provided here, moved to RootLayout
   Sidebar,
   SidebarHeader,
   SidebarContent,
@@ -23,7 +22,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"; 
+import { TooltipProvider } from "@/components/ui/tooltip"; 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -34,7 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LocaleToggle } from "@/components/locale-toggle";
-import { useLocale } from "@/context/locale-context"; // For the key prop on children
+import { useLocale } from '@/context/locale-context';
 
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -43,18 +42,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { currentLocale } = useLocale(); 
   const currentYear = new Date().getFullYear();
 
-  const cssVariables = {
-    "--sidebar-width": "16rem",
-    "--sidebar-width-mobile": "18rem",
-    "--sidebar-width-icon": "3rem",
-  } as React.CSSProperties;
-
+  // CSS variables are now set in RootLayout's div wrapper
 
   return (
-    // The main div with group/sidebar-wrapper and CSS variables is now in RootLayout
-    // SidebarProvider is also in RootLayout, wrapping this AppShell
-    <>
-      <Sidebar> {/* Removed explicit collapsible="icon" to inherit from Provider */}
+    <TooltipProvider delayDuration={0}>
+      <Sidebar> {/* Inherits collapsible mode from SidebarProvider in RootLayout */}
         <SidebarHeader className="p-4">
           <div className="flex items-center justify-between w-full">
             <Link href="/" className="flex items-center gap-2">
@@ -161,6 +153,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p>Version 0.1.0 (Prototype)</p>
         </footer>
       </SidebarInset>
-    </>
+    </TooltipProvider>
   );
 }

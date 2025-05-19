@@ -37,4 +37,5 @@ export default function TelemedicinePage() {
           </CardContent>
         </Card>
       </div>
-  )
+  );
+}

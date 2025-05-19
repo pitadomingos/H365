@@ -37,4 +37,5 @@ export default function AnalyticsBIPage() {
           </CardContent>
         </Card>
       </div>
-  )
+  );
+}
