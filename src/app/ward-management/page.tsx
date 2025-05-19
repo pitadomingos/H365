@@ -1,7 +1,7 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { BedDouble, Users, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed, Edit, PlusCircle } from "lucide-react";
@@ -34,7 +34,6 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-// --- Data Structures ---
 interface WardSummary {
   id: string;
   name: string;
@@ -96,14 +95,13 @@ interface AdmittedPatientFullDetails {
 }
 
 interface PendingAdmission {
-  id: string; // Could be a temporary referral ID or patient ID
+  id: string; 
   patientId: string;
   patientName: string;
   referringDepartment: string;
   reasonForAdmission: string;
 }
 
-// --- Mock Data ---
 const mockWardSummariesData: WardSummary[] = [
     { id: "W001", name: "General Medicine Ward A" },
     { id: "W002", name: "Surgical Ward B" },
@@ -159,7 +157,6 @@ const mockAdmittedPatientFullDetailsData: Record<string, AdmittedPatientFullDeta
     ],
     doctorNotes: [{ noteId: "DN001-A", date: new Date(Date.now() - 86400000).toISOString(), doctor: "Dr. Smith", note: "Patient responding well. Continue plan." }, {noteId: "DN001-B", date: new Date().toISOString(), doctor: "Dr. House", note: "Reviewed chest X-ray, slight improvement in consolidation."}],
   },
-    // ... (other mock patient full details remain the same as before)
    "ADM002": {
     admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", wardName: "General Medicine Ward A", bedNumber: "Bed 5",
     treatmentPlan: "Furosemide 40mg IV BD. Fluid restriction 1.5L/day. Daily weights. Monitor electrolytes.",
@@ -219,7 +216,6 @@ export default function WardManagementPage() {
   const [transferReason, setTransferReason] = useState("");
   const [isProcessingTransfer, setIsProcessingTransfer] = useState(false);
 
-  // State for new admission form
   const [hospitalPendingAdmissions, setHospitalPendingAdmissions] = useState<PendingAdmission[]>([]);
   const [isLoadingPendingAdmissions, setIsLoadingPendingAdmissions] = useState(true);
   const [selectedPendingPatientId, setSelectedPendingPatientId] = useState("");
@@ -231,14 +227,12 @@ export default function WardManagementPage() {
 
   useEffect(() => {
     setIsLoadingAllWards(true);
-    // Simulate fetching all wards summary
     setTimeout(() => {
       setAllWardsData(mockWardSummariesData);
       setIsLoadingAllWards(false);
     }, 800);
 
     setIsLoadingPendingAdmissions(true);
-    // Simulate fetching hospital-wide pending admissions
     setTimeout(() => {
         setHospitalPendingAdmissions(mockHospitalPendingAdmissionsData);
         setIsLoadingPendingAdmissions(false);
@@ -251,7 +245,6 @@ export default function WardManagementPage() {
       setCurrentWardDetails(null); 
       setSelectedPatientForDetails(null); 
       setCurrentAdmittedPatientFullDetails(null);
-      // Simulate fetching details for the selected ward
       setTimeout(() => {
         const details = mockWardDetailsData[selectedWardId];
         if (details) {
@@ -281,12 +274,11 @@ export default function WardManagementPage() {
     if (selectedPatientForDetails) {
       setIsLoadingSelectedPatientDetails(true);
       setCurrentAdmittedPatientFullDetails(null);
-      // Simulate fetching full details for the selected admitted patient
       setTimeout(() => {
         const fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
         setCurrentAdmittedPatientFullDetails(fullDetails || null);
         if (fullDetails) {
-          setMedicationScheduleInModal(fullDetails.medicationSchedule.map(item => ({...item}))); // Copy for modal
+          setMedicationScheduleInModal(fullDetails.medicationSchedule.map(item => ({...item}))); 
         } else {
           setMedicationScheduleInModal([]);
         }
@@ -326,7 +318,6 @@ export default function WardManagementPage() {
     console.log("Submitting to /api/v1/admissions (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Mock success: Update local state
     const newPatientInWard: PatientInWard = {
         admissionId: newAdmissionId,
         patientId: patientToAdmit.patientId,
@@ -353,7 +344,6 @@ export default function WardManagementPage() {
         };
     });
     
-    // Add to mockAdmittedPatientFullDetailsData for consistency if selected later
     mockAdmittedPatientFullDetailsData[newAdmissionId] = {
         admissionId: newAdmissionId,
         patientId: patientToAdmit.patientId,
@@ -365,11 +355,9 @@ export default function WardManagementPage() {
         doctorNotes: [{noteId: `DN-ADMIT-${Date.now()}`, date: new Date().toISOString(), doctor: admissionDoctor, note: `Admitted for ${admissionDiagnosis}.`}],
     };
 
-
     setHospitalPendingAdmissions(prev => prev.filter(p => p.id !== selectedPendingPatientId));
     toast({ title: "Patient Admitted (Mock)", description: `${patientToAdmit.patientName} admitted to ${currentWardDetails.name}, ${bedToOccupy.bedNumber}.` });
 
-    // Reset form
     setSelectedPendingPatientId("");
     setSelectedAvailableBedId("");
     setAdmissionDoctor("");
@@ -393,7 +381,7 @@ export default function WardManagementPage() {
 
   const handleOpenMedicationModal = () => {
     if (!currentAdmittedPatientFullDetails) return;
-    setMedicationScheduleInModal(currentAdmittedPatientFullDetails.medicationSchedule.map(med => ({ ...med }))); // Deep copy
+    setMedicationScheduleInModal(currentAdmittedPatientFullDetails.medicationSchedule.map(med => ({ ...med }))); 
     setNewMedName("");
     setNewMedDosage("");
     setNewMedTime("");
@@ -437,6 +425,10 @@ export default function WardManagementPage() {
     console.log("Submitting to /api/v1/admissions/{admissionId}/medication-schedule (mock with full schedule):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, medicationSchedule: medicationScheduleInModal }) : null);
+    
+    // Also update the main mock data source
+    mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].medicationSchedule = medicationScheduleInModal;
+
     toast({title: "Medication Log Updated (Mock)", description: "Medication schedule has been updated."});
     setIsMedicationModalOpen(false);
     setIsSavingMedicationUpdates(false);
@@ -543,7 +535,6 @@ export default function WardManagementPage() {
 
 
   return (
-    <AppShell>
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -709,7 +700,7 @@ export default function WardManagementPage() {
                             >
                             <TableCell className="font-medium">{patient.name}</TableCell>
                             <TableCell>{patient.bedNumber}</TableCell>
-                            <TableCell className="text-xs">{new Date(patient.admittedDate).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-xs">{new Date(patient.admittedDate+"T00:00:00").toLocaleDateString()}</TableCell>
                             <TableCell className="text-xs">{patient.primaryDiagnosis || "N/A"}</TableCell>
                             </TableRow>
                         ))}
@@ -962,7 +953,7 @@ export default function WardManagementPage() {
                                 {transferType === "internal_ward" && (
                                     <div className="space-y-2">
                                         <Label htmlFor="targetInternalWard">Destination Ward <span className="text-destructive">*</span></Label>
-                                        <Select value={targetInternalWardId} onValueChange={setTargetInternalWardId} disabled={isLoadingAllWards}>
+                                        <Select value={targetInternalWardId} onValueChange={setTargetInternalWardId} disabled={isLoadingAllWards || isProcessingTransfer}>
                                             <SelectTrigger id="targetInternalWard">
                                                 <SelectValue placeholder="Select destination ward" />
                                             </SelectTrigger>
@@ -978,12 +969,12 @@ export default function WardManagementPage() {
                                 {transferType === "external_hospital" && (
                                     <div className="space-y-2">
                                         <Label htmlFor="externalHospitalName">Destination Hospital Name <span className="text-destructive">*</span></Label>
-                                        <Input id="externalHospitalName" value={externalHospitalName} onChange={(e) => setExternalHospitalName(e.target.value)} placeholder="Enter hospital name" />
+                                        <Input id="externalHospitalName" value={externalHospitalName} onChange={(e) => setExternalHospitalName(e.target.value)} placeholder="Enter hospital name" disabled={isProcessingTransfer}/>
                                     </div>
                                 )}
                                 <div className="space-y-2">
                                     <Label htmlFor="transferReason">Reason for Transfer <span className="text-destructive">*</span></Label>
-                                    <Textarea id="transferReason" value={transferReason} onChange={(e) => setTransferReason(e.target.value)} placeholder="Detailed reason for transfer..." />
+                                    <Textarea id="transferReason" value={transferReason} onChange={(e) => setTransferReason(e.target.value)} placeholder="Detailed reason for transfer..." disabled={isProcessingTransfer}/>
                                 </div>
                             </div>
                             <DialogFooter>
@@ -1015,6 +1006,4 @@ export default function WardManagementPage() {
             </Card>
         )}
       </div>
-    </AppShell>
-  );
-}
+  )

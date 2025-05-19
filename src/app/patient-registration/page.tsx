@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,7 +36,7 @@ const patientFormSchema = z.object({
   fullName: z.string().min(1, "Full name is required."),
   dateOfBirth: z.date({ required_error: "Date of birth is required."}),
   gender: z.string().min(1, "Gender is required."),
-  allergies: z.string().optional(), // Added allergies field
+  allergies: z.string().optional(),
   contactNumber: z.string().min(1, "Contact number is required."),
   email: z.string().email("Invalid email address.").optional().or(z.literal('')),
   address: z.string().min(1, "Address is required."),
@@ -79,7 +78,7 @@ export default function PatientRegistrationPage() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [currentDate, setCurrentDate] = useState('');
-  const hospitalName = "HealthFlow Central Hospital"; // To be replaced by dynamic data later
+  const hospitalName = "HealthFlow Central Hospital"; 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -91,7 +90,6 @@ export default function PatientRegistrationPage() {
     setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
     
     setIsWaitingListLoading(true);
-    // Simulate fetching waiting list data from /api/v1/visits/waiting-list
     setTimeout(() => {
       const initialWaitingList: WaitingListItem[] = [
         { id: 1, name: "Alice Wonderland", gender: "Female", time: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
@@ -114,7 +112,7 @@ export default function PatientRegistrationPage() {
 
   const enableCamera = async () => {
     if (hasCameraPermission === false && !stream) {
-      setHasCameraPermission(null); // Allow re-requesting permission
+      setHasCameraPermission(null); 
     }
 
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -207,8 +205,7 @@ export default function PatientRegistrationPage() {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
     }
-     // Re-enable camera automatically or prompt user to re-enable
-    if (hasCameraPermission) { // only if permission was initially true
+    if (hasCameraPermission) {
         enableCamera();
     }
   };
@@ -216,7 +213,7 @@ export default function PatientRegistrationPage() {
 
   const downloadCSVTemplate = () => {
     const headers = [
-      "NationalID", "FullName", "DateOfBirth (YYYY-MM-DD)", "Gender", "Allergies (comma-separated)",
+      "NationalID", "FullName", "DateOfBirth (YYYY-MM-DD)", "Gender", "Allergies",
       "ContactNumber", "EmailAddress", "Address", "District", "Province",
       "HomeHospital", "NextOfKinName", "NextOfKinNumber", "NextOfKinAddress"
     ];
@@ -277,7 +274,7 @@ export default function PatientRegistrationPage() {
       ...data,
       dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, "yyyy-MM-dd") : undefined,
       photoDataUri: capturedImage,
-      allergies: data.allergies || "", // Ensure allergies is at least an empty string
+      allergies: data.allergies || "", 
     };
 
     console.log("Submitting to /api/v1/patients (mock):", payload);
@@ -326,7 +323,6 @@ export default function PatientRegistrationPage() {
   };
 
   return (
-    <AppShell>
       <div className="flex flex-col gap-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -378,15 +374,6 @@ export default function PatientRegistrationPage() {
                         )}
                     </div>
                     <canvas ref={canvasRef} className="hidden"></canvas>
-                     {hasCameraPermission === false && !stream && (
-                        <Alert variant="destructive" className="w-full mt-2">
-                            <AlertTitle>Camera Access Denied</AlertTitle>
-                            <AlertDescription>
-                              Please allow camera access in your browser settings.
-                              <Button onClick={enableCamera} variant="link" className="p-0 h-auto ml-1">Retry</Button>
-                            </AlertDescription>
-                        </Alert>
-                    )}
                   </div>
 
                   <div className="lg:col-span-2 space-y-4">
@@ -459,37 +446,44 @@ export default function PatientRegistrationPage() {
                         <Textarea id="allergies" placeholder="e.g., Penicillin, Dust mites, Peanuts" {...form.register("allergies")} />
                         {form.formState.errors.allergies && <p className="text-xs text-destructive">{form.formState.errors.allergies.message}</p>}
                     </div>
+                     <div className="pt-2">
+                        <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
+                            <Camera className="h-5 w-5" /> Patient Photo Capture <span className="text-destructive">*</span>
+                        </h3>
+                        <p className="text-sm text-muted-foreground">Capture a clear photo. Aim for a passport-style image. Photo is mandatory for this form.</p>
+                        <div className="flex gap-2 mt-2">
+                        {!stream && !capturedImage && (
+                            <Button type="button" onClick={enableCamera} variant="outline">
+                            <Camera className="mr-2 h-4 w-4" /> Enable Camera
+                            </Button>
+                        )}
+                        {stream && hasCameraPermission && !capturedImage && (
+                            <Button type="button" onClick={capturePhoto}>
+                            <Camera className="mr-2 h-4 w-4" /> Capture Photo
+                            </Button>
+                        )}
+                        {capturedImage && (
+                            <Button type="button" onClick={discardPhoto} variant="destructive" className="flex items-center">
+                            <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
+                            </Button>
+                        )}
+                        </div>
+                        {hasCameraPermission === false && !stream && (
+                            <Alert variant="destructive" className="w-full mt-2">
+                                <AlertTitle>Camera Access Denied</AlertTitle>
+                                <AlertDescription>
+                                Please allow camera access in your browser settings.
+                                <Button onClick={enableCamera} variant="link" className="p-0 h-auto ml-1">Retry</Button>
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        {hasCameraPermission === null && !stream && !capturedImage &&(
+                        <p className="text-xs text-muted-foreground mt-1">Click "Enable Camera" to start.</p>
+                        )}
+                    </div>
                   </div>
                 </div>
                 
-                <div className="pt-2">
-                  <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
-                    <Camera className="h-5 w-5" /> Patient Photo Capture <span className="text-destructive">*</span>
-                  </h3>
-                  <p className="text-sm text-muted-foreground">Capture a clear photo. Aim for a passport-style image. Photo is mandatory for this form.</p>
-                  <div className="flex gap-2 mt-2">
-                  {!stream && !capturedImage && (
-                      <Button type="button" onClick={enableCamera} variant="outline">
-                      <Camera className="mr-2 h-4 w-4" /> Enable Camera
-                      </Button>
-                  )}
-                  {stream && hasCameraPermission && !capturedImage && (
-                      <Button type="button" onClick={capturePhoto}>
-                      <Camera className="mr-2 h-4 w-4" /> Capture Photo
-                      </Button>
-                  )}
-                  {capturedImage && (
-                      <Button type="button" onClick={discardPhoto} variant="destructive" className="flex items-center">
-                      <Trash2 className="mr-2 h-4 w-4" /> Discard Photo
-                      </Button>
-                  )}
-                  </div>
-                  {hasCameraPermission === null && !stream && !capturedImage &&(
-                  <p className="text-xs text-muted-foreground mt-1">Click "Enable Camera" to start.</p>
-                  )}
-                </div>
-
-
                 <div className="space-y-6 pt-4">
                   <div className="space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">Contact Information</h3>
@@ -533,7 +527,7 @@ export default function PatientRegistrationPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-md font-semibold border-b pb-1">Next of Kin (Optional)</h3>
+                    <h3 className="text-md font-semibold border-b pb-1">Next of Kin</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                        <div className="space-y-2">
                         <Label htmlFor="nextOfKinName">Full Name</Label>
@@ -552,7 +546,7 @@ export default function PatientRegistrationPage() {
                        {form.formState.errors.nextOfKinAddress && <p className="text-xs text-destructive">{form.formState.errors.nextOfKinAddress.message}</p>}
                     </div>
                   </div>
-
+                  
                   <div className="space-y-4 pt-4 border-t">
                      <h3 className="text-md font-semibold flex items-center gap-2 pt-2">
                         <UploadCloud className="h-6 w-6" /> Bulk Patient Registration
@@ -642,7 +636,7 @@ export default function PatientRegistrationPage() {
                     <p>No patients currently in the waiting list.</p>
                   </div>
                 )}
-                 <Button type="button" variant="outline" className="w-full mt-6" onClick={() => toast({ title: "List Refreshed (Mock)"})} disabled={isWaitingListLoading}>
+                 <Button type="button" variant="outline" className="w-full mt-6" onClick={() => {setIsWaitingListLoading(true); setTimeout(() => { setWaitingList([...waitingList].sort(() => 0.5 - Math.random())); setIsWaitingListLoading(false); toast({title: "List Refreshed (Mock)"})}, 700) }} disabled={isWaitingListLoading}>
                     {isWaitingListLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                     Refresh List
                  </Button>
@@ -666,7 +660,4 @@ export default function PatientRegistrationPage() {
           </div>
         </div>
       </div>
-    </AppShell>
-  );
-}
-    
+  )

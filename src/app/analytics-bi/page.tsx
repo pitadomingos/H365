@@ -1,17 +1,17 @@
 
 "use client";
 
-import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BrainCircuit } from "lucide-react";
 import { getTranslator, type Locale } from '@/lib/i18n';
+import { useLocale } from "@/context/locale-context";
+
 
 export default function AnalyticsBIPage() {
-  const currentLocale: Locale = 'en';
+  const { currentLocale } = useLocale();
   const t = getTranslator(currentLocale);
 
   return (
-    <AppShell>
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -37,6 +37,4 @@ export default function AnalyticsBIPage() {
           </CardContent>
         </Card>
       </div>
-    </AppShell>
-  );
-}
+  )

@@ -1,13 +1,11 @@
 
 "use client";
 
-import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChartBig } from "lucide-react";
 
 export default function ReportingPage() {
   return (
-    <AppShell>
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -35,6 +33,4 @@ export default function ReportingPage() {
           </CardContent>
         </Card>
       </div>
-    </AppShell>
-  );
-}
+  )

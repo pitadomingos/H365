@@ -1,17 +1,17 @@
 
 "use client";
 
-import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard } from "lucide-react";
 import { getTranslator, type Locale } from '@/lib/i18n';
+import { useLocale } from "@/context/locale-context";
+
 
 export default function BillingPage() {
-  const currentLocale: Locale = 'en'; // This would ideally come from context or URL
+  const { currentLocale } = useLocale();
   const t = getTranslator(currentLocale);
 
   return (
-    <AppShell>
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -25,7 +25,7 @@ export default function BillingPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">{t('techOverview.section5.itemBilling.desc')}</p>
-            {/* Add more specific placeholder content or sub-sections later */}
+            
             <h3 className="mt-4 font-semibold text-lg">Potential Features:</h3>
             <ul className="list-disc list-inside text-muted-foreground space-y-1 mt-2 text-sm">
               <li>Patient invoice generation.</li>
@@ -38,6 +38,4 @@ export default function BillingPage() {
           </CardContent>
         </Card>
       </div>
-    </AppShell>
-  );
-}
+  )

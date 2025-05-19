@@ -4,7 +4,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid } from "recharts"
+import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid } from "recharts"
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -111,7 +110,6 @@ export default function VisitingPatientsPage() {
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
 
-    // Simulate fetching waiting list data
     setIsWaitingListLoading(true);
     setTimeout(() => {
       const initialWaitingList: WaitingListItem[] = [
@@ -124,13 +122,12 @@ export default function VisitingPatientsPage() {
       setIsWaitingListLoading(false);
     }, 1500);
 
-    // Simulate fetching analytics data
     setIsAnalyticsLoading(true);
     setTimeout(() => {
         setVisitChartData(initialVisitChartData);
         setAnalyticsStats({
             avgWaitTime: "25",
-            totalProcessed: (initialWaitingList.length + 15).toString(),
+            totalProcessed: (initialWaitingList.length + 15).toString(), // Example dynamic calculation
             peakHour: "11:00 AM"
         });
         setIsAnalyticsLoading(false);
@@ -156,9 +153,7 @@ export default function VisitingPatientsPage() {
     setReasonForVisit("");
     setAssignedDoctor("");
 
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
-    // Mock API response: /api/v1/patients/search?nationalId={searchNationalId}
     if (searchNationalId === "123456789") {
       setSearchedPatient({
         id: "P001",
@@ -194,13 +189,12 @@ export default function VisitingPatientsPage() {
         return;
     }
     setIsAddingToWaitingList(true);
-    // Simulate API call: POST /api/v1/visits
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const newWaitingListItem: WaitingListItem = {
         id: `WL${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         patientName: searchedPatient.fullName,
-        photoUrl: `https://placehold.co/40x40.png`,
+        photoUrl: `https://placehold.co/40x40.png`, 
         gender: searchedPatient.gender,
         location: department,
         status: reasonForVisit,
@@ -225,7 +219,6 @@ export default function VisitingPatientsPage() {
       return;
     }
     setIsRegisteringInModal(true);
-    // Simulate API call: POST /api/v1/patients
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     toast({
@@ -245,7 +238,6 @@ export default function VisitingPatientsPage() {
 
 
   return (
-    <AppShell>
       <div className="flex flex-col gap-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -363,7 +355,7 @@ export default function VisitingPatientsPage() {
                   <CardHeader>
                     <CardTitle className="text-xl">{searchedPatient.fullName}</CardTitle>
                     <CardDescription>
-                      National ID: {searchedPatient.nationalId} | DOB: {new Date(searchedPatient.dob).toLocaleDateString()} | Gender: {searchedPatient.gender}
+                      National ID: {searchedPatient.nationalId} | DOB: {new Date(searchedPatient.dob+"T00:00:00").toLocaleDateString()} | Gender: {searchedPatient.gender}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -468,7 +460,7 @@ export default function VisitingPatientsPage() {
                   <p className="text-sm">No patients currently in the waiting list.</p>
                 </div>
               )}
-               <Button variant="outline" className="w-full mt-4 text-sm" onClick={() => toast({ title: "List Refreshed", description: "Waiting list updated (mock)." })} disabled={isWaitingListLoading}>
+               <Button variant="outline" className="w-full mt-4 text-sm" onClick={() => {setIsWaitingListLoading(true); setTimeout(() => { setWaitingList([...waitingList].sort(() => 0.5 - Math.random())); setIsWaitingListLoading(false); toast({title: "List Refreshed (Mock)"})}, 700) }} disabled={isWaitingListLoading}>
                 {isWaitingListLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                 Refresh List
               </Button>
@@ -526,7 +518,7 @@ export default function VisitingPatientsPage() {
               <h3 className="text-md font-semibold mb-2">Visits by Department</h3>
               <ChartContainer config={chartConfig} className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={visitChartData} accessibilityLayer margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <RechartsBarChart data={visitChartData} accessibilityLayer margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                     <CartesianGrid vertical={false} strokeDasharray="3 3" />
                     <XAxis dataKey="department" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
                     <YAxis tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
@@ -547,7 +539,7 @@ export default function VisitingPatientsPage() {
                         </div>
                         )
                     }} />
-                  </BarChart>
+                  </RechartsBarChart>
                 </ResponsiveContainer>
               </ChartContainer>
             </div>
@@ -556,7 +548,4 @@ export default function VisitingPatientsPage() {
           </CardContent>
         </Card>
       </div>
-    </AppShell>
-  );
-}
-
+  )

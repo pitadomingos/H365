@@ -2,7 +2,6 @@
 "use client";
 
 import * as React from "react";
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -38,7 +37,7 @@ interface Appointment {
   time: string;
   type: string;
   status: "Confirmed" | "Pending" | "Cancelled" | "Completed";
-  date: string; // Added date for easier filtering/display
+  date: string; 
 }
 
 interface NotificationItem {
@@ -61,7 +60,6 @@ export default function AppointmentsPage() {
   const [notifications, setNotifications] = React.useState<NotificationItem[]>([]);
   const [isLoadingNotifications, setIsLoadingNotifications] = React.useState(true);
 
-  // State for new appointment dialog
   const [isSchedulingDialogOpen, setIsSchedulingDialogOpen] = React.useState(false);
   const [newPatientName, setNewPatientName] = React.useState("");
   const [newSelectedDoctor, setNewSelectedDoctor] = React.useState("");
@@ -71,7 +69,6 @@ export default function AppointmentsPage() {
   const [isScheduling, setIsScheduling] = React.useState(false);
 
   React.useEffect(() => {
-    // Simulate fetching appointments
     setIsLoadingAppointments(true);
     setTimeout(() => {
       const fetchedAppointments: Appointment[] = [
@@ -85,7 +82,6 @@ export default function AppointmentsPage() {
       setIsLoadingAppointments(false);
     }, 1500);
 
-    // Simulate fetching notifications
     setIsLoadingNotifications(true);
     setTimeout(() => {
       const fetchedNotifications: NotificationItem[] = [
@@ -109,7 +105,6 @@ export default function AppointmentsPage() {
       return;
     }
     setIsScheduling(true);
-    // Simulate API POST request to /api/v1/appointments
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     const newApt: Appointment = {
@@ -119,16 +114,15 @@ export default function AppointmentsPage() {
       date: newAppointmentDate,
       time: newAppointmentTime,
       type: newAppointmentType,
-      status: "Pending", // New appointments default to Pending
+      status: "Pending", 
     };
 
-    setAppointments(prev => [newApt, ...prev]);
+    setAppointments(prev => [newApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
     toast({
       title: "Appointment Scheduled (Mock)",
       description: `Appointment for ${newPatientName} with ${newApt.doctor} on ${newAppointmentDate} at ${newAppointmentTime} has been requested.`,
     });
 
-    // Reset form and close dialog
     setNewPatientName("");
     setNewSelectedDoctor("");
     setNewAppointmentDate("");
@@ -143,7 +137,6 @@ export default function AppointmentsPage() {
   );
 
   return (
-    <AppShell>
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -321,6 +314,4 @@ export default function AppointmentsPage() {
           </div>
         </div>
       </div>
-    </AppShell>
-  );
-}
+  )

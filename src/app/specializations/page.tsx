@@ -1,10 +1,9 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react'; // Added useState and useEffect
-import { AppShell } from "@/components/layout/app-shell";
+import React, { useState, useEffect } from 'react'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, Briefcase, Users, Loader2, Star } from "lucide-react"; // Added Star icon
+import { Bell, Briefcase, Users, Loader2, Star } from "lucide-react"; 
 import { SpecialistConsultationForm } from "./specialist-consultation-form";
 import { getTreatmentRecommendationAction } from "../treatment-recommendation/actions";
 import Image from "next/image";
@@ -37,7 +36,6 @@ export default function SpecializationsPage() {
   const [isLoadingSpecialistNotifications, setIsLoadingSpecialistNotifications] = useState(true);
 
   useEffect(() => {
-    // Simulate fetching referral list
     setIsLoadingReferrals(true);
     setTimeout(() => {
       const mockReferralListData: MockListItem[] = [
@@ -48,7 +46,6 @@ export default function SpecializationsPage() {
       setIsLoadingReferrals(false);
     }, 1200);
 
-    // Simulate fetching specialist notifications
     setIsLoadingSpecialistNotifications(true);
     setTimeout(() => {
       const mockSpecialistNotificationsData: MockListItem[] = [
@@ -62,7 +59,6 @@ export default function SpecializationsPage() {
 
 
   return (
-    <AppShell>
       <div className="grid lg:grid-cols-[300px_1fr] xl:grid-cols-[350px_1fr] gap-6 h-full items-start">
         {/* Left Panel */}
         <div className="lg:sticky lg:top-[calc(theme(spacing.16)_+_theme(spacing.6))] flex flex-col gap-6">
@@ -163,6 +159,4 @@ export default function SpecializationsPage() {
         </div>
 
       </div>
-    </AppShell>
-  );
-}
+  )

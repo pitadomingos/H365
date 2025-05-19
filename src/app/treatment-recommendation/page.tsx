@@ -1,24 +1,23 @@
 
-'use server'; // Keep this if getTreatmentRecommendationAction is directly used/defined here, otherwise remove if actions are in separate file.
+'use server'; 
 
-import { AppShell } from "@/components/layout/app-shell";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClipboardEdit, ListChecks, Bell, Users, FlaskConical } from "lucide-react";
 import { ConsultationForm } from "./consultation-form";
 import { getTreatmentRecommendationAction } from "./actions";
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 
 interface MockListItem {
   id: string;
   patientName: string;
-  timeAdded?: string; // For waiting list
-  location?: string; // For waiting list
-  status?: string; // For waiting list
-  message?: string; // For notifications
-  time?: string; // For notifications
-  read?: boolean; // For notifications
+  timeAdded?: string; 
+  location?: string; 
+  status?: string; 
+  message?: string; 
+  time?: string; 
+  read?: boolean; 
   photoUrl: string;
   gender?: "Male" | "Female" | "Other";
 }
@@ -41,7 +40,6 @@ const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
 
 export default async function ConsultationRoomPage() {
   return (
-    <AppShell>
       <div className="grid lg:grid-cols-[300px_1fr] xl:grid-cols-[350px_1fr] gap-6 h-full items-start">
         {/* Left Panel */}
         <div className="lg:sticky lg:top-[calc(theme(spacing.16)_+_theme(spacing.6))] flex flex-col gap-6">
@@ -130,8 +128,5 @@ export default async function ConsultationRoomPage() {
           </div>
           <ConsultationForm getRecommendationAction={getTreatmentRecommendationAction} />
         </div>
-
       </div>
-    </AppShell>
-  );
-}
+  )

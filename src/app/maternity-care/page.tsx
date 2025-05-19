@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,10 +43,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 interface AntenatalVisit {
   id: string;
   date: string;
-  gestationalAge: string; // e.g., "12w 3d"
+  gestationalAge: string; 
   weightKg: number | string;
-  bp: string; // e.g., "120/80 mmHg"
-  fhrBpm: number | string; // Fetal Heart Rate
+  bp: string; 
+  fhrBpm: number | string; 
   fundalHeightCm: number | string;
   notes: string;
   nextAppointment?: string;
@@ -60,11 +59,11 @@ interface MaternityPatient {
   age: number;
   gender: "Male" | "Female" | "Other";
   photoUrl: string;
-  lmp?: string; // Last Menstrual Period
-  edd: string; // Estimated Due Date
+  lmp?: string; 
+  edd: string; 
   gestationalAge: string;
-  gravida: number | string; // Allow string for input
-  para: number | string;    // Allow string for input
+  gravida: number | string; 
+  para: number | string;    
   bloodGroup: string;
   rhFactor: string;
   allergies: string[];
@@ -82,8 +81,8 @@ const mockPatientsList: MaternityPatient[] = [
     gender: "Female",
     photoUrl: "https://placehold.co/100x100.png",
     lmp: "2024-03-01",
-    edd: "2024-12-06", // Approx. 40 weeks from LMP
-    gestationalAge: "24w 5d", // Needs to be calculated dynamically in real app
+    edd: "2024-12-06", 
+    gestationalAge: "24w 5d", 
     gravida: 1,
     para: 0,
     bloodGroup: "O+",
@@ -94,7 +93,7 @@ const mockPatientsList: MaternityPatient[] = [
     antenatalVisits: [
       { id: "AV001", date: "2024-05-10", gestationalAge: "10w 1d", weightKg: 60, bp: "110/70", fhrBpm: 150, fundalHeightCm: "N/A", notes: "First visit, all good.", nextAppointment: "2024-06-10" },
       { id: "AV002", date: "2024-06-12", gestationalAge: "14w 3d", weightKg: 62, bp: "115/75", fhrBpm: 155, fundalHeightCm: 15, notes: "Routine checkup, anomaly scan advised.", nextAppointment: "2024-07-12" },
-    ],
+    ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   },
    {
     id: "MP002",
@@ -115,11 +114,10 @@ const mockPatientsList: MaternityPatient[] = [
     riskFactors: ["Advanced Maternal Age", "History of GDM"],
     antenatalVisits: [
       { id: "AV003", date: "2024-07-20", gestationalAge: "9w 2d", weightKg: 70, bp: "120/80", fhrBpm: 160, fundalHeightCm: "N/A", notes: "Booking visit. GTT scheduled.", nextAppointment: "2024-08-20" },
-    ],
+    ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   }
 ];
 
-// New Visit Form State
 interface NewVisitFormState {
   visitDate?: Date;
   gestationalAge: string;
@@ -137,13 +135,13 @@ interface MaternityIntakeFormState {
     dob?: Date;
     gender: "Male" | "Female" | "Other" | "";
     lmp?: Date;
-    edd?: Date; // Can be calculated or entered
+    edd?: Date; 
     gravida: string;
     para: string;
     bloodGroup: string;
     rhFactor: string;
-    allergies: string; // Comma-separated
-    existingConditions: string; // Comma-separated
+    allergies: string; 
+    existingConditions: string; 
 }
 
 export default function MaternityCarePage() {
@@ -177,7 +175,7 @@ export default function MaternityCarePage() {
 
   const calculateEdd = (lmp: Date | undefined): Date | undefined => {
     if (!lmp) return undefined;
-    return addDays(addWeeks(lmp, 40), 0); // Naegele's rule (simplified)
+    return addDays(addWeeks(lmp, 40), 0); 
   };
   
   useEffect(() => {
@@ -203,7 +201,6 @@ export default function MaternityCarePage() {
     setIsLoadingSearch(true);
     setSelectedPatient(null);
     setPatientNotFound(false);
-    // Simulate API call: GET /api/v1/maternity/patients/{nationalId}
     await new Promise(resolve => setTimeout(resolve, 1000));
     const found = allMaternityPatients.find(p => p.nationalId === searchNationalId);
     if (found) {
@@ -228,7 +225,7 @@ export default function MaternityCarePage() {
     const orderedTestIds = orderedTests.map(test => test.id);
 
     const payload = {
-      patientId: selectedPatient.nationalId, // Use nationalId or a specific maternity patient ID if available
+      patientId: selectedPatient.nationalId, 
       maternityContext: true, 
       testIds: orderedTestIds,
       clinicalNotes: (document.getElementById('maternityLabClinicalNotes') as HTMLTextAreaElement)?.value || ""
@@ -241,9 +238,10 @@ export default function MaternityCarePage() {
       description:`Lab tests ordered for ${selectedPatient?.fullName}: ${orderedTestLabels.length > 0 ? orderedTestLabels.join(', ') : 'No specific tests selected.'}`
     });
     setSelectedLabTests({});
-    (document.getElementById('maternityLabClinicalNotes') as HTMLTextAreaElement).value = "";
+    const notesEl = document.getElementById('maternityLabClinicalNotes') as HTMLTextAreaElement;
+    if (notesEl) notesEl.value = "";
     setIsOrderingLabs(false);
-    // Potentially close dialog here if it's a separate component, handled by onOpenChange
+    
   }
 
   const handleSubmitImagingOrder = async () => {
@@ -261,7 +259,7 @@ export default function MaternityCarePage() {
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${selectedPatient?.fullName}. Details: ${payload.imagingType} - ${payload.regionDetails}`});
     setIsOrderingImaging(false);
-    // Reset imaging form fields if they are part of the dialog. Handled by Dialog close.
+    
   }
 
   const handleNewVisitFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -291,9 +289,11 @@ export default function MaternityCarePage() {
     };
 
     setSelectedPatient(prev => prev ? ({ ...prev, antenatalVisits: [...prev.antenatalVisits, newVisit].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
+    setAllMaternityPatients(prevPatients => prevPatients.map(p => p.id === selectedPatient.id ? {...selectedPatient, antenatalVisits: [...selectedPatient.antenatalVisits, newVisit].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())} : p));
+
     toast({ title: "New Antenatal Visit Logged", description: `Visit on ${newVisit.date} for ${selectedPatient.fullName} saved.`});
     setIsNewVisitModalOpen(false);
-    setNewVisitForm({ gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "" }); 
+    setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", nextAppointmentDate: undefined }); 
     setIsLoggingVisit(false);
   };
   
@@ -324,42 +324,40 @@ export default function MaternityCarePage() {
         return;
     }
     setIsSubmittingIntake(true);
-    // Simulate API call to /api/v1/maternity/patients
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const newMaternityPatient: MaternityPatient = {
         id: `MP${Date.now()}`,
         nationalId,
         fullName,
-        age: new Date().getFullYear() - new Date(dob).getFullYear(), // Calculate age
-        gender,
-        photoUrl: "https://placehold.co/100x100.png", // Default placeholder
+        age: new Date().getFullYear() - new Date(dob).getFullYear(), 
+        gender: gender as MaternityPatient["gender"],
+        photoUrl: "https://placehold.co/100x100.png", 
         lmp: format(lmp, "yyyy-MM-dd"),
         edd: format(edd, "yyyy-MM-dd"),
-        gestationalAge: "0w 0d", // Placeholder, real app would calculate
+        gestationalAge: "0w 0d", 
         gravida: parseInt(gravida),
         para: parseInt(para),
         bloodGroup: maternityIntakeForm.bloodGroup,
         rhFactor: maternityIntakeForm.rhFactor,
         allergies: maternityIntakeForm.allergies.split(',').map(s => s.trim()).filter(Boolean),
         existingConditions: maternityIntakeForm.existingConditions.split(',').map(s => s.trim()).filter(Boolean),
-        riskFactors: [], // Initialize as empty
-        antenatalVisits: [], // Initialize as empty
+        riskFactors: [], 
+        antenatalVisits: [], 
     };
 
     setAllMaternityPatients(prev => [...prev, newMaternityPatient]);
-    setSelectedPatient(newMaternityPatient); // Automatically select the newly registered patient
+    setSelectedPatient(newMaternityPatient); 
     toast({ title: "Maternity Care Initiated", description: `${newMaternityPatient.fullName} registered for maternity care.` });
     setIsMaternityIntakeModalOpen(false);
     setMaternityIntakeForm({ nationalId: "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", existingConditions: "" });
-    setPatientNotFound(false); // Clear not found state
-    setSearchNationalId(newMaternityPatient.nationalId); // Pre-fill search bar
+    setPatientNotFound(false); 
+    setSearchNationalId(newMaternityPatient.nationalId); 
     setIsSubmittingIntake(false);
   };
 
 
   return (
-    <AppShell>
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -373,7 +371,7 @@ export default function MaternityCarePage() {
             <CardDescription>Enter patient's National ID to load their maternity care details or register a new patient for maternity care.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-2">
+             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
               <Input
                 id="searchNationalId"
                 placeholder="Enter National ID (e.g., 112233445)"
@@ -386,135 +384,134 @@ export default function MaternityCarePage() {
                 {isLoadingSearch ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                 {isLoadingSearch ? "Searching..." : "Search"}
               </Button>
+               <Dialog open={isMaternityIntakeModalOpen} onOpenChange={(open) => {
+                    if (!open) {
+                        setMaternityIntakeForm({ nationalId: searchNationalId || "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", existingConditions: "" });
+                    } else {
+                        setMaternityIntakeForm(prev => ({ ...prev, nationalId: searchNationalId || ""}));
+                    }
+                    setIsMaternityIntakeModalOpen(open);
+                }}>
+                    <DialogTrigger asChild>
+                        <Button variant="default" className="mt-2 sm:mt-0 w-full sm:w-auto">
+                            <UserPlus className="mr-2 h-4 w-4"/> Register New Maternity Patient / Initiate Care
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-2xl">
+                        <form onSubmit={handleMaternityIntakeSubmit}>
+                            <DialogHeader>
+                                <DialogTitle>Maternity Intake Form</DialogTitle>
+                                <DialogDescription>
+                                    Enter details for a new maternity patient or to initiate care for an existing patient.
+                                    Fields marked <span className="text-destructive">*</span> are required.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+                                <Separator/>
+                                <h3 className="font-semibold text-md">Patient Demographics</h3>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="intakeNationalId">National ID <span className="text-destructive">*</span></Label>
+                                        <Input id="intakeNationalId" name="nationalId" value={maternityIntakeForm.nationalId} onChange={handleIntakeFormChange} placeholder="Patient's National ID" required disabled={isSubmittingIntake}/>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="intakeFullName">Full Name <span className="text-destructive">*</span></Label>
+                                        <Input id="intakeFullName" name="fullName" value={maternityIntakeForm.fullName} onChange={handleIntakeFormChange} placeholder="Patient's Full Name" required disabled={isSubmittingIntake}/>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="intakeDob">Date of Birth <span className="text-destructive">*</span></Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !maternityIntakeForm.dob && "text-muted-foreground")} disabled={isSubmittingIntake}>
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {maternityIntakeForm.dob ? format(maternityIntakeForm.dob, "PPP") : <span>Pick a date</span>}
+                                            </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                            <Calendar mode="single" selected={maternityIntakeForm.dob} onSelect={(date) => setMaternityIntakeForm(prev => ({...prev, dob: date}))} initialFocus captionLayout="dropdown-buttons" fromYear={1950} toYear={new Date().getFullYear()} />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="intakeGender">Gender <span className="text-destructive">*</span></Label>
+                                        <Select name="gender" value={maternityIntakeForm.gender} onValueChange={(val) => setMaternityIntakeForm(prev => ({...prev, gender: val as MaternityIntakeFormState["gender"]}))} required disabled={isSubmittingIntake}>
+                                            <SelectTrigger id="intakeGender"><SelectValue placeholder="Select Gender" /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Female">Female</SelectItem>
+                                                <SelectItem value="Other">Other</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <Separator/>
+                                <h3 className="font-semibold text-md">Maternity Information</h3>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="intakeLmp">Last Menstrual Period (LMP) <span className="text-destructive">*</span></Label>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !maternityIntakeForm.lmp && "text-muted-foreground")} disabled={isSubmittingIntake}>
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {maternityIntakeForm.lmp ? format(maternityIntakeForm.lmp, "PPP") : <span>Pick LMP date</span>}
+                                            </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                            <Calendar mode="single" selected={maternityIntakeForm.lmp} onSelect={(date) => setMaternityIntakeForm(prev => ({...prev, lmp: date}))} initialFocus />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="intakeEdd">Estimated Due Date (EDD)</Label>
+                                        <Input id="intakeEdd" value={maternityIntakeForm.edd ? format(maternityIntakeForm.edd, "PPP") : "Auto-calculated"} readOnly disabled className="bg-muted/50" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="intakeGravida">Gravida <span className="text-destructive">*</span></Label>
+                                        <Input id="intakeGravida" name="gravida" type="number" value={maternityIntakeForm.gravida} onChange={handleIntakeFormChange} placeholder="e.g., 1" required disabled={isSubmittingIntake}/>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="intakePara">Para <span className="text-destructive">*</span></Label>
+                                        <Input id="intakePara" name="para" type="number" value={maternityIntakeForm.para} onChange={handleIntakeFormChange} placeholder="e.g., 0" required disabled={isSubmittingIntake}/>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="intakeBloodGroup">Blood Group</Label>
+                                        <Input id="intakeBloodGroup" name="bloodGroup" value={maternityIntakeForm.bloodGroup} onChange={handleIntakeFormChange} placeholder="e.g., O+" disabled={isSubmittingIntake}/>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="intakeRhFactor">Rh Factor</Label>
+                                        <Input id="intakeRhFactor" name="rhFactor" value={maternityIntakeForm.rhFactor} onChange={handleIntakeFormChange} placeholder="e.g., Positive" disabled={isSubmittingIntake}/>
+                                    </div>
+                                </div>
+                                <Separator/>
+                                <h3 className="font-semibold text-md">Medical History (Optional)</h3>
+                                <div className="space-y-1">
+                                    <Label htmlFor="intakeAllergies">Allergies (comma-separated)</Label>
+                                    <Textarea id="intakeAllergies" name="allergies" value={maternityIntakeForm.allergies} onChange={handleIntakeFormChange} placeholder="e.g., Penicillin, Sulfa drugs" disabled={isSubmittingIntake}/>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="intakeExistingConditions">Existing Medical Conditions (comma-separated)</Label>
+                                    <Textarea id="intakeExistingConditions" name="existingConditions" value={maternityIntakeForm.existingConditions} onChange={handleIntakeFormChange} placeholder="e.g., Hypertension, Diabetes" disabled={isSubmittingIntake}/>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingIntake}>Cancel</Button></DialogClose>
+                                <Button type="submit" disabled={isSubmittingIntake}>
+                                    {isSubmittingIntake ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                    {isSubmittingIntake ? "Saving..." : "Save & Start Maternity Care"}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
             {patientNotFound && (
                  <Alert variant="default" className="border-primary/50">
                     <Info className="h-5 w-5 text-primary" />
                     <AlertTitle>Patient Not Found for Maternity Care</AlertTitle>
                     <AlertDescription>
-                    No active maternity record found for National ID: {searchNationalId}. You can register them below.
+                    No active maternity record found for National ID: {searchNationalId}. You can register them using the button above.
                     </AlertDescription>
                 </Alert>
             )}
-            <Dialog open={isMaternityIntakeModalOpen} onOpenChange={(open) => {
-                if (!open) {
-                     setMaternityIntakeForm({ nationalId: searchNationalId || "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", existingConditions: "" });
-                } else {
-                    // Pre-fill National ID if patient search was attempted
-                    setMaternityIntakeForm(prev => ({ ...prev, nationalId: searchNationalId || ""}));
-                }
-                setIsMaternityIntakeModalOpen(open);
-            }}>
-                <DialogTrigger asChild>
-                    <Button variant="default">
-                        <UserPlus className="mr-2 h-4 w-4"/> Register New Maternity Patient / Initiate Care
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-2xl">
-                    <form onSubmit={handleMaternityIntakeSubmit}>
-                        <DialogHeader>
-                            <DialogTitle>Maternity Intake Form</DialogTitle>
-                            <DialogDescription>
-                                Enter details for a new maternity patient or to initiate care for an existing patient.
-                                Fields marked <span className="text-destructive">*</span> are required.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-                            <Separator/>
-                            <h3 className="font-semibold text-md">Patient Demographics</h3>
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <Label htmlFor="intakeNationalId">National ID <span className="text-destructive">*</span></Label>
-                                    <Input id="intakeNationalId" name="nationalId" value={maternityIntakeForm.nationalId} onChange={handleIntakeFormChange} placeholder="Patient's National ID" required disabled={isSubmittingIntake}/>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="intakeFullName">Full Name <span className="text-destructive">*</span></Label>
-                                    <Input id="intakeFullName" name="fullName" value={maternityIntakeForm.fullName} onChange={handleIntakeFormChange} placeholder="Patient's Full Name" required disabled={isSubmittingIntake}/>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="intakeDob">Date of Birth <span className="text-destructive">*</span></Label>
-                                     <Popover>
-                                        <PopoverTrigger asChild>
-                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !maternityIntakeForm.dob && "text-muted-foreground")} disabled={isSubmittingIntake}>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {maternityIntakeForm.dob ? format(maternityIntakeForm.dob, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                        <Calendar mode="single" selected={maternityIntakeForm.dob} onSelect={(date) => setMaternityIntakeForm(prev => ({...prev, dob: date}))} initialFocus captionLayout="dropdown-buttons" fromYear={1950} toYear={new Date().getFullYear()} />
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="intakeGender">Gender <span className="text-destructive">*</span></Label>
-                                    <Select name="gender" value={maternityIntakeForm.gender} onValueChange={(val) => setMaternityIntakeForm(prev => ({...prev, gender: val as MaternityIntakeFormState["gender"]}))} required disabled={isSubmittingIntake}>
-                                        <SelectTrigger id="intakeGender"><SelectValue placeholder="Select Gender" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Female">Female</SelectItem>
-                                            <SelectItem value="Other">Other</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <Separator/>
-                            <h3 className="font-semibold text-md">Maternity Information</h3>
-                             <div className="grid md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <Label htmlFor="intakeLmp">Last Menstrual Period (LMP) <span className="text-destructive">*</span></Label>
-                                     <Popover>
-                                        <PopoverTrigger asChild>
-                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !maternityIntakeForm.lmp && "text-muted-foreground")} disabled={isSubmittingIntake}>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {maternityIntakeForm.lmp ? format(maternityIntakeForm.lmp, "PPP") : <span>Pick LMP date</span>}
-                                        </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                        <Calendar mode="single" selected={maternityIntakeForm.lmp} onSelect={(date) => setMaternityIntakeForm(prev => ({...prev, lmp: date}))} initialFocus />
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="intakeEdd">Estimated Due Date (EDD)</Label>
-                                    <Input id="intakeEdd" value={maternityIntakeForm.edd ? format(maternityIntakeForm.edd, "PPP") : "Auto-calculated"} readOnly disabled className="bg-muted/50" />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="intakeGravida">Gravida <span className="text-destructive">*</span></Label>
-                                    <Input id="intakeGravida" name="gravida" type="number" value={maternityIntakeForm.gravida} onChange={handleIntakeFormChange} placeholder="e.g., 1" required disabled={isSubmittingIntake}/>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="intakePara">Para <span className="text-destructive">*</span></Label>
-                                    <Input id="intakePara" name="para" type="number" value={maternityIntakeForm.para} onChange={handleIntakeFormChange} placeholder="e.g., 0" required disabled={isSubmittingIntake}/>
-                                </div>
-                                 <div className="space-y-1">
-                                    <Label htmlFor="intakeBloodGroup">Blood Group</Label>
-                                    <Input id="intakeBloodGroup" name="bloodGroup" value={maternityIntakeForm.bloodGroup} onChange={handleIntakeFormChange} placeholder="e.g., O+" disabled={isSubmittingIntake}/>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="intakeRhFactor">Rh Factor</Label>
-                                    <Input id="intakeRhFactor" name="rhFactor" value={maternityIntakeForm.rhFactor} onChange={handleIntakeFormChange} placeholder="e.g., Positive" disabled={isSubmittingIntake}/>
-                                </div>
-                            </div>
-                            <Separator/>
-                             <h3 className="font-semibold text-md">Medical History (Optional)</h3>
-                            <div className="space-y-1">
-                                <Label htmlFor="intakeAllergies">Allergies (comma-separated)</Label>
-                                <Textarea id="intakeAllergies" name="allergies" value={maternityIntakeForm.allergies} onChange={handleIntakeFormChange} placeholder="e.g., Penicillin, Sulfa drugs" disabled={isSubmittingIntake}/>
-                            </div>
-                            <div className="space-y-1">
-                                <Label htmlFor="intakeExistingConditions">Existing Medical Conditions (comma-separated)</Label>
-                                <Textarea id="intakeExistingConditions" name="existingConditions" value={maternityIntakeForm.existingConditions} onChange={handleIntakeFormChange} placeholder="e.g., Hypertension, Diabetes" disabled={isSubmittingIntake}/>
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingIntake}>Cancel</Button></DialogClose>
-                            <Button type="submit" disabled={isSubmittingIntake}>
-                                {isSubmittingIntake ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                {isSubmittingIntake ? "Saving..." : "Save & Start Maternity Care"}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
           </CardContent>
         </Card>
 
@@ -580,6 +577,7 @@ export default function MaternityCarePage() {
                                         <Button
                                             variant={"outline"}
                                             className={cn("w-full justify-start text-left font-normal",!nextScheduledDate && "text-muted-foreground")}
+                                            disabled={isSchedulingNextVisit}
                                         >
                                             <CalendarIcon className="mr-2 h-4 w-4" />
                                             {nextScheduledDate ? format(nextScheduledDate, "PPP") : <span>Pick a date</span>}
@@ -862,8 +860,4 @@ export default function MaternityCarePage() {
           </div>
         )}
       </div>
-    </AppShell>
-  );
-}
-
-    
+  )
