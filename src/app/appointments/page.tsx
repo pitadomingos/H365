@@ -32,8 +32,8 @@ import { toast } from "@/hooks/use-toast";
 
 interface Appointment {
   id: string;
-  patient: string;
-  doctor: string;
+  patientName: string;
+  doctorName: string;
   time: string;
   type: string;
   status: "Confirmed" | "Pending" | "Cancelled" | "Completed";
@@ -41,13 +41,18 @@ interface Appointment {
 }
 
 interface NotificationItem {
-  id: number;
+  id: string | number;
   message: string;
   time: string;
   read: boolean;
 }
 
-const mockDoctors = [
+interface Doctor {
+    id: string;
+    name: string;
+}
+
+const initialMockDoctors: Doctor[] = [
     { id: "dr-smith", name: "Dr. Smith" },
     { id: "dr-jones", name: "Dr. Jones" },
     { id: "dr-eve", name: "Dr. Eve" },
@@ -57,46 +62,97 @@ export default function AppointmentsPage() {
   const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
   const [appointments, setAppointments] = React.useState<Appointment[]>([]);
   const [isLoadingAppointments, setIsLoadingAppointments] = React.useState(true);
+  
   const [notifications, setNotifications] = React.useState<NotificationItem[]>([]);
   const [isLoadingNotifications, setIsLoadingNotifications] = React.useState(true);
 
+  const [doctors, setDoctors] = React.useState<Doctor[]>([]);
+  const [isLoadingDoctors, setIsLoadingDoctors] = React.useState(true);
+
   const [isSchedulingDialogOpen, setIsSchedulingDialogOpen] = React.useState(false);
   const [newPatientName, setNewPatientName] = React.useState("");
-  const [newSelectedDoctor, setNewSelectedDoctor] = React.useState("");
+  const [newSelectedDoctorId, setNewSelectedDoctorId] = React.useState("");
   const [newAppointmentDate, setNewAppointmentDate] = React.useState("");
-  const [newAppointmentTime, setNewAppointmentTime] = React.useState("");
+  const [newAppointmentTime, setNewAppointmentTime] = React.useState(""); // Format HH:MM
   const [newAppointmentType, setNewAppointmentType] = React.useState("Consultation");
   const [isScheduling, setIsScheduling] = React.useState(false);
 
   React.useEffect(() => {
-    setIsLoadingAppointments(true);
-    setTimeout(() => {
-      const fetchedAppointments: Appointment[] = [
-        { id: "APT001", patient: "Alice Wonderland", doctor: "Dr. Smith", date: "2024-08-15", time: "10:00 AM - 10:30 AM", type: "Consultation", status: "Confirmed" },
-        { id: "APT002", patient: "Bob The Builder", doctor: "Dr. Jones", date: "2024-08-15", time: "11:00 AM - 11:45 AM", type: "Check-up", status: "Pending" },
-        { id: "APT003", patient: "Charlie Brown", doctor: "Dr. Smith", date: "2024-08-16", time: "02:00 PM - 02:30 PM", type: "Follow-up", status: "Cancelled" },
-        { id: "APT004", patient: "Diana Prince", doctor: "Dr. Eve", date: "2024-08-16", time: "03:00 PM - 03:15 PM", type: "Telemedicine", status: "Confirmed" },
-        { id: "APT005", patient: "Edward Hands", doctor: "Dr. Jones", date: new Date().toISOString().split('T')[0], time: "09:00 AM - 09:30 AM", type: "Consultation", status: "Confirmed" },
-      ];
-      setAppointments(fetchedAppointments);
-      setIsLoadingAppointments(false);
-    }, 1500);
+    const fetchAppointments = async () => {
+      setIsLoadingAppointments(true);
+      try {
+        // Simulate API call: GET /api/v1/appointments
+        // const response = await fetch('/api/v1/appointments');
+        // if (!response.ok) throw new Error('Failed to fetch appointments');
+        // const data = await response.json();
+        // setAppointments(data);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const fetchedAppointments: Appointment[] = [
+          { id: "APT001", patientName: "Alice Wonderland", doctorName: "Dr. Smith", date: "2024-08-15", time: "10:00 AM - 10:30 AM", type: "Consultation", status: "Confirmed" },
+          { id: "APT002", patientName: "Bob The Builder", doctorName: "Dr. Jones", date: "2024-08-15", time: "11:00 AM - 11:45 AM", type: "Check-up", status: "Pending" },
+          { id: "APT003", patientName: "Charlie Brown", doctorName: "Dr. Smith", date: "2024-08-16", time: "02:00 PM - 02:30 PM", type: "Follow-up", status: "Cancelled" },
+          { id: "APT004", patientName: "Diana Prince", doctorName: "Dr. Eve", date: "2024-08-16", time: "03:00 PM - 03:15 PM", type: "Telemedicine", status: "Confirmed" },
+          { id: "APT005", patientName: "Edward Hands", doctorName: "Dr. Jones", date: new Date().toISOString().split('T')[0], time: "09:00 AM - 09:30 AM", type: "Consultation", status: "Confirmed" },
+        ];
+        setAppointments(fetchedAppointments);
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load appointments."});
+      } finally {
+        setIsLoadingAppointments(false);
+      }
+    };
 
-    setIsLoadingNotifications(true);
-    setTimeout(() => {
-      const fetchedNotifications: NotificationItem[] = [
-        { id: 1, message: "Appointment with Alice Wonderland confirmed for tomorrow at 10:00 AM.", time: "2 hours ago", read: false },
-        { id: 2, message: "Lab results for Bob The Builder are ready.", time: "5 hours ago", read: true },
-        { id: 3, message: "Reminder: Follow-up with Charlie Brown in 3 days.", time: "1 day ago", read: false },
-      ];
-      setNotifications(fetchedNotifications);
-      setIsLoadingNotifications(false);
-    }, 1200);
+    const fetchNotifications = async () => {
+      setIsLoadingNotifications(true);
+      try {
+        // Simulate API call: GET /api/v1/notifications?context=appointments
+        // const response = await fetch('/api/v1/notifications?context=appointments');
+        // if (!response.ok) throw new Error('Failed to fetch notifications');
+        // const data = await response.json();
+        // setNotifications(data);
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        const fetchedNotifications: NotificationItem[] = [
+          { id: 1, message: "Appointment with Alice Wonderland confirmed for tomorrow at 10:00 AM.", time: "2 hours ago", read: false },
+          { id: 2, message: "Lab results for Bob The Builder are ready.", time: "5 hours ago", read: true },
+          { id: 3, message: "Reminder: Follow-up with Charlie Brown in 3 days.", time: "1 day ago", read: false },
+        ];
+        setNotifications(fetchedNotifications);
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load notifications."});
+      } finally {
+        setIsLoadingNotifications(false);
+      }
+    };
+
+    const fetchDoctors = async () => {
+        setIsLoadingDoctors(true);
+        try {
+            // Simulate API call: GET /api/v1/doctors
+            // const response = await fetch('/api/v1/doctors');
+            // if (!response.ok) throw new Error('Failed to fetch doctors');
+            // const data = await response.json();
+            // setDoctors(data);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            setDoctors(initialMockDoctors);
+        } catch (error) {
+            console.error("Error fetching doctors:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not load doctors list." });
+            setDoctors(initialMockDoctors); // Fallback to initial mock on error
+        } finally {
+            setIsLoadingDoctors(false);
+        }
+    };
+
+    fetchAppointments();
+    fetchNotifications();
+    fetchDoctors();
   }, []);
 
   const handleScheduleNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPatientName || !newSelectedDoctor || !newAppointmentDate || !newAppointmentTime) {
+    if (!newPatientName || !newSelectedDoctorId || !newAppointmentDate || !newAppointmentTime) {
       toast({
         variant: "destructive",
         title: "Missing Information",
@@ -105,31 +161,59 @@ export default function AppointmentsPage() {
       return;
     }
     setIsScheduling(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const newApt: Appointment = {
-      id: `APT${Math.floor(Math.random() * 1000)}`,
-      patient: newPatientName,
-      doctor: mockDoctors.find(d => d.id === newSelectedDoctor)?.name || "N/A",
-      date: newAppointmentDate,
-      time: newAppointmentTime,
-      type: newAppointmentType,
-      status: "Pending", 
+
+    const payload = {
+        patientName: newPatientName,
+        doctorId: newSelectedDoctorId,
+        date: newAppointmentDate,
+        time: newAppointmentTime, // e.g., "10:00"
+        type: newAppointmentType,
     };
 
-    setAppointments(prev => [newApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
-    toast({
-      title: "Appointment Scheduled (Mock)",
-      description: `Appointment for ${newPatientName} with ${newApt.doctor} on ${newAppointmentDate} at ${newAppointmentTime} has been requested.`,
-    });
+    try {
+        // Simulate API call: POST /api/v1/appointments
+        // const response = await fetch('/api/v1/appointments', {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify(payload),
+        // });
+        // if (!response.ok) {
+        //     const errorData = await response.json().catch(() => ({ error: "Failed to schedule. API error."}));
+        //     throw new Error(errorData.error || `API error: ${response.statusText}`);
+        // }
+        // const newApt = await response.json();
 
-    setNewPatientName("");
-    setNewSelectedDoctor("");
-    setNewAppointmentDate("");
-    setNewAppointmentTime("");
-    setNewAppointmentType("Consultation");
-    setIsScheduling(false);
-    setIsSchedulingDialogOpen(false);
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Mock delay
+        const selectedDoctor = doctors.find(d => d.id === newSelectedDoctorId);
+        const newApt: Appointment = {
+          id: `APT${Math.floor(Math.random() * 10000)}`,
+          patientName: newPatientName,
+          doctorName: selectedDoctor?.name || "N/A",
+          date: newAppointmentDate,
+          // Backend would format time, here we mock it
+          time: `${newAppointmentTime} - ${new Date(new Date(`1970-01-01T${newAppointmentTime}:00`).getTime() + 30*60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`,
+          type: newAppointmentType,
+          status: "Pending", 
+        };
+
+        setAppointments(prev => [newApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
+        toast({
+          title: "Appointment Requested (Mock)",
+          description: `Request for ${newPatientName} with ${newApt.doctorName} on ${newAppointmentDate} at ${newAppointmentTime} has been submitted.`,
+        });
+
+        setNewPatientName("");
+        setNewSelectedDoctorId("");
+        setNewAppointmentDate("");
+        setNewAppointmentTime("");
+        setNewAppointmentType("Consultation");
+        setIsSchedulingDialogOpen(false);
+    } catch (error: any) {
+        console.error("Error scheduling appointment:", error);
+        toast({ variant: "destructive", title: "Scheduling Error", description: error.message || "Could not schedule appointment." });
+    } finally {
+        setIsScheduling(false);
+    }
   };
 
   const filteredAppointments = appointments.filter(apt => 
@@ -144,7 +228,7 @@ export default function AppointmentsPage() {
           </h1>
           <Dialog open={isSchedulingDialogOpen} onOpenChange={setIsSchedulingDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button disabled={isLoadingDoctors}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Schedule New
               </Button>
             </DialogTrigger>
@@ -159,34 +243,36 @@ export default function AppointmentsPage() {
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
                     <Label htmlFor="patientName">Patient Name <span className="text-destructive">*</span></Label>
-                    <Input id="patientName" placeholder="Patient Full Name" value={newPatientName} onChange={(e) => setNewPatientName(e.target.value)} required />
+                    <Input id="patientName" placeholder="Patient Full Name" value={newPatientName} onChange={(e) => setNewPatientName(e.target.value)} required disabled={isScheduling}/>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="doctorName">Doctor <span className="text-destructive">*</span></Label>
-                    <Select value={newSelectedDoctor} onValueChange={setNewSelectedDoctor} required>
+                    <Select value={newSelectedDoctorId} onValueChange={setNewSelectedDoctorId} required disabled={isScheduling || isLoadingDoctors}>
                       <SelectTrigger id="doctorName">
-                        <SelectValue placeholder="Select Doctor" />
+                        <SelectValue placeholder={isLoadingDoctors ? "Loading doctors..." : "Select Doctor"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockDoctors.map(doc => (
-                          <SelectItem key={doc.id} value={doc.id}>{doc.name}</SelectItem>
-                        ))}
+                        {isLoadingDoctors ? <SelectItem value="loading" disabled>Loading...</SelectItem> : 
+                          doctors.map(doc => (
+                            <SelectItem key={doc.id} value={doc.id}>{doc.name}</SelectItem>
+                          ))
+                        }
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="appointmentDate">Date <span className="text-destructive">*</span></Label>
-                        <Input id="appointmentDate" type="date" value={newAppointmentDate} onChange={(e) => setNewAppointmentDate(e.target.value)} required />
+                        <Input id="appointmentDate" type="date" value={newAppointmentDate} onChange={(e) => setNewAppointmentDate(e.target.value)} required disabled={isScheduling}/>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="appointmentTime">Time <span className="text-destructive">*</span></Label>
-                        <Input id="appointmentTime" type="time" value={newAppointmentTime} onChange={(e) => setNewAppointmentTime(e.target.value)} required/>
+                        <Input id="appointmentTime" type="time" value={newAppointmentTime} onChange={(e) => setNewAppointmentTime(e.target.value)} required disabled={isScheduling}/>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="appointmentType">Appointment Type</Label>
-                    <Select value={newAppointmentType} onValueChange={setNewAppointmentType}>
+                    <Select value={newAppointmentType} onValueChange={setNewAppointmentType} disabled={isScheduling}>
                       <SelectTrigger id="appointmentType">
                         <SelectValue placeholder="Select Type" />
                       </SelectTrigger>
@@ -202,7 +288,7 @@ export default function AppointmentsPage() {
                 </div>
                 <DialogFooter>
                   <DialogClose asChild><Button type="button" variant="outline" disabled={isScheduling}>Cancel</Button></DialogClose>
-                  <Button type="submit" disabled={isScheduling}>
+                  <Button type="submit" disabled={isScheduling || isLoadingDoctors || !newSelectedDoctorId}>
                     {isScheduling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     {isScheduling ? "Scheduling..." : "Schedule Appointment"}
                   </Button>
@@ -238,8 +324,8 @@ export default function AppointmentsPage() {
                   <TableBody>
                     {filteredAppointments.map((apt) => (
                       <TableRow key={apt.id}>
-                        <TableCell className="font-medium">{apt.patient}</TableCell>
-                        <TableCell>{apt.doctor}</TableCell>
+                        <TableCell className="font-medium">{apt.patientName}</TableCell>
+                        <TableCell>{apt.doctorName}</TableCell>
                         <TableCell>{apt.time}</TableCell>
                         <TableCell className="flex items-center gap-1">
                           {apt.type === "Telemedicine" && <Video className="h-4 w-4 text-primary" />}
@@ -315,3 +401,5 @@ export default function AppointmentsPage() {
         </div>
       </div>
   )
+
+    
