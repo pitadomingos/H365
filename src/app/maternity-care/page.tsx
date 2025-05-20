@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Baby, Search, CalendarPlus, FileText, ShieldAlert, Microscope, ScanSearch, FlaskConical, RadioTower, Loader2, CalendarIcon, Save, UserPlus, Info } from "lucide-react";
+import { Baby, Search, CalendarPlus, FileText, ShieldAlert, Microscope, ScanSearch, FlaskConical, RadioTower, Loader2, CalendarIcon, Save, UserPlus, Info, Thermometer, Weight, Ruler, Sigma, ActivityIcon as BloodPressureIcon } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -44,12 +44,17 @@ interface AntenatalVisit {
   id: string;
   date: string;
   gestationalAge: string; 
-  weightKg: number | string;
+  weightKg: string;
   bp: string; 
-  fhrBpm: number | string; 
-  fundalHeightCm: number | string;
+  fhrBpm: string; 
+  fundalHeightCm: string;
   notes: string;
   nextAppointment?: string;
+  bodyTemperature?: string;
+  heightCm?: string;
+  bmi?: string;
+  bmiStatus?: string;
+  bpStatus?: string;
 }
 
 interface MaternityPatient {
@@ -62,8 +67,8 @@ interface MaternityPatient {
   lmp?: string; 
   edd: string; 
   gestationalAge: string;
-  gravida: number | string; 
-  para: number | string;    
+  gravida: string; 
+  para: string;    
   bloodGroup: string;
   rhFactor: string;
   allergies: string[];
@@ -83,16 +88,16 @@ const mockPatientsList: MaternityPatient[] = [
     lmp: "2024-03-01",
     edd: "2024-12-06", 
     gestationalAge: "24w 5d", 
-    gravida: 1,
-    para: 0,
+    gravida: "1",
+    para: "0",
     bloodGroup: "O+",
     rhFactor: "Positive",
     allergies: ["Penicillin"],
     existingConditions: ["Mild Asthma"],
     riskFactors: ["None Identified"],
     antenatalVisits: [
-      { id: "AV001", date: "2024-05-10", gestationalAge: "10w 1d", weightKg: 60, bp: "110/70", fhrBpm: 150, fundalHeightCm: "N/A", notes: "First visit, all good.", nextAppointment: "2024-06-10" },
-      { id: "AV002", date: "2024-06-12", gestationalAge: "14w 3d", weightKg: 62, bp: "115/75", fhrBpm: 155, fundalHeightCm: 15, notes: "Routine checkup, anomaly scan advised.", nextAppointment: "2024-07-12" },
+      { id: "AV001", date: "2024-05-10", gestationalAge: "10w 1d", weightKg: "60", bp: "110/70", fhrBpm: "150", fundalHeightCm: "N/A", notes: "First visit, all good.", nextAppointment: "2024-06-10", bodyTemperature: "36.8", heightCm: "165", bmi: "22.0", bmiStatus: "Normal weight", bpStatus: "Normal" },
+      { id: "AV002", date: "2024-06-12", gestationalAge: "14w 3d", weightKg: "62", bp: "115/75", fhrBpm: "155", fundalHeightCm: "15", notes: "Routine checkup, anomaly scan advised.", nextAppointment: "2024-07-12", bodyTemperature: "37.0", heightCm: "165", bmi: "22.7", bmiStatus: "Normal weight", bpStatus: "Normal" },
     ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   },
    {
@@ -105,15 +110,15 @@ const mockPatientsList: MaternityPatient[] = [
     lmp: "2024-05-15",
     edd: "2025-02-19",
     gestationalAge: "13w 2d",
-    gravida: 2,
-    para: 1,
+    gravida: "2",
+    para: "1",
     bloodGroup: "A-",
     rhFactor: "Negative",
     allergies: [],
     existingConditions: ["Gestational Diabetes (Previous Pregnancy)"],
     riskFactors: ["Advanced Maternal Age", "History of GDM"],
     antenatalVisits: [
-      { id: "AV003", date: "2024-07-20", gestationalAge: "9w 2d", weightKg: 70, bp: "120/80", fhrBpm: 160, fundalHeightCm: "N/A", notes: "Booking visit. GTT scheduled.", nextAppointment: "2024-08-20" },
+      { id: "AV003", date: "2024-07-20", gestationalAge: "9w 2d", weightKg: "70", bp: "120/80", fhrBpm: "160", fundalHeightCm: "N/A", notes: "Booking visit. GTT scheduled.", nextAppointment: "2024-08-20", bodyTemperature: "37.1", heightCm: "160", bmi: "27.3", bmiStatus: "Overweight", bpStatus: "Elevated"},
     ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
   }
 ];
@@ -127,6 +132,8 @@ interface NewVisitFormState {
   fundalHeightCm: string;
   notes: string;
   nextAppointmentDate?: Date;
+  bodyTemperature?: string;
+  heightCm?: string;
 }
 
 interface MaternityIntakeFormState {
@@ -144,6 +151,54 @@ interface MaternityIntakeFormState {
     existingConditions: string; 
 }
 
+const getBmiStatusAndColor = (bmi: number | null): { status: string; colorClass: string; textColorClass: string; } => {
+  if (bmi === null || isNaN(bmi)) {
+    return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+  }
+  if (bmi < 18.5) {
+    return { status: "Underweight", colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
+  } else if (bmi < 25) {
+    return { status: "Normal weight", colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
+  } else if (bmi < 30) {
+    return { status: "Overweight", colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
+  } else if (bmi < 35) {
+    return { status: "Obese (Class I)", colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
+  } else if (bmi < 40) {
+    return { status: "Obese (Class II)", colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
+  } else {
+    return { status: "Obese (Class III)", colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
+  }
+};
+
+const getBloodPressureStatus = (bp: string): { status: string; colorClass: string; textColorClass: string; } => {
+  if (!bp || !bp.includes('/')) {
+    return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+  }
+  const parts = bp.split('/');
+  const systolic = parseInt(parts[0], 10);
+  const diastolic = parseInt(parts[1], 10);
+
+  if (isNaN(systolic) || isNaN(diastolic)) {
+    return { status: "Invalid", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+  }
+
+  if (systolic < 90 || diastolic < 60) {
+    return { status: "Hypotension", colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
+  } else if (systolic < 120 && diastolic < 80) {
+    return { status: "Normal", colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
+  } else if (systolic >= 120 && systolic <= 129 && diastolic < 80) {
+    return { status: "Elevated", colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
+  } else if ((systolic >= 130 && systolic <= 139) || (diastolic >= 80 && diastolic <= 89)) {
+    return { status: "Stage 1 HTN", colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
+  } else if (systolic >= 140 || diastolic >= 90) {
+    return { status: "Stage 2 HTN", colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
+  } else if (systolic > 180 || diastolic > 120) {
+    return { status: "Hypertensive Crisis", colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
+  }
+  return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+};
+
+
 export default function MaternityCarePage() {
   const [searchNationalId, setSearchNationalId] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<MaternityPatient | null>(null);
@@ -153,8 +208,12 @@ export default function MaternityCarePage() {
   const [isNewVisitModalOpen, setIsNewVisitModalOpen] = useState(false);
   const [isLoggingVisit, setIsLoggingVisit] = useState(false);
   const [newVisitForm, setNewVisitForm] = useState<NewVisitFormState>({
-    gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: ""
+    gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", bodyTemperature: "", heightCm: ""
   });
+  const [newVisitBmi, setNewVisitBmi] = useState<string | null>(null);
+  const [newVisitBmiDisplay, setNewVisitBmiDisplay] = useState<{ status: string; colorClass: string; textColorClass: string; } | null>(null);
+  const [newVisitBpDisplay, setNewVisitBpDisplay] = useState<{ status: string; colorClass: string, textColorClass: string; } | null>(null);
+
 
   const [selectedLabTests, setSelectedLabTests] = useState<Record<string, boolean>>({});
   const [isOrderingLabs, setIsOrderingLabs] = useState(false);
@@ -187,6 +246,24 @@ export default function MaternityCarePage() {
     }
   }, [maternityIntakeForm.lmp]);
 
+  useEffect(() => {
+    const w = parseFloat(newVisitForm.weightKg || '0');
+    const h = parseFloat(newVisitForm.heightCm || '0');
+    if (w > 0 && h > 0) {
+      const hM = h / 100;
+      const calculatedBmi = w / (hM * hM);
+      setNewVisitBmi(calculatedBmi.toFixed(2));
+      setNewVisitBmiDisplay(getBmiStatusAndColor(calculatedBmi));
+    } else {
+      setNewVisitBmi(null);
+      setNewVisitBmiDisplay(getBmiStatusAndColor(null));
+    }
+  }, [newVisitForm.weightKg, newVisitForm.heightCm]);
+
+  useEffect(() => {
+    setNewVisitBpDisplay(getBloodPressureStatus(newVisitForm.bp || ""));
+  }, [newVisitForm.bp]);
+
   const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
     if (gender === "Male") return "male avatar";
     if (gender === "Female") return "female avatar";
@@ -201,6 +278,8 @@ export default function MaternityCarePage() {
     setIsLoadingSearch(true);
     setSelectedPatient(null);
     setPatientNotFound(false);
+    // Simulate API call
+    // In a real app: const response = await fetch(`/api/v1/maternity/patients/search?nationalId=${searchNationalId}`);
     await new Promise(resolve => setTimeout(resolve, 1000));
     const found = allMaternityPatients.find(p => p.nationalId === searchNationalId);
     if (found) {
@@ -208,7 +287,7 @@ export default function MaternityCarePage() {
       toast({ title: "Patient Found", description: `${found.fullName}'s maternity record loaded.` });
     } else {
       setPatientNotFound(true);
-      toast({ variant: "destructive", title: "Not Found", description: "No maternity record found for this National ID. You can register them for maternity care." });
+      toast({ variant: "default", title: "Not Found", description: "No maternity record found for this National ID. You can register them for maternity care." });
     }
     setIsLoadingSearch(false);
   };
@@ -221,8 +300,8 @@ export default function MaternityCarePage() {
     if (!selectedPatient) return;
     setIsOrderingLabs(true);
     const orderedTests = COMMON_ORDERABLE_LAB_TESTS.filter(test => selectedLabTests[test.id]);
-    const orderedTestLabels = orderedTests.map(test => test.label);
     const orderedTestIds = orderedTests.map(test => test.id);
+    const orderedTestLabels = orderedTests.map(test => test.label);
 
     const payload = {
       patientId: selectedPatient.nationalId, 
@@ -232,6 +311,7 @@ export default function MaternityCarePage() {
     };
 
     console.log("Submitting Maternity Lab Order to /api/v1/maternity/lab-orders (mock):", payload);
+    // In a real app: const response = await fetch('/api/v1/maternity/lab-orders', { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'} });
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({
       title: "Lab Order Submitted (Mock)", 
@@ -241,7 +321,7 @@ export default function MaternityCarePage() {
     const notesEl = document.getElementById('maternityLabClinicalNotes') as HTMLTextAreaElement;
     if (notesEl) notesEl.value = "";
     setIsOrderingLabs(false);
-    
+    // Close dialog if it's open, assuming DialogClose is handled by Dialog component
   }
 
   const handleSubmitImagingOrder = async () => {
@@ -258,8 +338,15 @@ export default function MaternityCarePage() {
     console.log("Submitting Maternity Imaging Order to /api/v1/maternity/imaging-orders (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${selectedPatient?.fullName}. Details: ${payload.imagingType} - ${payload.regionDetails}`});
-    setIsOrderingImaging(false);
     
+    const typeEl = document.getElementById('maternityImagingType') as HTMLSelectElement;
+    const regionEl = document.getElementById('maternityImagingRegionDetails') as HTMLTextAreaElement;
+    const notesEl = document.getElementById('maternityImagingClinicalNotes') as HTMLTextAreaElement;
+    if (typeEl) typeEl.value = "";
+    if (regionEl) regionEl.value = "";
+    if (notesEl) notesEl.value = "";
+    setIsOrderingImaging(false);
+     // Close dialog if it's open
   }
 
   const handleNewVisitFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -274,26 +361,42 @@ export default function MaternityCarePage() {
         return;
     }
     setIsLoggingVisit(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const newVisit: AntenatalVisit = {
-        id: `AV${Date.now()}`,
-        date: format(newVisitForm.visitDate, "yyyy-MM-dd"),
+    const payload = {
+        patientId: selectedPatient.id,
+        visitDate: format(newVisitForm.visitDate, "yyyy-MM-dd"),
         gestationalAge: newVisitForm.gestationalAge,
         weightKg: newVisitForm.weightKg,
         bp: newVisitForm.bp,
         fhrBpm: newVisitForm.fhrBpm,
         fundalHeightCm: newVisitForm.fundalHeightCm,
         notes: newVisitForm.notes,
-        nextAppointment: newVisitForm.nextAppointmentDate ? format(newVisitForm.nextAppointmentDate, "yyyy-MM-dd") : undefined,
+        nextAppointmentDate: newVisitForm.nextAppointmentDate ? format(newVisitForm.nextAppointmentDate, "yyyy-MM-dd") : undefined,
+        bodyTemperature: newVisitForm.bodyTemperature,
+        heightCm: newVisitForm.heightCm,
+        bmi: newVisitBmi,
+        bmiStatus: newVisitBmiDisplay?.status,
+        bpStatus: newVisitBpDisplay?.status,
+    };
+    console.log("Submitting new antenatal visit to /api/v1/maternity/patients/{patientId}/antenatal-visits (mock):", payload);
+    // In a real app: const response = await fetch(`/api/v1/maternity/patients/${selectedPatient.id}/antenatal-visits`, { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'} });
+    // const savedVisit = await response.json();
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const savedVisit: AntenatalVisit = { // Mock saved visit
+        id: `AV${Date.now()}`,
+        ...payload
     };
 
-    setSelectedPatient(prev => prev ? ({ ...prev, antenatalVisits: [...prev.antenatalVisits, newVisit].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
-    setAllMaternityPatients(prevPatients => prevPatients.map(p => p.id === selectedPatient.id ? {...selectedPatient, antenatalVisits: [...selectedPatient.antenatalVisits, newVisit].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())} : p));
+    setSelectedPatient(prev => prev ? ({ ...prev, antenatalVisits: [savedVisit, ...prev.antenatalVisits].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
+    setAllMaternityPatients(prevPatients => prevPatients.map(p => p.id === selectedPatient.id ? {...selectedPatient, antenatalVisits: [savedVisit, ...selectedPatient.antenatalVisits].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())} : p));
 
-    toast({ title: "New Antenatal Visit Logged", description: `Visit on ${newVisit.date} for ${selectedPatient.fullName} saved.`});
+
+    toast({ title: "New Antenatal Visit Logged", description: `Visit on ${savedVisit.date} for ${selectedPatient.fullName} saved.`});
     setIsNewVisitModalOpen(false);
-    setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", nextAppointmentDate: undefined }); 
+    setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", bodyTemperature: "", heightCm: "", nextAppointmentDate: undefined }); 
+    setNewVisitBmi(null);
+    setNewVisitBmiDisplay(null);
+    setNewVisitBpDisplay(null);
     setIsLoggingVisit(false);
   };
   
@@ -303,6 +406,13 @@ export default function MaternityCarePage() {
         return;
     }
     setIsSchedulingNextVisit(true);
+    const payload = {
+        patientId: selectedPatient.id,
+        nextVisitDate: format(nextScheduledDate, "yyyy-MM-dd"),
+        notes: nextScheduledNotes,
+    };
+    console.log("Scheduling next ANC visit via /api/v1/maternity/schedule-next-visit (mock):", payload);
+    // In a real app: const response = await fetch('/api/v1/maternity/schedule-next-visit', { method: 'POST', ... });
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({ title: "Next Visit Scheduled (Mock)", description: `Next ANC visit for ${selectedPatient.fullName} scheduled for ${format(nextScheduledDate, "PPP")}. Notes: ${nextScheduledNotes}`});
     setIsScheduleNextVisitModalOpen(false);
@@ -324,6 +434,7 @@ export default function MaternityCarePage() {
         return;
     }
     setIsSubmittingIntake(true);
+    // In a real app: const response = await fetch('/api/v1/maternity/patients', { method: 'POST', ... });
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const newMaternityPatient: MaternityPatient = {
@@ -335,9 +446,9 @@ export default function MaternityCarePage() {
         photoUrl: "https://placehold.co/100x100.png", 
         lmp: format(lmp, "yyyy-MM-dd"),
         edd: format(edd, "yyyy-MM-dd"),
-        gestationalAge: "0w 0d", 
-        gravida: parseInt(gravida),
-        para: parseInt(para),
+        gestationalAge: "0w 0d", // This would be calculated on backend or updated on first visit
+        gravida: gravida,
+        para: para,
         bloodGroup: maternityIntakeForm.bloodGroup,
         rhFactor: maternityIntakeForm.rhFactor,
         allergies: maternityIntakeForm.allergies.split(',').map(s => s.trim()).filter(Boolean),
@@ -355,6 +466,8 @@ export default function MaternityCarePage() {
     setSearchNationalId(newMaternityPatient.nationalId); 
     setIsSubmittingIntake(false);
   };
+
+  const latestVisitVitals = selectedPatient?.antenatalVisits?.[0];
 
 
   return (
@@ -438,7 +551,7 @@ export default function MaternityCarePage() {
                                             <SelectTrigger id="intakeGender"><SelectValue placeholder="Select Gender" /></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="Female">Female</SelectItem>
-                                                <SelectItem value="Other">Other</SelectItem>
+                                                {/* <SelectItem value="Other">Other</SelectItem> Removed male as per typical maternity context */}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -538,6 +651,15 @@ export default function MaternityCarePage() {
                   <p><strong>EDD:</strong> {new Date(selectedPatient.edd + "T00:00:00").toLocaleDateString()} ({selectedPatient.gestationalAge})</p>
                   <p><strong>Gravida/Para:</strong> G{selectedPatient.gravida} P{selectedPatient.para}</p>
                   <p><strong>Blood Group:</strong> {selectedPatient.bloodGroup} ({selectedPatient.rhFactor})</p>
+                   {latestVisitVitals && (
+                    <>
+                        <Separator className="my-2"/>
+                        <h4 className="font-medium flex items-center gap-1"><Activity className="h-4 w-4 text-primary"/>Latest Vitals (from {new Date(latestVisitVitals.date+"T00:00:00").toLocaleDateString()}):</h4>
+                        <p>Temp: {latestVisitVitals.bodyTemperature || 'N/A'}°C | BP: {latestVisitVitals.bp || 'N/A'} {latestVisitVitals.bpStatus && <Badge variant="outline" className={cn("ml-1 text-xs", getBloodPressureStatus(latestVisitVitals.bp).colorClass, getBloodPressureStatus(latestVisitVitals.bp).textColorClass )}>{latestVisitVitals.bpStatus}</Badge>}</p>
+                        <p>Wt: {latestVisitVitals.weightKg || 'N/A'}kg | Ht: {latestVisitVitals.heightCm || 'N/A'}cm | BMI: {latestVisitVitals.bmi || 'N/A'} {latestVisitVitals.bmiStatus && <Badge variant="outline" className={cn("ml-1 text-xs", getBmiStatusAndColor(parseFloat(latestVisitVitals.bmi)).colorClass, getBmiStatusAndColor(parseFloat(latestVisitVitals.bmi)).textColorClass )}>{latestVisitVitals.bmiStatus}</Badge>}</p>
+                    </>
+                  )}
+                  <Separator className="my-2"/>
                   <div>
                     <h4 className="font-medium">Allergies:</h4>
                     {selectedPatient.allergies.length > 0 ? selectedPatient.allergies.join(', ') : <span className="text-muted-foreground">None reported</span>}
@@ -650,22 +772,18 @@ export default function MaternityCarePage() {
                                 {isLoggingVisit ? "Logging..." : "Log New Visit"}
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-lg">
+                        <DialogContent className="sm:max-w-2xl"> {/* Increased width for more fields */}
                             <form onSubmit={handleLogNewVisitSubmit}>
                                 <DialogHeader>
                                     <DialogTitle>Log New Antenatal Visit for {selectedPatient.fullName}</DialogTitle>
                                     <DialogDescription>Enter details for the current antenatal visit.</DialogDescription>
                                 </DialogHeader>
-                                <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
                                     <div className="space-y-2">
                                         <Label htmlFor="visitDate">Visit Date <span className="text-destructive">*</span></Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                            <Button
-                                                variant={"outline"}
-                                                className={cn("w-full justify-start text-left font-normal",!newVisitForm.visitDate && "text-muted-foreground")}
-                                                disabled={isLoggingVisit}
-                                            >
+                                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal",!newVisitForm.visitDate && "text-muted-foreground")} disabled={isLoggingVisit}>
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                                 {newVisitForm.visitDate ? format(newVisitForm.visitDate, "PPP") : <span>Pick a date</span>}
                                             </Button>
@@ -680,14 +798,46 @@ export default function MaternityCarePage() {
                                             <Label htmlFor="gestationalAge">Gestational Age (weeks+days)</Label>
                                             <Input id="gestationalAge" name="gestationalAge" value={newVisitForm.gestationalAge} onChange={handleNewVisitFormChange} placeholder="e.g., 12w 3d" disabled={isLoggingVisit}/>
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="weightKg">Weight (kg)</Label>
-                                            <Input id="weightKg" name="weightKg" type="number" value={newVisitForm.weightKg} onChange={handleNewVisitFormChange} placeholder="e.g., 65.5" disabled={isLoggingVisit}/>
+                                         <div className="space-y-2">
+                                            <Label htmlFor="bodyTemperature" className="flex items-center"><Thermometer className="mr-1.5 h-4 w-4 text-primary" />Temp (°C)</Label>
+                                            <Input id="bodyTemperature" name="bodyTemperature" value={newVisitForm.bodyTemperature || ""} onChange={handleNewVisitFormChange} placeholder="e.g., 37.5" disabled={isLoggingVisit}/>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="bp">Blood Pressure (mmHg)</Label>
+                                            <Label htmlFor="weightKg" className="flex items-center"><Weight className="mr-1.5 h-4 w-4 text-primary" />Weight (kg)</Label>
+                                            <Input id="weightKg" name="weightKg" type="number" step="0.1" value={newVisitForm.weightKg} onChange={handleNewVisitFormChange} placeholder="e.g., 65.5" disabled={isLoggingVisit}/>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="heightCm" className="flex items-center"><Ruler className="mr-1.5 h-4 w-4 text-primary" />Height (cm)</Label>
+                                            <Input id="heightCm" name="heightCm" type="number" value={newVisitForm.heightCm || ""} onChange={handleNewVisitFormChange} placeholder="e.g., 165" disabled={isLoggingVisit}/>
+                                        </div>
+                                    </div>
+                                     <div className="grid grid-cols-2 gap-4 items-center">
+                                        <div className="space-y-1">
+                                            <Label className="flex items-center text-xs"><Sigma className="mr-1.5 h-3 w-3" />BMI (kg/m²)</Label>
+                                            <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-muted/50 min-w-[150px]">
+                                                <span className="text-sm font-medium">{newVisitBmi || "N/A"}</span>
+                                                {newVisitBmiDisplay && newVisitBmiDisplay.status !== "N/A" && (
+                                                    <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", newVisitBmiDisplay.colorClass, newVisitBmiDisplay.textColorClass)}>{newVisitBmiDisplay.status}</Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />BP Status</Label>
+                                            <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-muted/50 min-w-[150px]">
+                                                {newVisitBpDisplay && newVisitBpDisplay.status !== "N/A" && newVisitBpDisplay.status !== "Invalid" && (
+                                                    <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", newVisitBpDisplay.colorClass, newVisitBpDisplay.textColorClass)}>{newVisitBpDisplay.status}</Badge>
+                                                )}
+                                                {(newVisitBpDisplay?.status === "N/A" || newVisitBpDisplay?.status === "Invalid") && (
+                                                <span className="text-sm font-medium">{newVisitBpDisplay.status}</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="bp" className="flex items-center"><BloodPressureIcon className="mr-1.5 h-4 w-4 text-primary" />Blood Pressure (mmHg)</Label>
                                             <Input id="bp" name="bp" value={newVisitForm.bp} onChange={handleNewVisitFormChange} placeholder="e.g., 120/80" disabled={isLoggingVisit}/>
                                         </div>
                                         <div className="space-y-2">
@@ -796,7 +946,16 @@ export default function MaternityCarePage() {
                       </DialogContent>
                     </Dialog>
 
-                    <Dialog>
+                    <Dialog onOpenChange={(open) => {
+                         if (!open) {
+                            const typeEl = document.getElementById('maternityImagingType') as HTMLSelectElement;
+                            const regionEl = document.getElementById('maternityImagingRegionDetails') as HTMLTextAreaElement;
+                            const notesEl = document.getElementById('maternityImagingClinicalNotes') as HTMLTextAreaElement;
+                            if (typeEl) typeEl.value = "";
+                            if (regionEl) regionEl.value = "";
+                            if (notesEl) notesEl.value = "";
+                        }
+                    }}>
                       <DialogTrigger asChild>
                         <Button variant="outline" disabled={!selectedPatient || isOrderingImaging}>
                             {isOrderingImaging ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RadioTower className="mr-2 h-4 w-4"/>}
@@ -811,8 +970,8 @@ export default function MaternityCarePage() {
                         <div className="grid gap-4 py-4">
                           <div className="space-y-2">
                             <Label htmlFor="maternityImagingType">Imaging Type</Label>
-                            <Select disabled={isOrderingImaging} name="maternityImagingType" defaultValue="">
-                              <SelectTrigger id="maternityImagingType">
+                            <Select disabled={isOrderingImaging} name="maternityImagingType" defaultValue="" id="maternityImagingType">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select imaging type" />
                               </SelectTrigger>
                               <SelectContent>
@@ -860,4 +1019,6 @@ export default function MaternityCarePage() {
           </div>
         )}
       </div>
-  )
+  );
+}
+

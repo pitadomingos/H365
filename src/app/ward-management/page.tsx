@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { BedDouble, Users, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed, Edit, PlusCircle } from "lucide-react";
+import { BedDouble, Users, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed, Edit, PlusCircle, Thermometer, Weight, Ruler, Sigma, Save, ActivityIcon as BloodPressureIcon } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -83,6 +83,16 @@ interface DoctorNote {
   note: string;
 }
 
+interface VitalsData {
+  bodyTemperature?: string;
+  weightKg?: string;
+  heightCm?: string;
+  bloodPressure?: string;
+  bmi?: string;
+  bmiStatus?: string;
+  bpStatus?: string;
+}
+
 interface AdmittedPatientFullDetails {
   admissionId: string;
   patientId: string;
@@ -92,6 +102,7 @@ interface AdmittedPatientFullDetails {
   treatmentPlan: string;
   medicationSchedule: MedicationScheduleItem[];
   doctorNotes: DoctorNote[];
+  vitals?: VitalsData;
 }
 
 interface PendingAdmission {
@@ -115,73 +126,95 @@ const mockHospitalPendingAdmissionsData: PendingAdmission[] = [
     { id: "PEND003", patientId: "P103", patientName: "Maria Garcia", referringDepartment: "Specialist Consultation (Cardiology)", reasonForAdmission: "Post-MI observation and cardiac rehab." },
 ];
 
-const mockWardDetailsData: Record<string, WardDetails> = {
-  "W001": {
-    id: "W001", name: "General Medicine Ward A", totalBeds: 20, occupiedBeds: 2, availableBeds: 18, occupancyRate: 10,
-    patients: [
-      { admissionId: "ADM001", patientId: "P001", name: "Eva Green", bedNumber: "Bed 3", admittedDate: "2024-07-28", primaryDiagnosis: "Pneumonia" },
-      { admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", bedNumber: "Bed 5", admittedDate: "2024-07-29", primaryDiagnosis: "CHF Exacerbation" },
-    ],
-    beds: Array.from({ length: 20 }).map((_, i) => ({
-        id: `B001-${i+1}`, bedNumber: `Bed ${i+1}`,
-        status: (i === 2 || i === 4) ? "Occupied" : (i === 10 ? "Cleaning" : "Available"),
-        patientName: i === 2 ? "Eva Green" : i === 4 ? "Tom Hanks" : undefined,
-        patientId: i === 2 ? "P001" : i === 4 ? "P002" : undefined,
-    }))
-  },
-   "W002": {
-    id: "W002", name: "Surgical Ward B", totalBeds: 15, occupiedBeds: 1, availableBeds: 14, occupancyRate: 6.6,
-    patients: [ { admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", bedNumber: "Bed 1", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Appendectomy" } ],
-    beds: Array.from({ length: 15 }).map((_, i) => ({ id: `B002-${i+1}`, bedNumber: `Bed ${i+1}`, status: i === 0 ? "Occupied" : "Available", patientName: i === 0 ? "Lucy Liu" : undefined, patientId: i === 0 ? "P003" : undefined }))
-  },
-   "W003": {
-    id: "W003", name: "Pediatrics Ward C", totalBeds: 10, occupiedBeds: 1, availableBeds: 9, occupancyRate: 10,
-    patients: [ { admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", bedNumber: "Bed 2", admittedDate: "2024-07-31", primaryDiagnosis: "Asthma Attack" } ],
-    beds: Array.from({ length: 10 }).map((_, i) => ({ id: `B003-${i+1}`, bedNumber: `Bed ${i+1}`, status: i === 1 ? "Occupied" : "Available", patientName: i === 1 ? "Kevin McCallister" : undefined, patientId: i === 1 ? "P004" : undefined }))
-  },
-   "W004": {
-    id: "W004", name: "Maternity Ward D", totalBeds: 12, occupiedBeds: 1, availableBeds: 11, occupancyRate: 8.3,
-    patients: [ { admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", bedNumber: "Bed 7", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Partum Observation" } ],
-    beds: Array.from({ length: 12 }).map((_, i) => ({ id: `B004-${i+1}`, bedNumber: `Bed ${i+1}`, status: i === 6 ? "Occupied" : "Available", patientName: i === 6 ? "Sarah Connor" : undefined, patientId: i === 6 ? "PM005" : undefined }))
-  }
-};
-
 const mockAdmittedPatientFullDetailsData: Record<string, AdmittedPatientFullDetails> = {
   "ADM001": {
     admissionId: "ADM001", patientId: "P001", name: "Eva Green", wardName: "General Medicine Ward A", bedNumber: "Bed 3",
     treatmentPlan: "IV Ceftriaxone 1g OD. Oxygen support PRN. Monitor vitals Q4H. Chest physiotherapy BID.",
     medicationSchedule: [
-      { medicationItemId: "MEDSCH001-A", medication: "Ceftriaxone 1g IV", dosage: "1g", time: "08:00", status: "Administered", notes: "Given slowly over 30 mins." },
-      { medicationItemId: "MEDSCH001-B", medication: "Paracetamol 500mg PO", dosage: "500mg", time: "12:00", status: "Pending" },
-      { medicationItemId: "MEDSCH001-C", medication: "Salbutamol Neb", dosage: "2.5mg", time: "14:00", status: "Pending", notes: "Check O2 sats before/after." },
+      { medicationItemId: "MEDSCH001-A-1", medication: "Ceftriaxone 1g IV", dosage: "1g", time: "08:00", status: "Administered", notes: "Given slowly over 30 mins." },
+      { medicationItemId: "MEDSCH001-B-1", medication: "Paracetamol 500mg PO", dosage: "500mg", time: "12:00", status: "Pending" },
+      { medicationItemId: "MEDSCH001-C-1", medication: "Salbutamol Neb", dosage: "2.5mg", time: "14:00", status: "Pending", notes: "Check O2 sats before/after." },
     ],
-    doctorNotes: [{ noteId: "DN001-A", date: new Date(Date.now() - 86400000).toISOString(), doctor: "Dr. Smith", note: "Patient responding well. Continue plan." }, {noteId: "DN001-B", date: new Date().toISOString(), doctor: "Dr. House", note: "Reviewed chest X-ray, slight improvement in consolidation."}],
+    doctorNotes: [{ noteId: "DN001-A-1", date: new Date(Date.now() - 86400000).toISOString(), doctor: "Dr. Smith", note: "Patient responding well. Continue plan." }, {noteId: "DN001-B-1", date: new Date().toISOString(), doctor: "Dr. House", note: "Reviewed chest X-ray, slight improvement in consolidation."}],
+    vitals: { bodyTemperature: "37.2", weightKg: "65", heightCm: "168", bloodPressure: "120/80" }
   },
    "ADM002": {
     admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", wardName: "General Medicine Ward A", bedNumber: "Bed 5",
     treatmentPlan: "Furosemide 40mg IV BD. Fluid restriction 1.5L/day. Daily weights. Monitor electrolytes.",
-    medicationSchedule: [{ medicationItemId: "MEDSCH002-A", medication: "Furosemide 40mg IV", dosage: "40mg", time: "09:00", status: "Administered" }],
-    doctorNotes: [{ noteId: "DN002-A", date: new Date().toISOString(), doctor: "Dr. House", note: "Mild improvement in edema." }],
+    medicationSchedule: [{ medicationItemId: "MEDSCH002-A-1", medication: "Furosemide 40mg IV", dosage: "40mg", time: "09:00", status: "Administered" }],
+    doctorNotes: [{ noteId: "DN002-A-1", date: new Date().toISOString(), doctor: "Dr. House", note: "Mild improvement in edema." }],
+    vitals: { bodyTemperature: "36.8", weightKg: "80", heightCm: "175", bloodPressure: "135/85" }
   },
    "ADM003": {
     admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", wardName: "Surgical Ward B", bedNumber: "Bed 1",
     treatmentPlan: "Post-op day 1. Pain management with Tramadol 50mg PO Q6H PRN. Wound care. Encourage mobilization.",
-    medicationSchedule: [{ medicationItemId: "MEDSCH003-A", medication: "Tramadol 50mg PO", dosage: "50mg", time: "PRN", status: "Pending" }],
-    doctorNotes: [{ noteId: "DN003-A", date: new Date().toISOString(), doctor: "Dr. Grey", note: "Surgical site clean. Patient ambulating." }],
+    medicationSchedule: [{ medicationItemId: "MEDSCH003-A-1", medication: "Tramadol 50mg PO", dosage: "50mg", time: "PRN", status: "Pending" }],
+    doctorNotes: [{ noteId: "DN003-A-1", date: new Date().toISOString(), doctor: "Dr. Grey", note: "Surgical site clean. Patient ambulating." }],
+    vitals: { bodyTemperature: "37.0", weightKg: "55", heightCm: "160", bloodPressure: "110/70" }
   },
   "ADM004": {
     admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", wardName: "Pediatrics Ward C", bedNumber: "Bed 2",
     treatmentPlan: "Nebulized Salbutamol Q4H. Prednisolone PO. Monitor oxygen saturation.",
-    medicationSchedule: [{ medicationItemId: "MEDSCH004-A", medication: "Salbutamol Neb", dosage: "2.5mg", time: "10:00", status: "Administered" }],
-    doctorNotes: [{ noteId: "DN004-A", date: new Date().toISOString(), doctor: "Dr. Carter", note: "Wheezing reduced. Stable." }],
+    medicationSchedule: [{ medicationItemId: "MEDSCH004-A-1", medication: "Salbutamol Neb", dosage: "2.5mg", time: "10:00", status: "Administered" }],
+    doctorNotes: [{ noteId: "DN004-A-1", date: new Date().toISOString(), doctor: "Dr. Carter", note: "Wheezing reduced. Stable." }],
+     vitals: { bodyTemperature: "37.5", weightKg: "30", heightCm: "130", bloodPressure: "100/60" }
   },
   "ADM005": {
     admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", wardName: "Maternity Ward D", bedNumber: "Bed 7",
     treatmentPlan: "Routine post-natal care. Monitor for bleeding. Pain relief PRN.",
-    medicationSchedule: [{ medicationItemId: "MEDSCH005-A", medication: "Ibuprofen 400mg PO", dosage: "400mg", time: "PRN", status: "Pending" }],
-    doctorNotes: [{ noteId: "DN005-A", date: new Date().toISOString(), doctor: "Dr. Greene", note: "Patient and baby doing well." }],
+    medicationSchedule: [{ medicationItemId: "MEDSCH005-A-1", medication: "Ibuprofen 400mg PO", dosage: "400mg", time: "PRN", status: "Pending" }],
+    doctorNotes: [{ noteId: "DN005-A-1", date: new Date().toISOString(), doctor: "Dr. Greene", note: "Patient and baby doing well." }],
+    vitals: { bodyTemperature: "36.9", weightKg: "70", heightCm: "170", bloodPressure: "118/78" }
   },
 };
+
+const getBmiStatusAndColor = (bmi: number | null): { status: string; colorClass: string; textColorClass: string; } => {
+  if (bmi === null || isNaN(bmi)) {
+    return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+  }
+  if (bmi < 18.5) {
+    return { status: "Underweight", colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
+  } else if (bmi < 25) {
+    return { status: "Normal weight", colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
+  } else if (bmi < 30) {
+    return { status: "Overweight", colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
+  } else if (bmi < 35) {
+    return { status: "Obese (Class I)", colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
+  } else if (bmi < 40) {
+    return { status: "Obese (Class II)", colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
+  } else {
+    return { status: "Obese (Class III)", colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
+  }
+};
+
+const getBloodPressureStatus = (bp: string): { status: string; colorClass: string; textColorClass: string; } => {
+  if (!bp || !bp.includes('/')) {
+    return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+  }
+  const parts = bp.split('/');
+  const systolic = parseInt(parts[0], 10);
+  const diastolic = parseInt(parts[1], 10);
+
+  if (isNaN(systolic) || isNaN(diastolic)) {
+    return { status: "Invalid", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+  }
+
+  if (systolic < 90 || diastolic < 60) {
+    return { status: "Hypotension", colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
+  } else if (systolic < 120 && diastolic < 80) {
+    return { status: "Normal", colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
+  } else if (systolic >= 120 && systolic <= 129 && diastolic < 80) {
+    return { status: "Elevated", colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
+  } else if ((systolic >= 130 && systolic <= 139) || (diastolic >= 80 && diastolic <= 89)) {
+    return { status: "Stage 1 HTN", colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
+  } else if (systolic >= 140 || diastolic >= 90) {
+    return { status: "Stage 2 HTN", colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
+  } else if (systolic > 180 || diastolic > 120) {
+    return { status: "Hypertensive Crisis", colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
+  }
+  return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+};
+
 
 export default function WardManagementPage() {
   const [allWardsData, setAllWardsData] = useState<WardSummary[]>([]);
@@ -223,6 +256,13 @@ export default function WardManagementPage() {
   const [admissionDoctor, setAdmissionDoctor] = useState("");
   const [admissionDiagnosis, setAdmissionDiagnosis] = useState("");
   const [isAdmittingPatient, setIsAdmittingPatient] = useState(false);
+
+  // Vitals state for editing in the patient details section
+  const [editableVitals, setEditableVitals] = useState<VitalsData>({});
+  const [isSavingVitals, setIsSavingVitals] = useState(false);
+  const [calculatedBmi, setCalculatedBmi] = useState<string | null>(null);
+  const [bmiDisplay, setBmiDisplay] = useState<{ status: string; colorClass: string; textColorClass: string; } | null>(null);
+  const [bpDisplay, setBpDisplay] = useState<{ status: string; colorClass: string, textColorClass: string; } | null>(null);
 
 
   useEffect(() => {
@@ -277,6 +317,25 @@ export default function WardManagementPage() {
       setTimeout(() => {
         const fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
         setCurrentAdmittedPatientFullDetails(fullDetails || null);
+        setEditableVitals(fullDetails?.vitals || {});
+        if (fullDetails && fullDetails.vitals) {
+          const w = parseFloat(fullDetails.vitals.weightKg || '0');
+          const h = parseFloat(fullDetails.vitals.heightCm || '0');
+          if (w > 0 && h > 0) {
+            const hM = h / 100;
+            const bmiVal = w / (hM * hM);
+            setCalculatedBmi(bmiVal.toFixed(2));
+            setBmiDisplay(getBmiStatusAndColor(bmiVal));
+          } else {
+            setCalculatedBmi(null);
+            setBmiDisplay(getBmiStatusAndColor(null));
+          }
+          setBpDisplay(getBloodPressureStatus(fullDetails.vitals.bloodPressure || ""));
+        } else {
+          setCalculatedBmi(null);
+          setBmiDisplay(getBmiStatusAndColor(null));
+          setBpDisplay(getBloodPressureStatus(""));
+        }
         if (fullDetails) {
           setMedicationScheduleInModal(fullDetails.medicationSchedule.map(item => ({...item}))); 
         } else {
@@ -286,9 +345,49 @@ export default function WardManagementPage() {
       }, 800);
     } else {
         setCurrentAdmittedPatientFullDetails(null);
+        setEditableVitals({});
+        setCalculatedBmi(null);
+        setBmiDisplay(getBmiStatusAndColor(null));
+        setBpDisplay(getBloodPressureStatus(""));
         setMedicationScheduleInModal([]);
     }
   }, [selectedPatientForDetails]);
+
+  useEffect(() => {
+    const w = parseFloat(editableVitals.weightKg || '0');
+    const h = parseFloat(editableVitals.heightCm || '0');
+    if (w > 0 && h > 0) {
+      const hM = h / 100;
+      const bmiVal = w / (hM * hM);
+      setCalculatedBmi(bmiVal.toFixed(2));
+      setBmiDisplay(getBmiStatusAndColor(bmiVal));
+    } else {
+      setCalculatedBmi(null);
+      setBmiDisplay(getBmiStatusAndColor(null));
+    }
+  }, [editableVitals.weightKg, editableVitals.heightCm]);
+
+  useEffect(() => {
+    setBpDisplay(getBloodPressureStatus(editableVitals.bloodPressure || ""));
+  }, [editableVitals.bloodPressure]);
+
+  const handleEditableVitalsChange = (field: keyof VitalsData, value: string) => {
+    setEditableVitals(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveVitals = async () => {
+    if (!currentAdmittedPatientFullDetails) return;
+    setIsSavingVitals(true);
+    const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, vitals: editableVitals };
+    console.log("Saving vitals to /api/v1/admissions/{admissionId}/vitals (mock):", payload);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, vitals: { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status } }) : null);
+    // Update the main mock data source
+    mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].vitals = { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status };
+    toast({ title: "Vitals Saved (Mock)", description: "Patient vitals updated successfully." });
+    setIsSavingVitals(false);
+  };
+
 
   const handleAdmitPatientToWard = async () => {
     if (!selectedWardId || !selectedPendingPatientId || !selectedAvailableBedId || !admissionDoctor.trim() || !admissionDiagnosis.trim()) {
@@ -353,6 +452,7 @@ export default function WardManagementPage() {
         treatmentPlan: `Initial plan for ${admissionDiagnosis}. Monitor vitals.`,
         medicationSchedule: [],
         doctorNotes: [{noteId: `DN-ADMIT-${Date.now()}`, date: new Date().toISOString(), doctor: admissionDoctor, note: `Admitted for ${admissionDiagnosis}.`}],
+        vitals: {}, // Initialize with empty vitals, to be updated by ward staff
     };
 
     setHospitalPendingAdmissions(prev => prev.filter(p => p.id !== selectedPendingPatientId));
@@ -373,7 +473,11 @@ export default function WardManagementPage() {
     console.log("Submitting to /api/v1/admissions/{admissionId}/doctor-notes (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
     const newNoteEntry: DoctorNote = { noteId: `DN${Date.now()}`, date: new Date().toISOString(), doctor: "Dr. Current User (Mock)", note: newDoctorNote };
-    setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, doctorNotes: [newNoteEntry, ...prev.doctorNotes] }) : null);
+    setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, doctorNotes: [newNoteEntry, ...prev.doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
+    // Update main mock data source
+    if (currentAdmittedPatientFullDetails) {
+      mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes = [newNoteEntry, ...mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
     toast({title: "Note Saved (Mock)", description: "New doctor's note added."});
     setNewDoctorNote("");
     setIsAddingNote(false);
@@ -427,7 +531,9 @@ export default function WardManagementPage() {
     setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, medicationSchedule: medicationScheduleInModal }) : null);
     
     // Also update the main mock data source
-    mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].medicationSchedule = medicationScheduleInModal;
+    if (currentAdmittedPatientFullDetails) {
+        mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].medicationSchedule = medicationScheduleInModal;
+    }
 
     toast({title: "Medication Log Updated (Mock)", description: "Medication schedule has been updated."});
     setIsMedicationModalOpen(false);
@@ -714,7 +820,7 @@ export default function WardManagementPage() {
 
                 <Card className="shadow-sm">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5 text-primary"/>Bed Status - {currentWardDetails.name}</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Bed className="h-5 w-5 text-primary"/>Bed Status - {currentWardDetails.name}</CardTitle>
                     <CardDescription>Overview of all beds in this ward.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -762,17 +868,66 @@ export default function WardManagementPage() {
               )}
               {!isLoadingSelectedPatientDetails && currentAdmittedPatientFullDetails && (
                 <>
+                  {/* Vitals Section */}
+                  <div className="space-y-3 p-4 border rounded-md bg-muted/20">
+                    <h4 className="text-md font-semibold mb-2 flex items-center"><Activity className="mr-2 h-4 w-4 text-primary" /> Current Vitals</h4>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+                        <div className="space-y-1">
+                            <Label htmlFor="wardBodyTemperature" className="flex items-center text-xs"><Thermometer className="mr-1.5 h-3 w-3" />Temp (°C)</Label>
+                            <Input id="wardBodyTemperature" value={editableVitals.bodyTemperature || ""} onChange={(e) => handleEditableVitalsChange("bodyTemperature", e.target.value)} placeholder="e.g., 37.5" disabled={isSavingVitals} />
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="wardWeight" className="flex items-center text-xs"><Weight className="mr-1.5 h-3 w-3" />Weight (kg)</Label>
+                            <Input id="wardWeight" value={editableVitals.weightKg || ""} onChange={(e) => handleEditableVitalsChange("weightKg", e.target.value)} placeholder="e.g., 70" disabled={isSavingVitals} />
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="wardHeight" className="flex items-center text-xs"><Ruler className="mr-1.5 h-3 w-3" />Height (cm)</Label>
+                            <Input id="wardHeight" value={editableVitals.heightCm || ""} onChange={(e) => handleEditableVitalsChange("heightCm", e.target.value)} placeholder="e.g., 175" disabled={isSavingVitals} />
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="wardBloodPressure" className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />BP (mmHg)</Label>
+                            <Input id="wardBloodPressure" value={editableVitals.bloodPressure || ""} onChange={(e) => handleEditableVitalsChange("bloodPressure", e.target.value)} placeholder="e.g., 120/80" disabled={isSavingVitals} />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="flex items-center text-xs"><Sigma className="mr-1.5 h-3 w-3" />BMI (kg/m²)</Label>
+                            <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-background min-w-[150px]">
+                                <span className="text-sm font-medium">{calculatedBmi || "N/A"}</span>
+                                {bmiDisplay && bmiDisplay.status !== "N/A" && (
+                                    <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", bmiDisplay.colorClass, bmiDisplay.textColorClass)}>{bmiDisplay.status}</Badge>
+                                )}
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />BP Status</Label>
+                             <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-background min-w-[150px]">
+                                {bpDisplay && bpDisplay.status !== "N/A" && bpDisplay.status !== "Invalid" && (
+                                    <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", bpDisplay.colorClass, bpDisplay.textColorClass)}>{bpDisplay.status}</Badge>
+                                )}
+                                {(bpDisplay?.status === "N/A" || bpDisplay?.status === "Invalid") && (
+                                   <span className="text-sm font-medium">{bpDisplay.status}</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                     <Button size="sm" onClick={handleSaveVitals} disabled={isSavingVitals || !currentAdmittedPatientFullDetails} className="mt-2">
+                        {isSavingVitals ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                        Save Vitals
+                    </Button>
+                  </div>
+                  <Separator />
+
                   <div>
                     <h4 className="text-md font-semibold mb-2 flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" /> Treatment Plan Summary</h4>
-                    <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md whitespace-pre-wrap">{currentAdmittedPatientFullDetails.treatmentPlan}</p>
+                    <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md whitespace-pre-wrap">{currentAdmittedPatientFullDetails.treatmentPlan}</p>
                   </div>
+                  <Separator />
 
                   <div>
                     <div className="flex justify-between items-center mb-2">
                         <h4 className="text-md font-semibold flex items-center"><Pill className="mr-2 h-4 w-4 text-primary" /> Medication Schedule</h4>
-                        <Dialog open={isMedicationModalOpen} onOpenChange={setIsMedicationModalOpen}>
+                        <Dialog open={isMedicationModalOpen} onOpenChange={(open) => { if(!open) {setNewMedName(""); setNewMedDosage(""); setNewMedTime(""); setNewMedNotes("");} setIsMedicationModalOpen(open);}}>
                             <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={handleOpenMedicationModal} disabled={isSavingMedicationUpdates || isDischarging || isProcessingTransfer || isAddingNote}>
+                                <Button variant="outline" size="sm" onClick={handleOpenMedicationModal} disabled={isSavingMedicationUpdates || isDischarging || isProcessingTransfer || isAddingNote || isSavingVitals}>
                                 <Edit className="mr-2 h-3 w-3" /> Manage Medication Log
                                 </Button>
                             </DialogTrigger>
@@ -891,6 +1046,7 @@ export default function WardManagementPage() {
                         <p className="text-xs text-muted-foreground text-center py-2">No medication schedule found.</p>
                     )}
                   </div>
+                  <Separator />
                   
                   <div>
                     <h4 className="text-md font-semibold mb-2 flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-primary" /> Doctor's Notes</h4>
@@ -907,7 +1063,7 @@ export default function WardManagementPage() {
                       )}
                     </div>
                     <Textarea placeholder="Add new note..." className="mt-2 text-xs" rows={2} value={newDoctorNote} onChange={(e) => setNewDoctorNote(e.target.value)} disabled={isAddingNote}/>
-                    <Button variant="outline" size="sm" className="mt-2 w-full" onClick={handleAddNote} disabled={isAddingNote || !newDoctorNote.trim() || isDischarging || isProcessingTransfer || isSavingMedicationUpdates}>
+                    <Button variant="outline" size="sm" className="mt-2 w-full" onClick={handleAddNote} disabled={isAddingNote || !newDoctorNote.trim() || isDischarging || isProcessingTransfer || isSavingMedicationUpdates || isSavingVitals}>
                        {isAddingNote ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                        {isAddingNote ? "Adding..." : "Add Note"}
                     </Button>
@@ -920,14 +1076,14 @@ export default function WardManagementPage() {
             </CardContent>
             {currentAdmittedPatientFullDetails && (
                 <CardFooter className="border-t pt-4 flex-col sm:flex-row gap-2">
-                    <Button variant="outline" className="w-full sm:w-auto" onClick={handleDischarge} disabled={isDischarging || isProcessingTransfer || isAddingNote || isSavingMedicationUpdates}>
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={handleDischarge} disabled={isDischarging || isProcessingTransfer || isAddingNote || isSavingMedicationUpdates || isSavingVitals}>
                         {isDischarging ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogOutIcon className="mr-2 h-4 w-4" />}
                         {isDischarging ? "Discharging..." : `Discharge ${currentAdmittedPatientFullDetails.name.split(' ')[0]}`}
                     </Button>
                     
                     <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
                         <DialogTrigger asChild>
-                            <Button variant="outline" className="w-full sm:w-auto" onClick={handleOpenTransferModal} disabled={isDischarging || isProcessingTransfer || isAddingNote || isSavingMedicationUpdates}>
+                            <Button variant="outline" className="w-full sm:w-auto" onClick={handleOpenTransferModal} disabled={isDischarging || isProcessingTransfer || isAddingNote || isSavingMedicationUpdates || isSavingVitals}>
                                 <ArrowRightLeft className="mr-2 h-4 w-4" /> Transfer {currentAdmittedPatientFullDetails.name.split(' ')[0]}
                             </Button>
                         </DialogTrigger>
@@ -1006,4 +1162,5 @@ export default function WardManagementPage() {
             </Card>
         )}
       </div>
-  )
+  );
+}
