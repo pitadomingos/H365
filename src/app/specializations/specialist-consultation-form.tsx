@@ -37,7 +37,7 @@ const FormSchema = z.object({
   bodyTemperature: z.string().optional(),
   weight: z.string().optional(),
   height: z.string().optional(),
-  bloodPressure: z.string().optional(),
+  bloodPressure: z.string().optional(), // Added bloodPressure
   symptoms: z.string().min(1, "Symptoms are required for AI recommendation.").optional(),
   labResultsSummary: z.string().optional(),
   imagingDataSummary: z.string().optional(),
@@ -140,7 +140,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
   
   const [bmi, setBmi] = useState<string | null>(null);
   const [bmiDisplay, setBmiDisplay] = useState<{ status: string; colorClass: string; textColorClass: string; } | null>(null);
-  const [bpDisplay, setBpDisplay] = useState<{ status: string; colorClass: string, textColorClass: string; } | null>(null);
+  const [bpDisplay, setBpDisplay] = useState<{ status: string; colorClass: string, textColorClass: string; } | null>(null); // Added for BP
   
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
   
@@ -157,7 +157,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
       bodyTemperature: "",
       weight: "",
       height: "",
-      bloodPressure: "",
+      bloodPressure: "", // Added
       symptoms: "",
       labResultsSummary: "",
       imagingDataSummary: "",
@@ -169,7 +169,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
   const { watch, setValue } = form;
   const weightKg = watch('weight');
   const heightCm = watch('height');
-  const bloodPressureInput = watch('bloodPressure');
+  const bloodPressureInput = watch('bloodPressure'); // Added
 
 
   useEffect(() => {
@@ -186,7 +186,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
     }
   }, [weightKg, heightCm]);
 
-  useEffect(() => {
+  useEffect(() => { // Added for BP
     if (bloodPressureInput) {
       setBpDisplay(getBloodPressureStatus(bloodPressureInput));
     } else {
@@ -238,7 +238,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
         bodyTemperature: "",
         weight: "",
         height: "",
-        bloodPressure: "",
+        bloodPressure: "", // Added
         symptoms: "",
         labResultsSummary: "",
         imagingDataSummary: "",
@@ -247,7 +247,7 @@ export function SpecialistConsultationForm({ getRecommendationAction }: Speciali
     });
     setBmi(null);
     setBmiDisplay(getBmiStatusAndColor(null));
-    setBpDisplay(getBloodPressureStatus(""));
+    setBpDisplay(getBloodPressureStatus("")); // Added
     setSelectedLabTests({});
     setIsSearching(false);
   };
@@ -324,7 +324,7 @@ ${visitHistoryString || "No recent visit history available."}
         weightKg: parseFloat(currentFormData.weight || "0") || undefined,
         heightCm: parseFloat(currentFormData.height || "0") || undefined,
         bmi: parseFloat(bmi || "0") || undefined,
-        bloodPressure: currentFormData.bloodPressure || undefined,
+        bloodPressure: currentFormData.bloodPressure || undefined, // Added
       },
       symptoms: currentFormData.symptoms,
       labResultsSummaryInput: currentFormData.labResultsSummary,
@@ -348,7 +348,7 @@ ${visitHistoryString || "No recent visit history available."}
         bodyTemperature: "",
         weight: "",
         height: "",
-        bloodPressure: "",
+        bloodPressure: "", // Added
         symptoms: "",
         labResultsSummary: "",
         imagingDataSummary: "",
@@ -360,7 +360,7 @@ ${visitHistoryString || "No recent visit history available."}
     setError(null);
     setBmi(null);
     setBmiDisplay(getBmiStatusAndColor(null));
-    setBpDisplay(getBloodPressureStatus(""));
+    setBpDisplay(getBloodPressureStatus("")); // Added
     setSelectedLabTests({});
     setIsOutcomeModalOpen(false);
     setIsSubmittingOutcome(false);
@@ -383,7 +383,7 @@ ${visitHistoryString || "No recent visit history available."}
         weightKg: parseFloat(currentFormData.weight || "0") || undefined,
         heightCm: parseFloat(currentFormData.height || "0") || undefined,
         bmi: parseFloat(bmi || "0") || undefined,
-        bloodPressure: currentFormData.bloodPressure || undefined,
+        bloodPressure: currentFormData.bloodPressure || undefined, // Added
       },
       symptoms: currentFormData.symptoms,
       labResultsSummaryInput: currentFormData.labResultsSummary,
@@ -419,6 +419,8 @@ ${visitHistoryString || "No recent visit history available."}
         description:`Lab tests ordered for ${patientData?.fullName} by Specialist: ${orderedTestLabels.length > 0 ? orderedTestLabels.join(', ') : 'No specific tests selected.'}`
     });
     setSelectedLabTests({});
+    const notesEl = document.getElementById('specialistLabClinicalNotes') as HTMLTextAreaElement;
+    if (notesEl) notesEl.value = "";
     setIsSubmittingLabOrder(false);
   };
 
@@ -432,7 +434,13 @@ ${visitHistoryString || "No recent visit history available."}
     };
     console.log("Submitting Imaging Order to /api/v1/consultations/{consultationId}/imaging-orders (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName} by Specialist. Payload: ${JSON.stringify(payload)}`});
+    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName} by Specialist. Details: ${payload.imagingType} - ${payload.regionDetails}`});
+    const typeEl = document.getElementById('specialistImagingType') as HTMLSelectElement;
+    const regionEl = document.getElementById('specialistImagingRegionDetails') as HTMLTextAreaElement;
+    const notesEl = document.getElementById('specialistImagingClinicalNotes') as HTMLTextAreaElement;
+    if (typeEl) typeEl.value = "";
+    if (regionEl) regionEl.value = "";
+    if (notesEl) notesEl.value = "";
     setIsSubmittingImagingOrder(false);
   };
 
@@ -593,7 +601,13 @@ ${visitHistoryString || "No recent visit history available."}
               </CardHeader>
                <CardContent>
                     <div className="flex flex-wrap items-center gap-2">
-                    <Dialog onOpenChange={(open) => !open && setSelectedLabTests({})}>
+                    <Dialog onOpenChange={(open) => { 
+                        if (!open) {
+                            setSelectedLabTests({}); 
+                            const notesEl = document.getElementById('specialistLabClinicalNotes') as HTMLTextAreaElement; 
+                            if(notesEl) notesEl.value = ""; 
+                        }
+                    }}>
                       <DialogTrigger asChild>
                         <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
                             <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
@@ -607,7 +621,7 @@ ${visitHistoryString || "No recent visit history available."}
                         <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                           <Label className="text-base font-semibold">Common Lab Tests:</Label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                            {COMMON_ORDERABLE_LAB_TESTS.map((test) => (
+                            {COMMON_ORDERABLE_LAB_TESTS.map((test) => ( 
                               <div key={test.id} className="flex items-center space-x-2">
                                 <Checkbox 
                                     id={`specialist-test-${test.id}`} 
@@ -621,10 +635,10 @@ ${visitHistoryString || "No recent visit history available."}
                               </div>
                             ))}
                           </div>
-                          <Separator className="my-2" />
+                          <Separator className="my-2"/>
                           <div className="space-y-2">
                             <Label htmlFor="specialistLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
-                            <Textarea id="specialistLabClinicalNotes" placeholder="e.g., Specialist screening, follow-up..." disabled={isSubmittingLabOrder}/>
+                            <Textarea id="specialistLabClinicalNotes" placeholder="e.g., Specialist screening, follow-up..." disabled={isSubmittingLabOrder} />
                           </div>
                         </div>
                         <DialogFooter>
@@ -637,7 +651,16 @@ ${visitHistoryString || "No recent visit history available."}
                       </DialogContent>
                     </Dialog>
 
-                    <Dialog>
+                    <Dialog onOpenChange={(open) => {
+                         if (!open) {
+                            const typeEl = document.getElementById('specialistImagingType') as HTMLSelectElement;
+                            const regionEl = document.getElementById('specialistImagingRegionDetails') as HTMLTextAreaElement;
+                            const notesEl = document.getElementById('specialistImagingClinicalNotes') as HTMLTextAreaElement;
+                            if (typeEl) typeEl.value = "";
+                            if (regionEl) regionEl.value = "";
+                            if (notesEl) notesEl.value = "";
+                        }
+                    }}>
                       <DialogTrigger asChild>
                         <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
                             <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
@@ -651,8 +674,8 @@ ${visitHistoryString || "No recent visit history available."}
                         <div className="grid gap-4 py-4">
                           <div className="space-y-2">
                             <Label htmlFor="specialistImagingType">Imaging Type</Label>
-                            <Select disabled={isSubmittingImagingOrder} name="specialistImagingType">
-                              <SelectTrigger id="specialistImagingType">
+                            <Select disabled={isSubmittingImagingOrder} name="specialistImagingType" defaultValue="" id="specialistImagingType">
+                              <SelectTrigger>
                                 <SelectValue placeholder="Select imaging type" />
                               </SelectTrigger>
                               <SelectContent>
@@ -673,7 +696,7 @@ ${visitHistoryString || "No recent visit history available."}
                           </div>
                         </div>
                         <DialogFooter>
-                          <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingImagingOrder}>Cancel</Button></DialogClose>
+                           <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingImagingOrder}>Cancel</Button></DialogClose>
                           <Button type="button" onClick={handleSubmitImagingOrder} disabled={isSubmittingImagingOrder}>
                             {isSubmittingImagingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                             {isSubmittingImagingOrder ? "Submitting..." : "Submit Imaging Order"}
@@ -681,7 +704,7 @@ ${visitHistoryString || "No recent visit history available."}
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
-                    <Button variant="outline" className="flex-shrink-0" onClick={handleSaveProgress} disabled={isActionDisabled || !patientData}>
+                     <Button variant="outline" className="flex-shrink-0" onClick={handleSaveProgress} disabled={isActionDisabled || !patientData}>
                         {isSavingProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
                         {isSavingProgress ? "Saving..." : "Save Progress"}
                     </Button>
@@ -890,3 +913,6 @@ ${visitHistoryString || "No recent visit history available."}
     </div>
   );
 }
+
+
+    
