@@ -190,7 +190,7 @@ const mockWardDetailsData: Record<string, WardDetails> = {
     "W001": {
         id: "W001", name: "General Medicine Ward A", totalBeds: 20, occupiedBeds: 2, availableBeds: 18, occupancyRate: 10,
         patients: [
-            { admissionId: "ADM001", patientId: "P001", name: "Eva Green", bedNumber: "Bed 3", admittedDate: "2024-07-20", primaryDiagnosis: "Pneumonia", keyAlerts: ["Isolation", "Oxygen PRN"] },
+            { admissionId: "ADM001", patientId: "P001", name: "Eva Green", bedNumber: "Bed 3", admittedDate: "2024-01-01", primaryDiagnosis: "Pneumonia", keyAlerts: ["Isolation", "Oxygen PRN"] },
             { admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", bedNumber: "Bed 5", admittedDate: "2024-06-15", primaryDiagnosis: "Heart Failure Exacerbation", keyAlerts: ["Fluid Restriction", "Daily Weight"] },
         ],
         beds: [
@@ -205,7 +205,7 @@ const mockWardDetailsData: Record<string, WardDetails> = {
     "W002": {
         id: "W002", name: "Surgical Ward B", totalBeds: 15, occupiedBeds: 1, availableBeds: 14, occupancyRate: 6.7,
         patients: [
-            { admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", bedNumber: "Bed 1", admittedDate: "2024-07-28", primaryDiagnosis: "Post-Appendectomy", keyAlerts: ["NPO", "Pain Control"] },
+            { admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", bedNumber: "Bed 1", admittedDate: "2023-10-01", primaryDiagnosis: "Post-Appendectomy", keyAlerts: ["NPO", "Pain Control"] },
         ],
         beds: [
             { id: "B001-B", bedNumber: "Bed 1", status: "Occupied", patientName: "Lucy Liu", patientId: "P003" },
@@ -213,7 +213,6 @@ const mockWardDetailsData: Record<string, WardDetails> = {
         ],
         alerts: { criticalLabsPending: 0, medicationsOverdue: 0, vitalsChecksDue: 1, newAdmissionOrders: 1, pendingDischarges: 0 }
     },
-    // Add mock details for W003 (Pediatrics) and W004 (Maternity) if needed for testing
     "W003": {
         id: "W003", name: "Pediatrics Ward C", totalBeds: 10, occupiedBeds: 0, availableBeds: 10, occupancyRate: 0,
         patients: [],
@@ -282,22 +281,26 @@ const getBloodPressureStatus = (bp: string): { status: string; colorClass: strin
 
 const formatStayDuration = (admissionDateString: string): string => {
     if (!admissionDateString) return "N/A";
-    const admissionDate = new Date(admissionDateString + "T00:00:00"); 
+    const admissionDate = new Date(admissionDateString); 
     const today = new Date();
     const diffTime = Math.abs(today.getTime() - admissionDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDaysTotal = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays < 1) return "Today";
-    if (diffDays === 1) return "1 day";
-    if (diffDays < 7) return `${diffDays} days`;
-    if (diffDays < 30) {
-        const weeks = Math.floor(diffDays / 7);
-        const days = diffDays % 7;
-        return `${weeks} week${weeks > 1 ? 's' : ''}${days > 0 ? `, ${days} day${days > 1 ? 's': ''}` : ''}`;
-    }
-    const months = Math.floor(diffDays / 30);
-    const remainingDays = diffDays % 30;
-    return `${months} month${months > 1 ? 's' : ''}${remainingDays > 0 ? `, ${remainingDays} day${remainingDays > 1 ? 's' : ''}` : ''}`;
+    if (diffDaysTotal < 1) return "Today";
+    if (diffDaysTotal === 1) return "1 day";
+    
+    const years = Math.floor(diffDaysTotal / 365);
+    const months = Math.floor((diffDaysTotal % 365) / 30);
+    const days = diffDaysTotal % 30;
+
+    let parts = [];
+    if (years > 0) parts.push(`${years} year${years > 1 ? 's' : ''}`);
+    if (months > 0) parts.push(`${months} month${months > 1 ? 's' : ''}`);
+    if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
+    
+    if (parts.length === 0 && diffDaysTotal > 1) return `${diffDaysTotal} days`; // Fallback for durations between 1 and 30 days if months/years are 0
+    
+    return parts.join(', ');
 };
 
 
@@ -355,10 +358,6 @@ export default function WardManagementPage() {
     setIsLoadingAllWards(true);
     setTimeout(async () => {
       try {
-        // const response = await fetch('/api/v1/wards');
-        // if (!response.ok) throw new Error('Failed to fetch wards');
-        // const data = await response.json();
-        // setAllWardsData(data);
         setAllWardsData(mockWardSummariesData);
       } catch (error) {
         console.error("Error fetching wards:", error);
@@ -371,10 +370,6 @@ export default function WardManagementPage() {
     setIsLoadingPendingAdmissions(true);
     setTimeout(async () => {
         try {
-            // const response = await fetch('/api/v1/admissions/pending');
-            // if (!response.ok) throw new Error('Failed to fetch pending admissions');
-            // const data = await response.json();
-            // setHospitalPendingAdmissions(data);
              setHospitalPendingAdmissions(mockHospitalPendingAdmissionsData);
         } catch (error) {
             console.error("Error fetching pending admissions:", error);
@@ -394,41 +389,33 @@ export default function WardManagementPage() {
       setLongestStayPatients([]);
       setTimeout(async () => {
         try {
-            // const response = await fetch(`/api/v1/wards/${selectedWardId}/details`);
-            // if (!response.ok) throw new Error(`Failed to fetch ward details for ${selectedWardId}`);
-            // const data = await response.json();
-            // setCurrentWardDetails(data);
             const details = mockWardDetailsData[selectedWardId];
             if (details) {
                 const occupiedBeds = details.patients.length;
                 const availableBeds = details.totalBeds - occupiedBeds;
                 const occupancyRate = details.totalBeds > 0 ? (occupiedBeds / details.totalBeds) * 100 : 0;
+                
+                const today = new Date();
+                const stays = details.patients.map(p => {
+                    const admittedDate = new Date(p.admittedDate);
+                    const durationMs = today.getTime() - admittedDate.getTime();
+                    const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
+                    return { ...p, durationDays };
+                }).sort((a, b) => b.durationDays - a.durationDays);
+
+                setLongestStayPatients(
+                    stays.slice(0, 5).map(p => ({
+                        name: p.name,
+                        duration: formatStayDuration(p.admittedDate),
+                        admissionId: p.admissionId 
+                    }))
+                );
                 setCurrentWardDetails({
                     ...details,
                     occupiedBeds,
                     availableBeds,
                     occupancyRate,
                 });
-
-                if (details.patients) {
-                    const today = new Date();
-                    const stays = details.patients.map(p => {
-                        const admittedDate = new Date(p.admittedDate + "T00:00:00");
-                        const durationMs = today.getTime() - admittedDate.getTime();
-                        const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
-                        return { ...p, durationDays };
-                    }).sort((a, b) => b.durationDays - a.durationDays);
-
-                    setLongestStayPatients(
-                        stays.slice(0, 5).map(p => ({
-                            name: p.name,
-                            duration: formatStayDuration(p.admittedDate),
-                            admissionId: p.admissionId 
-                        }))
-                    );
-                }
-
-
             } else {
                 setCurrentWardDetails(null);
                 toast({variant: "destructive", title: "Error", description: `Could not load details for ward ID ${selectedWardId}`});
@@ -455,9 +442,6 @@ export default function WardManagementPage() {
       setCurrentAdmittedPatientFullDetails(null);
       setTimeout(async () => {
         try {
-            // const response = await fetch(`/api/v1/admissions/${selectedPatientForDetails.admissionId}`);
-            // if (!response.ok) throw new Error(`Failed to fetch patient details for ${selectedPatientForDetails.name}`);
-            // const data = await response.json();
             const fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
             setCurrentAdmittedPatientFullDetails(fullDetails || null);
             setEditableVitals(fullDetails?.vitals || {});
@@ -530,7 +514,6 @@ export default function WardManagementPage() {
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, vitals: editableVitals };
     
     try {
-        // Simulate API call: PUT /api/v1/admissions/{admissionId}/vitals
         console.log("Saving vitals (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1000)); 
         const updatedVitalsWithCalculated = { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status };
@@ -576,7 +559,6 @@ export default function WardManagementPage() {
     };
     
     try {
-        // Simulate API call: POST /api/v1/admissions
         console.log("Admitting patient (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1500));
 
@@ -608,7 +590,6 @@ export default function WardManagementPage() {
             };
         });
         
-        // Also update the global mock data for full details
         mockAdmittedPatientFullDetailsData[newAdmissionId] = {
             admissionId: newAdmissionId,
             patientId: patientToAdmit.patientId,
@@ -642,14 +623,12 @@ export default function WardManagementPage() {
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, doctorId: "doc-currentUser-mockId", note: newDoctorNote };
     
     try {
-        // Simulate API call: POST /api/v1/admissions/{admissionId}/doctor-notes
         console.log("Adding doctor note (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1000)); 
         const newNoteEntry: DoctorNote = { noteId: `DN${Date.now()}`, date: new Date().toISOString(), doctor: "Dr. Current User (Mock)", note: newDoctorNote };
         
         setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, doctorNotes: [newNoteEntry, ...prev.doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
         
-        // Update the global mock
         if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
           mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes = [newNoteEntry, ...mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         }
@@ -664,7 +643,7 @@ export default function WardManagementPage() {
 
   const handleOpenMedicationModal = () => {
     if (!currentAdmittedPatientFullDetails) return;
-    setMedicationScheduleInModal(JSON.parse(JSON.stringify(currentAdmittedPatientFullDetails.medicationSchedule))); // Deep copy
+    setMedicationScheduleInModal(JSON.parse(JSON.stringify(currentAdmittedPatientFullDetails.medicationSchedule))); 
     setNewMedName("");
     setNewMedDosage("");
     setNewMedTime("");
@@ -706,13 +685,11 @@ export default function WardManagementPage() {
     setIsSavingMedicationUpdates(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, updatedSchedule: medicationScheduleInModal };
      try {
-        // Simulate API call: PUT /api/v1/admissions/{admissionId}/medication-schedule
         console.log("Saving medication log (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1000)); 
         
         setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, medicationSchedule: medicationScheduleInModal }) : null);
         
-        // Update the global mock
         if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
             mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].medicationSchedule = medicationScheduleInModal;
         }
@@ -732,7 +709,6 @@ export default function WardManagementPage() {
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, dischargeDate: new Date().toISOString(), dischargeSummary: "Patient stable for discharge.", dischargedBy: "doc-currentUser-mockId" };
     
     try {
-        // Simulate API call: PUT /api/v1/admissions/{admissionId}/discharge
         console.log("Discharging patient (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1500)); 
         toast({ title: "Patient Discharged (Mock)", description: `${currentAdmittedPatientFullDetails.name} processed for discharge.` });
@@ -802,7 +778,6 @@ export default function WardManagementPage() {
     };
     
     try {
-        // Simulate API call: PUT /api/v1/admissions/{admissionId}/transfer
         console.log("Transferring patient (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1500)); 
         const destinationName = transferType === "internal_ward" 
@@ -882,28 +857,41 @@ export default function WardManagementPage() {
             )}
 
             {currentWardDetails && !isLoadingCurrentWardDetails && (
-              <>
-                <div className="mt-4 p-4 border rounded-lg bg-muted/30 space-y-3">
-                  <h3 className="text-lg font-semibold">{currentWardDetails.name} - Dashboard</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
-                    <div><strong>Total Beds:</strong> {currentWardDetails.totalBeds}</div>
-                    <div><strong>Occupied:</strong> {currentWardDetails.occupiedBeds}</div>
-                    <div><strong>Available:</strong> {currentWardDetails.availableBeds}</div>
-                    <div><strong>Patients in Ward:</strong> {currentWardDetails.patients.length}</div>
-                    <div><strong>Occupancy:</strong> {currentWardDetails.occupancyRate.toFixed(1)}%</div>
+              <div className="mt-4 p-4 border rounded-lg bg-muted/30 space-y-3">
+                <h3 className="text-lg font-semibold">{currentWardDetails.name} - Dashboard</h3>
+                <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+                  {/* Left Block: Numerical Stats & Progress */}
+                  <div className="lg:w-3/5 space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-2 gap-4 text-sm">
+                      <div><strong>Total Beds:</strong> {currentWardDetails.totalBeds}</div>
+                      <div><strong>Occupied:</strong> {currentWardDetails.occupiedBeds}</div>
+                      <div><strong>Available:</strong> {currentWardDetails.availableBeds}</div>
+                      <div><strong>Patients in Ward:</strong> {currentWardDetails.patients.length}</div>
+                    </div>
+                    <div className="text-sm"><strong>Occupancy:</strong> {currentWardDetails.occupancyRate.toFixed(1)}%</div>
+                    <Progress value={currentWardDetails.occupancyRate} className="h-3 mt-1" />
                   </div>
-                  <Progress value={currentWardDetails.occupancyRate} className="h-3 mt-1" />
-                   {longestStayPatients.length > 0 && (
-                        <div className="mt-4 pt-3 border-t">
-                            <h4 className="text-sm font-semibold mb-1.5">Longest Stays (Top 5)</h4>
-                            <ol className="list-decimal list-inside text-xs space-y-1 text-muted-foreground">
-                                {longestStayPatients.map(p => (
-                                    <li key={p.admissionId}>{p.name} - {p.duration}</li>
-                                ))}
-                            </ol>
-                        </div>
+
+                  {/* Right Block: Longest Stays */}
+                  <div className="lg:w-2/5">
+                    {longestStayPatients.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1.5">Longest Stays (Top 5)</h4>
+                        <ol className="list-decimal list-inside text-xs space-y-1 text-muted-foreground">
+                          {longestStayPatients.map(p => (
+                            <li key={p.admissionId}>{p.name} - {p.duration}</li>
+                          ))}
+                        </ol>
+                      </div>
                     )}
+                    {longestStayPatients.length === 0 && !isLoadingCurrentWardDetails && (
+                      <p className="text-xs text-muted-foreground text-center py-2">No patient stay data to display.</p>
+                    )}
+                  </div>
                 </div>
+              </div>
+            )}
+             {currentWardDetails && !isLoadingCurrentWardDetails && (
                  <Card className="shadow-sm mt-4">
                     <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-md"><AlertTriangleIcon className="h-5 w-5 text-orange-500"/> Ward Alerts & Key Tasks</CardTitle>
@@ -931,8 +919,7 @@ export default function WardManagementPage() {
                         </div>
                     </CardContent>
                 </Card>
-              </>
-            )}
+             )}
           </CardContent>
         </Card>
 
@@ -1061,7 +1048,7 @@ export default function WardManagementPage() {
                     </CardContent>
                 </Card>
                 
-                <Card className="shadow-sm lg:col-span-1">
+                 <Card className="shadow-sm lg:col-span-1">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary"/>Longest Stays in {currentWardDetails.name}</CardTitle>
                         <CardDescription>Top 5 patients with the longest current admission.</CardDescription>
