@@ -76,8 +76,14 @@ const mockVisitHistory: VisitHistoryItem[] = [
   { id: "v5", date: "2023-01-30", department: "Outpatient", doctor: "Dr. Smith", reason: "Flu Symptoms" },
 ];
 
+export interface ConsultationInitialData extends Partial<FormValues> {
+  patientData?: PatientData | null;
+  recommendation?: TreatmentRecommendationOutput | null;
+}
+
 interface ConsultationFormProps {
   getRecommendationAction: (input: TreatmentRecommendationInput) => Promise<TreatmentRecommendationOutput | { error: string }>;
+  initialData?: ConsultationInitialData | null;
 }
 
 const getBmiStatusAndColor = (bmi: number | null): { status: string; colorClass: string; textColorClass: string; } => {
@@ -128,7 +134,7 @@ const getBloodPressureStatus = (bp: string): { status: string; colorClass: strin
 };
 
 
-export function ConsultationForm({ getRecommendationAction }: ConsultationFormProps) {
+export function ConsultationForm({ getRecommendationAction, initialData }: ConsultationFormProps) {
   const [isAiPending, startAiTransition] = useTransition();
   const [recommendation, setRecommendation] = useState<TreatmentRecommendationOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -151,22 +157,41 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      nationalIdSearch: "",
-      bodyTemperature: "",
-      weight: "",
-      height: "",
-      bloodPressure: "",
-      symptoms: "",
-      labResultsSummary: "",
-      imagingDataSummary: "",
-      doctorComments: "",
+      nationalIdSearch: initialData?.nationalIdSearch || "",
+      bodyTemperature: initialData?.bodyTemperature || "",
+      weight: initialData?.weight || "",
+      height: initialData?.height || "",
+      bloodPressure: initialData?.bloodPressure || "",
+      symptoms: initialData?.symptoms || "",
+      labResultsSummary: initialData?.labResultsSummary || "",
+      imagingDataSummary: initialData?.imagingDataSummary || "",
+      doctorComments: initialData?.doctorComments || "",
     },
   });
 
-  const { watch } = form;
+  const { watch, setValue } = form;
   const weightKg = watch('weight');
   const heightCm = watch('height');
   const bloodPressureInput = watch('bloodPressure');
+
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        nationalIdSearch: initialData.nationalIdSearch || patientData?.nationalId || "",
+        bodyTemperature: initialData.bodyTemperature || "",
+        weight: initialData.weight || "",
+        height: initialData.height || "",
+        bloodPressure: initialData.bloodPressure || "",
+        symptoms: initialData.symptoms || "",
+        labResultsSummary: initialData.labResultsSummary || "",
+        imagingDataSummary: initialData.imagingDataSummary || "",
+        doctorComments: initialData.doctorComments || "",
+      });
+      setPatientData(initialData.patientData || null);
+      setRecommendation(initialData.recommendation || null);
+      setError(null); 
+    }
+  }, [initialData, form, patientData?.nationalId]);
 
 
   useEffect(() => {
@@ -204,6 +229,25 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
       return;
     }
     setIsSearching(true);
+    setPatientData(null);
+    setRecommendation(null);
+    setError(null);
+    form.reset({ 
+        nationalIdSearch: nationalId,
+        bodyTemperature: "",
+        weight: "",
+        height: "",
+        bloodPressure: "",
+        symptoms: "",
+        labResultsSummary: "",
+        imagingDataSummary: "",
+        doctorComments: "",
+    });
+    setBmi(null);
+    setBmiDisplay(getBmiStatusAndColor(null));
+    setBpDisplay(getBloodPressureStatus(""));
+    setSelectedLabTests({});
+
     await new Promise(resolve => setTimeout(resolve, 1000)); 
     if (nationalId === "123456789" || nationalId === "987654321") {
       const fetchedPatientData: PatientData = {
@@ -223,23 +267,6 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
       toast({ variant: "destructive", title: "Not Found", description: "Patient with this National ID not found." });
       setPatientData(null); 
     }
-    setRecommendation(null);
-    setError(null);
-    form.reset({
-        nationalIdSearch: nationalId, 
-        bodyTemperature: "",
-        weight: "",
-        height: "",
-        bloodPressure: "",
-        symptoms: "",
-        labResultsSummary: "",
-        imagingDataSummary: "",
-        doctorComments: "",
-    });
-    setBmi(null);
-    setBmiDisplay(getBmiStatusAndColor(null));
-    setBpDisplay(getBloodPressureStatus(""));
-    setSelectedLabTests({});
     setIsSearching(false);
   };
 
@@ -382,6 +409,8 @@ ${visitHistoryString || "No recent visit history available."}
         .map(test => test.label);
     
     const payload = {
+        patientId: patientData.nationalId, 
+        consultationContext: "General Consultation", 
         testIds: Object.keys(selectedLabTests).filter(key => selectedLabTests[key]),
         clinicalNotes: (document.getElementById('consultLabClinicalNotes') as HTMLTextAreaElement)?.value || ""
     };
@@ -392,6 +421,8 @@ ${visitHistoryString || "No recent visit history available."}
         description:`Lab tests ordered for ${patientData?.fullName}: ${orderedTestLabels.length > 0 ? orderedTestLabels.join(', ') : 'No specific tests selected.'}`
     });
     setSelectedLabTests({}); 
+    const notesEl = document.getElementById('consultLabClinicalNotes') as HTMLTextAreaElement;
+    if (notesEl) notesEl.value = "";
     setIsSubmittingLabOrder(false);
   };
 
@@ -399,13 +430,22 @@ ${visitHistoryString || "No recent visit history available."}
     if (!patientData) return;
     setIsSubmittingImagingOrder(true);
     const payload = {
+        patientId: patientData.nationalId,
+        consultationContext: "General Consultation",
         imagingType: (document.getElementById('consultImagingType') as HTMLSelectElement)?.value || "",
         regionDetails: (document.getElementById('consultImagingRegionDetails') as HTMLTextAreaElement)?.value || "",
         clinicalNotes: (document.getElementById('consultImagingClinicalNotes') as HTMLTextAreaElement)?.value || ""
     };
     console.log("Submitting Imaging Order to /api/v1/consultations/{consultationId}/imaging-orders (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName}. Payload: ${JSON.stringify(payload)}`});
+    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName}. Details: ${payload.imagingType} - ${payload.regionDetails}`});
+    
+    const typeEl = document.getElementById('consultImagingType') as HTMLSelectElement;
+    const regionEl = document.getElementById('consultImagingRegionDetails') as HTMLTextAreaElement;
+    const notesEl = document.getElementById('consultImagingClinicalNotes') as HTMLTextAreaElement;
+    if (typeEl) typeEl.value = "";
+    if (regionEl) regionEl.value = "";
+    if (notesEl) notesEl.value = "";
     setIsSubmittingImagingOrder(false);
   };
   
@@ -525,15 +565,15 @@ ${visitHistoryString || "No recent visit history available."}
             </CardContent>
           </Card>
           
-           {patientData && (
-              <Card className="shadow-sm">
-                <CardHeader>
-                  <CardTitle>Diagnostic Orders</CardTitle>
-                  <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-wrap items-center gap-2">
-                    <Dialog onOpenChange={(open) => !open && setSelectedLabTests({})}>
+          {patientData && (
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle>Diagnostic Orders</CardTitle>
+                <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Dialog onOpenChange={(open) => { if (!open) {setSelectedLabTests({}); const notesEl = document.getElementById('consultLabClinicalNotes') as HTMLTextAreaElement; if(notesEl) notesEl.value = ""; }}}>
                     <DialogTrigger asChild>
                         <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
                         <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
@@ -575,9 +615,18 @@ ${visitHistoryString || "No recent visit history available."}
                         </Button>
                         </DialogFooter>
                     </DialogContent>
-                    </Dialog>
+                  </Dialog>
 
-                    <Dialog>
+                  <Dialog onOpenChange={(open) => {
+                         if (!open) {
+                            const typeEl = document.getElementById('consultImagingType') as HTMLSelectElement;
+                            const regionEl = document.getElementById('consultImagingRegionDetails') as HTMLTextAreaElement;
+                            const notesEl = document.getElementById('consultImagingClinicalNotes') as HTMLTextAreaElement;
+                            if (typeEl) typeEl.value = "";
+                            if (regionEl) regionEl.value = "";
+                            if (notesEl) notesEl.value = "";
+                        }
+                    }}>
                     <DialogTrigger asChild>
                         <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
                         <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
@@ -591,8 +640,8 @@ ${visitHistoryString || "No recent visit history available."}
                         <div className="grid gap-4 py-4">
                         <div className="space-y-2">
                             <Label htmlFor="consultImagingType">Imaging Type</Label>
-                            <Select disabled={isSubmittingImagingOrder} name="consultImagingType">
-                            <SelectTrigger id="consultImagingType">
+                            <Select disabled={isSubmittingImagingOrder} name="consultImagingType" defaultValue="" id="consultImagingType">
+                            <SelectTrigger>
                                 <SelectValue placeholder="Select imaging type" />
                             </SelectTrigger>
                             <SelectContent>
@@ -620,15 +669,15 @@ ${visitHistoryString || "No recent visit history available."}
                         </Button>
                         </DialogFooter>
                     </DialogContent>
-                    </Dialog>
-                    
-                    <Button variant="outline" className="flex-shrink-0" onClick={handleSaveProgress} disabled={isActionDisabled || !patientData}>
-                        {isSavingProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                        {isSavingProgress ? "Saving..." : "Save Progress"}
-                    </Button>
-                    </div>
-                </CardContent>
-              </Card>
+                  </Dialog>
+                  
+                  <Button variant="outline" className="flex-shrink-0" onClick={handleSaveProgress} disabled={isActionDisabled || !patientData}>
+                      {isSavingProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                      {isSavingProgress ? "Saving..." : "Save Progress"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
 
@@ -720,9 +769,6 @@ ${visitHistoryString || "No recent visit history available."}
                         disabled={isActionDisabled}
                         />
                 </CardContent>
-                <CardFooter>
-                     <Button variant="outline" className="flex-shrink-0 invisible">Placeholder</Button> {/* For spacing if Save was here */}
-                </CardFooter>
             </Card>
 
             <div className="flex justify-end mt-6">
@@ -741,7 +787,7 @@ ${visitHistoryString || "No recent visit history available."}
                         {[
                           { label: "Send Home", value: "Send Home", icon: Home },
                           { label: "Send to Pharmacy", value: "Send to Pharmacy", icon: ArrowRightToLine },
-                          { label: "Send to Inpatient", value: "Send to Inpatient (Ward)", icon: BedDouble },
+                          { label: "Admit to Ward", value: "Send to Inpatient (Ward)", icon: BedDouble },
                           { label: "Refer to Specialist", value: "Refer to Specialist", icon: Users2 },
                           { label: "Deceased", value: "Deceased", icon: Skull }
                         ].map(opt => (
@@ -833,3 +879,4 @@ ${visitHistoryString || "No recent visit history available."}
     </div>
   );
 }
+

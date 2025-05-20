@@ -58,6 +58,15 @@ interface PatientInWard {
   keyAlerts?: string[];
 }
 
+interface VisitHistoryItem {
+  id: string;
+  date: string;
+  facilityName: string;
+  department: string;
+  doctor: string;
+  reason: string;
+}
+
 interface WardDetails {
   id: string;
   name: string;
@@ -74,15 +83,6 @@ interface WardDetails {
     newAdmissionOrders: number;
     pendingDischarges: number;
   };
-}
-
-interface VisitHistoryItem {
-  id: string;
-  date: string;
-  facilityName: string;
-  department: string;
-  doctor: string;
-  reason: string;
 }
 
 interface MedicationScheduleItem {
@@ -298,9 +298,9 @@ const formatStayDuration = (admissionDateString: string): string => {
     if (months > 0) parts.push(`${months} month${months > 1 ? 's' : ''}`);
     if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
     
-    if (parts.length === 0 && diffDaysTotal > 1) return `${diffDaysTotal} days`; // Fallback for durations between 1 and 30 days if months/years are 0
+    if (parts.length === 0 && diffDaysTotal > 1) return `${diffDaysTotal} days`; 
     
-    return parts.join(', ');
+    return parts.join(', ') || "Today";
 };
 
 
@@ -355,9 +355,11 @@ export default function WardManagementPage() {
 
 
   useEffect(() => {
-    setIsLoadingAllWards(true);
-    setTimeout(async () => {
+    const fetchInitialWardData = async () => {
+      setIsLoadingAllWards(true);
       try {
+        // Simulate API call: GET /api/v1/wards
+        await new Promise(resolve => setTimeout(resolve, 500));
         setAllWardsData(mockWardSummariesData);
       } catch (error) {
         console.error("Error fetching wards:", error);
@@ -365,19 +367,23 @@ export default function WardManagementPage() {
       } finally {
         setIsLoadingAllWards(false);
       }
-    }, 500);
+    };
 
-    setIsLoadingPendingAdmissions(true);
-    setTimeout(async () => {
+    const fetchInitialPendingAdmissions = async () => {
+        setIsLoadingPendingAdmissions(true);
         try {
-             setHospitalPendingAdmissions(mockHospitalPendingAdmissionsData);
+             // Simulate API call: GET /api/v1/admissions/pending
+            await new Promise(resolve => setTimeout(resolve, 700));
+            setHospitalPendingAdmissions(mockHospitalPendingAdmissionsData);
         } catch (error) {
             console.error("Error fetching pending admissions:", error);
             toast({ variant: "destructive", title: "Error", description: "Could not load pending admissions." });
         } finally {
             setIsLoadingPendingAdmissions(false);
         }
-    }, 700);
+    };
+    fetchInitialWardData();
+    fetchInitialPendingAdmissions();
   }, []);
 
   useEffect(() => {
@@ -387,9 +393,11 @@ export default function WardManagementPage() {
       setSelectedPatientForDetails(null); 
       setCurrentAdmittedPatientFullDetails(null); 
       setLongestStayPatients([]);
-      setTimeout(async () => {
+      const fetchWardDetails = async () => {
         try {
-            const details = mockWardDetailsData[selectedWardId];
+            // Simulate API call: GET /api/v1/wards/{selectedWardId}/details
+            await new Promise(resolve => setTimeout(resolve, 600));
+            const details = mockWardDetailsData[selectedWardId]; // Using pre-defined mock
             if (details) {
                 const occupiedBeds = details.patients.length;
                 const availableBeds = details.totalBeds - occupiedBeds;
@@ -427,7 +435,8 @@ export default function WardManagementPage() {
         } finally {
             setIsLoadingCurrentWardDetails(false);
         }
-      }, 600);
+      };
+      fetchWardDetails();
     } else {
       setCurrentWardDetails(null);
       setSelectedPatientForDetails(null);
@@ -440,8 +449,10 @@ export default function WardManagementPage() {
     if (selectedPatientForDetails) {
       setIsLoadingSelectedPatientDetails(true);
       setCurrentAdmittedPatientFullDetails(null);
-      setTimeout(async () => {
+      const fetchPatientFullDetails = async () => {
         try {
+            // Simulate API call: GET /api/v1/admissions/{selectedPatientForDetails.admissionId}
+            await new Promise(resolve => setTimeout(resolve, 500));
             const fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
             setCurrentAdmittedPatientFullDetails(fullDetails || null);
             setEditableVitals(fullDetails?.vitals || {});
@@ -475,7 +486,8 @@ export default function WardManagementPage() {
         } finally {
             setIsLoadingSelectedPatientDetails(false);
         }
-      }, 500);
+      };
+      fetchPatientFullDetails();
     } else {
         setCurrentAdmittedPatientFullDetails(null);
         setEditableVitals({});
@@ -859,35 +871,32 @@ export default function WardManagementPage() {
             {currentWardDetails && !isLoadingCurrentWardDetails && (
               <div className="mt-4 p-4 border rounded-lg bg-muted/30 space-y-3">
                 <h3 className="text-lg font-semibold">{currentWardDetails.name} - Dashboard</h3>
-                <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-                  {/* Left Block: Numerical Stats & Progress */}
-                  <div className="lg:w-3/5 space-y-3">
-                    <div className="grid grid-cols-2 md:grid-cols-2 gap-4 text-sm">
-                      <div><strong>Total Beds:</strong> {currentWardDetails.totalBeds}</div>
-                      <div><strong>Occupied:</strong> {currentWardDetails.occupiedBeds}</div>
-                      <div><strong>Available:</strong> {currentWardDetails.availableBeds}</div>
-                      <div><strong>Patients in Ward:</strong> {currentWardDetails.patients.length}</div>
+                 <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+                    <div className="lg:w-3/5 space-y-3">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
+                        <div><strong>Total Beds:</strong> {currentWardDetails.totalBeds}</div>
+                        <div><strong>Occupied:</strong> {currentWardDetails.occupiedBeds}</div>
+                        <div><strong>Available:</strong> {currentWardDetails.availableBeds}</div>
+                        <div><strong>Patients in Ward:</strong> {currentWardDetails.patients.length}</div>
+                        </div>
+                        <div className="text-sm"><strong>Occupancy:</strong> {currentWardDetails.occupancyRate.toFixed(1)}%</div>
+                        <Progress value={currentWardDetails.occupancyRate} className="h-3 mt-1" />
                     </div>
-                    <div className="text-sm"><strong>Occupancy:</strong> {currentWardDetails.occupancyRate.toFixed(1)}%</div>
-                    <Progress value={currentWardDetails.occupancyRate} className="h-3 mt-1" />
-                  </div>
-
-                  {/* Right Block: Longest Stays */}
-                  <div className="lg:w-2/5">
-                    {longestStayPatients.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-semibold mb-1.5">Longest Stays (Top 5)</h4>
-                        <ol className="list-decimal list-inside text-xs space-y-1 text-muted-foreground">
-                          {longestStayPatients.map(p => (
-                            <li key={p.admissionId}>{p.name} - {p.duration}</li>
-                          ))}
-                        </ol>
-                      </div>
-                    )}
-                    {longestStayPatients.length === 0 && !isLoadingCurrentWardDetails && (
-                      <p className="text-xs text-muted-foreground text-center py-2">No patient stay data to display.</p>
-                    )}
-                  </div>
+                    <div className="lg:w-2/5">
+                        {longestStayPatients.length > 0 && (
+                        <div>
+                            <h4 className="text-sm font-semibold mb-1.5">Longest Stays (Top 5)</h4>
+                            <ol className="list-decimal list-inside text-xs space-y-1 text-muted-foreground">
+                            {longestStayPatients.map(p => (
+                                <li key={p.admissionId}>{p.name} - {p.duration}</li>
+                            ))}
+                            </ol>
+                        </div>
+                        )}
+                        {longestStayPatients.length === 0 && !isLoadingCurrentWardDetails && (
+                        <p className="text-xs text-muted-foreground text-center py-2">No patient stay data to display.</p>
+                        )}
+                    </div>
                 </div>
               </div>
             )}
@@ -1017,7 +1026,9 @@ export default function WardManagementPage() {
                             <TableRow>
                                 <TableHead>Patient Name</TableHead>
                                 <TableHead>Bed</TableHead>
-                                 <TableHead>Key Alerts</TableHead>
+                                <TableHead>Stay Duration</TableHead>
+                                <TableHead>Diagnosis</TableHead>
+                                <TableHead>Key Alerts</TableHead>
                             </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1032,6 +1043,8 @@ export default function WardManagementPage() {
                                 >
                                 <TableCell className="font-medium">{patient.name}</TableCell>
                                 <TableCell>{patient.bedNumber}</TableCell>
+                                <TableCell className="text-xs">{formatStayDuration(patient.admittedDate)}</TableCell>
+                                <TableCell className="text-xs">{patient.primaryDiagnosis || "N/A"}</TableCell>
                                 <TableCell className="space-x-1">
                                     {patient.keyAlerts && patient.keyAlerts.map(alert => (
                                         <Badge key={alert} variant={alert === "Isolation" || alert === "DNR" ? "destructive" : "secondary"} className="text-xs">{alert}</Badge>
@@ -1048,7 +1061,7 @@ export default function WardManagementPage() {
                     </CardContent>
                 </Card>
                 
-                 <Card className="shadow-sm lg:col-span-1">
+                <Card className="shadow-sm lg:col-span-1">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary"/>Longest Stays in {currentWardDetails.name}</CardTitle>
                         <CardDescription>Top 5 patients with the longest current admission.</CardDescription>

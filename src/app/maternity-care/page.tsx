@@ -72,7 +72,7 @@ interface MaternityPatient {
   bloodGroup: string;
   rhFactor: string;
   allergies: string[];
-  existingConditions: string[];
+  chronicConditions: string[]; // Renamed from existingConditions
   riskFactors: string[];
   antenatalVisits: AntenatalVisit[];
 }
@@ -93,7 +93,7 @@ const mockPatientsList: MaternityPatient[] = [
     bloodGroup: "O+",
     rhFactor: "Positive",
     allergies: ["Penicillin"],
-    existingConditions: ["Mild Asthma"],
+    chronicConditions: ["Mild Asthma"], // Updated
     riskFactors: ["None Identified"],
     antenatalVisits: [
       { id: "AV001", date: "2024-05-10", gestationalAge: "10w 1d", weightKg: "60", bp: "110/70", fhrBpm: "150", fundalHeightCm: "N/A", notes: "First visit, all good.", nextAppointment: "2024-06-10", bodyTemperature: "36.8", heightCm: "165", bmi: "22.0", bmiStatus: "Normal weight", bpStatus: "Normal" },
@@ -115,7 +115,7 @@ const mockPatientsList: MaternityPatient[] = [
     bloodGroup: "A-",
     rhFactor: "Negative",
     allergies: [],
-    existingConditions: ["Gestational Diabetes (Previous Pregnancy)"],
+    chronicConditions: ["Gestational Diabetes (Previous Pregnancy)"], // Updated
     riskFactors: ["Advanced Maternal Age", "History of GDM"],
     antenatalVisits: [
       { id: "AV003", date: "2024-07-20", gestationalAge: "9w 2d", weightKg: "70", bp: "120/80", fhrBpm: "160", fundalHeightCm: "N/A", notes: "Booking visit. GTT scheduled.", nextAppointment: "2024-08-20", bodyTemperature: "37.1", heightCm: "160", bmi: "27.3", bmiStatus: "Overweight", bpStatus: "Elevated"},
@@ -148,7 +148,7 @@ interface MaternityIntakeFormState {
     bloodGroup: string;
     rhFactor: string;
     allergies: string; 
-    existingConditions: string; 
+    chronicConditions: string; // Updated from existingConditions
 }
 
 const getBmiStatusAndColor = (bmi: number | null): { status: string; colorClass: string; textColorClass: string; } => {
@@ -226,7 +226,7 @@ export default function MaternityCarePage() {
 
   const [isMaternityIntakeModalOpen, setIsMaternityIntakeModalOpen] = useState(false);
   const [maternityIntakeForm, setMaternityIntakeForm] = useState<MaternityIntakeFormState>({
-    nationalId: "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", existingConditions: ""
+    nationalId: "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", chronicConditions: "" // updated
   });
   const [isSubmittingIntake, setIsSubmittingIntake] = useState(false);
   const [allMaternityPatients, setAllMaternityPatients] = useState<MaternityPatient[]>(mockPatientsList);
@@ -280,6 +280,7 @@ export default function MaternityCarePage() {
     setPatientNotFound(false);
     // Simulate API call
     // In a real app: const response = await fetch(`/api/v1/maternity/patients/search?nationalId=${searchNationalId}`);
+    console.log(`Mock searching for maternity patient with ID: ${searchNationalId}`);
     await new Promise(resolve => setTimeout(resolve, 1000));
     const found = allMaternityPatients.find(p => p.nationalId === searchNationalId);
     if (found) {
@@ -310,7 +311,7 @@ export default function MaternityCarePage() {
       clinicalNotes: (document.getElementById('maternityLabClinicalNotes') as HTMLTextAreaElement)?.value || ""
     };
 
-    console.log("Submitting Maternity Lab Order to /api/v1/maternity/lab-orders (mock):", payload);
+    console.log("Submitting Maternity Lab Order (mock):", payload);
     // In a real app: const response = await fetch('/api/v1/maternity/lab-orders', { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'} });
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({
@@ -321,7 +322,7 @@ export default function MaternityCarePage() {
     const notesEl = document.getElementById('maternityLabClinicalNotes') as HTMLTextAreaElement;
     if (notesEl) notesEl.value = "";
     setIsOrderingLabs(false);
-    // Close dialog if it's open, assuming DialogClose is handled by Dialog component
+    // Consider closing the dialog here if needed.
   }
 
   const handleSubmitImagingOrder = async () => {
@@ -335,7 +336,7 @@ export default function MaternityCarePage() {
         regionDetails: (document.getElementById('maternityImagingRegionDetails') as HTMLTextAreaElement)?.value || "",
         clinicalNotes: (document.getElementById('maternityImagingClinicalNotes') as HTMLTextAreaElement)?.value || ""
     };
-    console.log("Submitting Maternity Imaging Order to /api/v1/maternity/imaging-orders (mock):", payload);
+    console.log("Submitting Maternity Imaging Order (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${selectedPatient?.fullName}. Details: ${payload.imagingType} - ${payload.regionDetails}`});
     
@@ -346,7 +347,7 @@ export default function MaternityCarePage() {
     if (regionEl) regionEl.value = "";
     if (notesEl) notesEl.value = "";
     setIsOrderingImaging(false);
-     // Close dialog if it's open
+     // Consider closing the dialog here
   }
 
   const handleNewVisitFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -378,17 +379,17 @@ export default function MaternityCarePage() {
         bmiStatus: newVisitBmiDisplay?.status,
         bpStatus: newVisitBpDisplay?.status,
     };
-    console.log("Submitting new antenatal visit to /api/v1/maternity/patients/{patientId}/antenatal-visits (mock):", payload);
+    console.log("Submitting new antenatal visit (mock):", payload);
     // In a real app: const response = await fetch(`/api/v1/maternity/patients/${selectedPatient.id}/antenatal-visits`, { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'} });
     // const savedVisit = await response.json();
     await new Promise(resolve => setTimeout(resolve, 1500));
-    const savedVisit: AntenatalVisit = { // Mock saved visit
+    const savedVisit: AntenatalVisit = { 
         id: `AV${Date.now()}`,
         ...payload
     };
 
     setSelectedPatient(prev => prev ? ({ ...prev, antenatalVisits: [savedVisit, ...prev.antenatalVisits].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
-    setAllMaternityPatients(prevPatients => prevPatients.map(p => p.id === selectedPatient.id ? {...selectedPatient, antenatalVisits: [savedVisit, ...selectedPatient.antenatalVisits].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())} : p));
+    setAllMaternityPatients(prevPatients => prevPatients.map(p => p.id === selectedPatient.id ? {...p, antenatalVisits: [savedVisit, ...(p.antenatalVisits || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())} : p));
 
 
     toast({ title: "New Antenatal Visit Logged", description: `Visit on ${savedVisit.date} for ${selectedPatient.fullName} saved.`});
@@ -411,7 +412,7 @@ export default function MaternityCarePage() {
         nextVisitDate: format(nextScheduledDate, "yyyy-MM-dd"),
         notes: nextScheduledNotes,
     };
-    console.log("Scheduling next ANC visit via /api/v1/maternity/schedule-next-visit (mock):", payload);
+    console.log("Scheduling next ANC visit (mock):", payload);
     // In a real app: const response = await fetch('/api/v1/maternity/schedule-next-visit', { method: 'POST', ... });
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({ title: "Next Visit Scheduled (Mock)", description: `Next ANC visit for ${selectedPatient.fullName} scheduled for ${format(nextScheduledDate, "PPP")}. Notes: ${nextScheduledNotes}`});
@@ -435,6 +436,7 @@ export default function MaternityCarePage() {
     }
     setIsSubmittingIntake(true);
     // In a real app: const response = await fetch('/api/v1/maternity/patients', { method: 'POST', ... });
+    console.log("Submitting maternity intake (mock):", maternityIntakeForm);
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const newMaternityPatient: MaternityPatient = {
@@ -446,13 +448,13 @@ export default function MaternityCarePage() {
         photoUrl: "https://placehold.co/100x100.png", 
         lmp: format(lmp, "yyyy-MM-dd"),
         edd: format(edd, "yyyy-MM-dd"),
-        gestationalAge: "0w 0d", // This would be calculated on backend or updated on first visit
+        gestationalAge: "0w 0d", 
         gravida: gravida,
         para: para,
         bloodGroup: maternityIntakeForm.bloodGroup,
         rhFactor: maternityIntakeForm.rhFactor,
         allergies: maternityIntakeForm.allergies.split(',').map(s => s.trim()).filter(Boolean),
-        existingConditions: maternityIntakeForm.existingConditions.split(',').map(s => s.trim()).filter(Boolean),
+        chronicConditions: maternityIntakeForm.chronicConditions.split(',').map(s => s.trim()).filter(Boolean), // Updated
         riskFactors: [], 
         antenatalVisits: [], 
     };
@@ -461,7 +463,7 @@ export default function MaternityCarePage() {
     setSelectedPatient(newMaternityPatient); 
     toast({ title: "Maternity Care Initiated", description: `${newMaternityPatient.fullName} registered for maternity care.` });
     setIsMaternityIntakeModalOpen(false);
-    setMaternityIntakeForm({ nationalId: "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", existingConditions: "" });
+    setMaternityIntakeForm({ nationalId: "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", chronicConditions: "" }); // Updated
     setPatientNotFound(false); 
     setSearchNationalId(newMaternityPatient.nationalId); 
     setIsSubmittingIntake(false);
@@ -499,7 +501,7 @@ export default function MaternityCarePage() {
               </Button>
                <Dialog open={isMaternityIntakeModalOpen} onOpenChange={(open) => {
                     if (!open) {
-                        setMaternityIntakeForm({ nationalId: searchNationalId || "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", existingConditions: "" });
+                        setMaternityIntakeForm({ nationalId: searchNationalId || "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", chronicConditions: "" }); // Updated
                     } else {
                         setMaternityIntakeForm(prev => ({ ...prev, nationalId: searchNationalId || ""}));
                     }
@@ -551,7 +553,6 @@ export default function MaternityCarePage() {
                                             <SelectTrigger id="intakeGender"><SelectValue placeholder="Select Gender" /></SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="Female">Female</SelectItem>
-                                                {/* <SelectItem value="Other">Other</SelectItem> Removed male as per typical maternity context */}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -601,8 +602,8 @@ export default function MaternityCarePage() {
                                     <Textarea id="intakeAllergies" name="allergies" value={maternityIntakeForm.allergies} onChange={handleIntakeFormChange} placeholder="e.g., Penicillin, Sulfa drugs" disabled={isSubmittingIntake}/>
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="intakeExistingConditions">Existing Medical Conditions (comma-separated)</Label>
-                                    <Textarea id="intakeExistingConditions" name="existingConditions" value={maternityIntakeForm.existingConditions} onChange={handleIntakeFormChange} placeholder="e.g., Hypertension, Diabetes" disabled={isSubmittingIntake}/>
+                                    <Label htmlFor="intakeChronicConditions">Chronic Conditions (comma-separated)</Label>
+                                    <Textarea id="intakeChronicConditions" name="chronicConditions" value={maternityIntakeForm.chronicConditions} onChange={handleIntakeFormChange} placeholder="e.g., Hypertension, Diabetes" disabled={isSubmittingIntake}/>
                                 </div>
                             </div>
                             <DialogFooter>
@@ -665,8 +666,8 @@ export default function MaternityCarePage() {
                     {selectedPatient.allergies.length > 0 ? selectedPatient.allergies.join(', ') : <span className="text-muted-foreground">None reported</span>}
                   </div>
                    <div>
-                    <h4 className="font-medium">Existing Conditions:</h4>
-                    {selectedPatient.existingConditions.length > 0 ? selectedPatient.existingConditions.join(', ') : <span className="text-muted-foreground">None reported</span>}
+                    <h4 className="font-medium">Chronic Conditions:</h4> {/* Changed from Existing Conditions */}
+                    {selectedPatient.chronicConditions.length > 0 ? selectedPatient.chronicConditions.join(', ') : <span className="text-muted-foreground">None reported</span>}
                   </div>
                   <Separator />
                    <div>
@@ -772,7 +773,7 @@ export default function MaternityCarePage() {
                                 {isLoggingVisit ? "Logging..." : "Log New Visit"}
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-2xl"> {/* Increased width for more fields */}
+                        <DialogContent className="sm:max-w-2xl"> 
                             <form onSubmit={handleLogNewVisitSubmit}>
                                 <DialogHeader>
                                     <DialogTitle>Log New Antenatal Visit for {selectedPatient.fullName}</DialogTitle>
@@ -938,7 +939,7 @@ export default function MaternityCarePage() {
                         </div>
                         <DialogFooter>
                           <DialogClose asChild><Button type="button" variant="outline" disabled={isOrderingLabs}>Cancel</Button></DialogClose>
-                          <Button type="submit" onClick={handleSubmitLabOrder} disabled={isOrderingLabs || Object.values(selectedLabTests).every(v => !v)}>
+                          <Button type="button" onClick={handleSubmitLabOrder} disabled={isOrderingLabs || Object.values(selectedLabTests).every(v => !v)}>
                             {isOrderingLabs ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                             {isOrderingLabs ? "Submitting..." : "Submit Lab Order"}
                           </Button>
@@ -993,7 +994,7 @@ export default function MaternityCarePage() {
                         </div>
                         <DialogFooter>
                            <DialogClose asChild><Button type="button" variant="outline" disabled={isOrderingImaging}>Cancel</Button></DialogClose>
-                          <Button type="submit" onClick={handleSubmitImagingOrder} disabled={isOrderingImaging}>
+                          <Button type="button" onClick={handleSubmitImagingOrder} disabled={isOrderingImaging}>
                             {isOrderingImaging ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                             {isOrderingImaging ? "Submitting..." : "Submit Imaging Order"}
                           </Button>

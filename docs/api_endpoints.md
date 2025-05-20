@@ -37,15 +37,15 @@ This document outlines the proposed API endpoints for the H365 application based
 
 *   **`POST /api/v1/patients`**
     *   Purpose: Register a new patient (individual registration).
-    *   Request Body: `{ nationalId, fullName, dateOfBirth, gender, contactNumber, email?, address, district, province, homeHospital?, nextOfKinName?, nextOfKinNumber?, nextOfKinAddress?, allergies?, photoDataUri? }` (photoDataUri is mandatory here)
-    *   Success Response (201 Created): `{ message: "Patient registered", patient: { id, nationalId, fullName, age, gender, ... } }`
+    *   Request Body: `{ nationalId, fullName, dateOfBirth, gender, contactNumber, email?, address, district, province, homeHospital?, nextOfKinName?, nextOfKinNumber?, nextOfKinAddress?, allergies?, chronicConditions?, photoDataUri? }` (photoDataUri is mandatory for this specific form).
+    *   Success Response (201 Created): `{ message: "Patient registered", patient: { id, nationalId, fullName, age, gender, chronicConditions, ... } }`
 *   **`GET /api/v1/patients/search?nationalId={nationalId}`**
     *   Purpose: Search for a patient by National ID.
-    *   Success Response (200 OK): Patient object.
+    *   Success Response (200 OK): Patient object including `chronicConditions`.
     *   Not Found Response (404): `{ error: "Patient not found" }`
 *   **`POST /api/v1/patients/bulk`**
     *   Purpose: Register multiple patients from a CSV/Excel file.
-    *   Request: Multipart form data with the file.
+    *   Request: Multipart form data with the file. (CSV headers should include `ChronicConditions`).
     *   Response: `{ message: "Bulk registration processing started.", results: { successful: number, failed: number, errors?: any[] } }`
 
 ## IV. Visiting Patients (Consultation Intake) (`/visiting-patients`)
@@ -95,7 +95,8 @@ This document outlines the proposed API endpoints for the H365 application based
     *   Purpose: Submit imaging orders for a consultation.
     *   Request Body: `{ imagingType: string, regionDetails: string, clinicalNotes: string }`
     *   Success Response (201 Created): `{ message: "Imaging order submitted", imagingOrderId }`
-*   **`GET /api/v1/referrals?specialty={specialty}`** (For Specializations page left panel)
+*   `GET /api/v1/consultations/drafts?doctorId={id}` (or `?specialistId={id}`) - For fetching drafts for the left panel.
+*   `GET /api/v1/referrals?specialty={specialty}` (For Specializations page left panel)
     *   Purpose: Get list of patients referred to the current specialist/department.
     *   Response: `[{ id, patientName, referringDoctor, reason, timeReferred, specialty, photoUrl, gender }, ...]`
 
@@ -103,11 +104,11 @@ This document outlines the proposed API endpoints for the H365 application based
 
 *   **`POST /api/v1/maternity/patients`**
     *   Purpose: Register/Initiate maternity care for a patient.
-    *   Request Body: `{ nationalId, fullName, dob, gender, lmp, edd?, gravida, para, bloodGroup?, rhFactor?, allergies?, existingConditions? }`
+    *   Request Body: `{ nationalId, fullName, dob, gender, lmp, edd?, gravida, para, bloodGroup?, rhFactor?, allergies?, chronicConditions? }`
     *   Success Response (201 Created): Created/updated maternity patient profile.
 *   **`GET /api/v1/maternity/patients/search?nationalId={nationalId}`** (Or reuse `/api/v1/patients/search` and then check if maternity profile exists)
     *   Purpose: Search for a maternity patient.
-    *   Response: Maternity patient object.
+    *   Response: Maternity patient object including `chronicConditions`.
 *   **`POST /api/v1/maternity/patients/{patientId}/antenatal-visits`**
     *   Purpose: Log a new antenatal visit.
     *   Request Body: `{ visitDate, gestationalAge, weightKg, bp, fhrBpm, fundalHeightCm, notes, nextAppointmentDate?, bodyTemperature?, heightCm?, bmi?, bmiStatus?, bpStatus? }`
@@ -130,7 +131,7 @@ This document outlines the proposed API endpoints for the H365 application based
     *   Success Response (201 Created): Created admission object.
 *   **`GET /api/v1/admissions/{admissionId}`**
     *   Purpose: Full care details of an admitted patient.
-    *   Response: `{ admissionId, patientId, name, ..., vitals: {...}, treatmentPlan, medicationSchedule: [...], doctorNotes: [...], visitHistory: [...] }`
+    *   Response: `{ admissionId, patientId, name, ..., vitals: {...}, chronicConditions: string[], treatmentPlan, medicationSchedule: [...], doctorNotes: [...], visitHistory: [...] }`
 *   **`PUT /api/v1/admissions/{admissionId}/vitals`**
     *   Purpose: Update vitals for an admitted patient.
     *   Request Body: `{ bodyTemperature?, weightKg?, heightCm?, bloodPressure? }` (includes calculated BMI/BP status on backend).
@@ -208,4 +209,3 @@ This document outlines the proposed API endpoints for the H365 application based
 
 This revised list aims to be comprehensive based on our frontend development. Each endpoint implies necessary backend logic for data validation, database interaction (with your MySQL database on Aiven), business rule enforcement, and appropriate responses.
 Let me know if this looks good, or if there are any immediate adjustments you'd like to make before we potentially dive into the first set of backend tasks!
-

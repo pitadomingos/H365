@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-// Link component is not used on this page directly after AppShell removal
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useForm, SubmitHandler, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import Link from "next/link"; // Added for the link to visiting patients
+import Link from "next/link";
 
 interface WaitingListItem {
   id: number | string;
@@ -38,6 +37,7 @@ const patientFormSchema = z.object({
   dateOfBirth: z.date({ required_error: "Date of birth is required."}),
   gender: z.string().min(1, "Gender is required."),
   allergies: z.string().optional(),
+  chronicConditions: z.string().optional(), // Added
   contactNumber: z.string().min(1, "Contact number is required."),
   email: z.string().email("Invalid email address.").optional().or(z.literal('')),
   address: z.string().min(1, "Address is required."),
@@ -61,6 +61,7 @@ export default function PatientRegistrationPage() {
       dateOfBirth: undefined,
       gender: "",
       allergies: "",
+      chronicConditions: "", // Added
       contactNumber: "",
       email: "",
       address: "",
@@ -90,28 +91,41 @@ export default function PatientRegistrationPage() {
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
     
-    setIsWaitingListLoading(true);
-    setTimeout(() => {
-      const initialWaitingList: WaitingListItem[] = [
-        { id: 1, name: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
-        { id: 2, name: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
-        { id: 3, name: "Charlie Brown", gender: "Male", timeAdded: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
-      ];
-      setWaitingList(initialWaitingList);
-      setIsWaitingListLoading(false);
-    }, 1500);
+    const fetchWaitingList = async () => {
+      setIsWaitingListLoading(true);
+      try {
+        // Simulate API call: GET /api/v1/visits/waiting-list
+        // const response = await fetch('/api/v1/visits/waiting-list');
+        // if (!response.ok) throw new Error('Failed to fetch waiting list');
+        // const data = await response.json();
+        // setWaitingList(data);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const initialWaitingList: WaitingListItem[] = [
+          { id: 1, name: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
+          { id: 2, name: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
+          { id: 3, name: "Charlie Brown", gender: "Male", timeAdded: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
+        ];
+        setWaitingList(initialWaitingList);
+      } catch (error) {
+        console.error("Error fetching waiting list:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load waiting list." });
+      } finally {
+        setIsWaitingListLoading(false);
+      }
+    };
+    fetchWaitingList();
   }, []);
 
   const enableCamera = useCallback(async () => {
     if (hasCameraPermission === false && !stream) {
-      setHasCameraPermission(null); // Allow re-requesting if previously denied and stream is gone
+      setHasCameraPermission(null); 
     }
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { width: 300, height: 385 } });
         setHasCameraPermission(true);
         setStream(mediaStream);
-        setCapturedImage(null); // Clear any previously captured image
+        setCapturedImage(null);
       } catch (err) {
         console.error("Error accessing camera:", err);
         setHasCameraPermission(false);
@@ -143,7 +157,6 @@ export default function PatientRegistrationPage() {
         });
       };
     }
-    // Cleanup function
     return () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -168,10 +181,10 @@ export default function PatientRegistrationPage() {
         
         let sx = 0, sy = 0, sWidth = video.videoWidth, sHeight = video.videoHeight;
 
-        if (videoAspectRatio > targetAspectRatio) { // Video is wider than target
+        if (videoAspectRatio > targetAspectRatio) { 
             sWidth = video.videoHeight * targetAspectRatio;
             sx = (video.videoWidth - sWidth) / 2;
-        } else { // Video is taller than target or same aspect ratio
+        } else { 
             sHeight = video.videoWidth / targetAspectRatio;
             sy = (video.videoHeight - sHeight) / 2;
         }
@@ -179,24 +192,23 @@ export default function PatientRegistrationPage() {
         context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
         const dataUrl = canvas.toDataURL('image/png');
         setCapturedImage(dataUrl);
-        stream.getTracks().forEach(track => track.stop()); // Stop stream after capture
-        setStream(null); // Clear stream state
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
       }
     }
   };
 
   const discardPhoto = () => {
     setCapturedImage(null);
-    // No need to call enableCamera directly here, user can click "Enable Camera" if needed
-    if (hasCameraPermission !== false) { // Only if not permanently denied
-      // Optionally, re-enable camera preview immediately
-      // enableCamera(); 
+    if (hasCameraPermission !== false) {
+      // enableCamera(); // Optionally re-enable, or let user click button
     }
   };
 
   const downloadCSVTemplate = () => {
     const headers = [
-      "NationalID", "FullName", "DateOfBirth (YYYY-MM-DD)", "Gender", "Allergies",
+      "NationalID", "FullName", "DateOfBirth (YYYY-MM-DD)", "Gender", 
+      "Allergies", "ChronicConditions", // Added ChronicConditions
       "ContactNumber", "EmailAddress", "Address", "District", "Province",
       "HomeHospital", "NextOfKinName", "NextOfKinNumber", "NextOfKinAddress"
     ];
@@ -222,10 +234,11 @@ export default function PatientRegistrationPage() {
   const handleFileUpload = async () => {
     if (selectedFile) {
       setIsUploading(true);
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500)); 
       toast({
         title: "File Upload (Mock)",
-        description: `${selectedFile.name} would be processed. This is a mock action.`,
+        description: `${selectedFile.name} would be processed. Backend integration needed.`,
       });
       setSelectedFile(null);
       const fileInput = document.getElementById('bulkPatientFile') as HTMLInputElement;
@@ -257,45 +270,54 @@ export default function PatientRegistrationPage() {
       ...data,
       dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, "yyyy-MM-dd") : undefined,
       allergies: data.allergies || "",
+      chronicConditions: data.chronicConditions || "", // Added
       photoDataUri: capturedImage, 
     };
 
     try {
-      const response = await fetch('/api/v1/patients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      // Actual fetch call will replace this mock
+      console.log("Submitting to /api/v1/patients (mock):", payload);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      // const response = await fetch('/api/v1/patients', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(payload),
+      // });
+      // if (!response.ok) {
+      //   const errorData = await response.json().catch(() => ({ error: "API request failed" }));
+      //   throw new Error(errorData.error || `API request failed with status: ${response.status}`);
+      // }
+      // const result = await response.json();
 
-      if (!response.ok) {
-        let errorData;
-        try {
-            errorData = await response.json();
-        } catch (e) {
-            errorData = { error: response.statusText || "API request failed" };
+      // Mocked success response
+      const mockResult = {
+        message: "Patient registered successfully (Mock)",
+        patient: {
+            id: `PID${Date.now()}`,
+            nationalId: data.nationalId,
+            fullName: data.fullName,
+            age: data.dateOfBirth ? new Date().getFullYear() - new Date(data.dateOfBirth).getFullYear() : 'N/A',
+            gender: data.gender,
+            address: data.address,
+            homeClinic: data.homeHospital || 'N/A',
+            allergies: (data.allergies || "").split(',').map(s => s.trim()).filter(Boolean),
+            chronicConditions: (data.chronicConditions || "").split(',').map(s => s.trim()).filter(Boolean), // Added
         }
-        throw new Error(errorData.error || `API request failed with status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      };
       
-      const patientAge = result.patient.dateOfBirth ? new Date().getFullYear() - new Date(result.patient.dateOfBirth).getFullYear() : 'N/A';
       toast({ 
-          title: "Patient Registered", 
-          description: `${result.patient.fullName} (ID: ${result.patient.nationalId}) registered. Age: ${patientAge}, Gender: ${result.patient.gender}. Allergies: ${result.patient.allergies || 'None'}. Backend returns address/clinic.` 
+        title: mockResult.message, 
+        description: `${mockResult.patient.fullName} (ID: ${mockResult.patient.nationalId}) registered. Age: ${mockResult.patient.age}, Gender: ${mockResult.patient.gender}. Allergies: ${mockResult.patient.allergies.join(', ') || 'None'}. Chronic Conditions: ${mockResult.patient.chronicConditions.join(', ') || 'None'}.` 
       });
       form.reset();
       setCapturedImage(null);
-      // Stream is already stopped in capturePhoto
-      setHasCameraPermission(null); // Reset to allow re-enabling
+      setHasCameraPermission(null); 
     } catch (error: any) {
-      console.error("API submission error:", error);
+      console.error("Submission error:", error);
       toast({
         variant: "destructive",
         title: "Registration Failed",
-        description: error.message || "An unexpected error occurred. Check if backend is running.",
+        description: error.message || "An unexpected error occurred. Check console for details.",
       });
     } finally {
       setIsSubmitting(false);
@@ -331,9 +353,17 @@ export default function PatientRegistrationPage() {
               </CardHeader>
               <CardContent className="py-6">
                 <div className="grid lg:grid-cols-[240px_1fr] gap-x-6 gap-y-4 items-start">
-                  {/* Photo Column */}
                   <div className="flex flex-col items-center">
                     <div className="relative w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden border border-dashed border-primary/50">
+                       {!capturedImage && (
+                          <video
+                              ref={videoRef}
+                              className={cn("w-full h-full object-cover", (!stream || !hasCameraPermission) && "bg-muted/50")}
+                              muted
+                              playsInline
+                              autoPlay={false} 
+                          />
+                       )}
                        {capturedImage ? (
                           <Image 
                             src={capturedImage} 
@@ -343,28 +373,16 @@ export default function PatientRegistrationPage() {
                             className="w-full h-full object-cover rounded-md" 
                             data-ai-hint={getAvatarHint(form.watch("gender") as PatientFormValues["gender"])}
                           />
-                        ) : (
-                          <>
-                            <video
-                                ref={videoRef}
-                                className={cn("w-full h-full object-cover", !stream && "bg-muted")}
-                                muted
-                                playsInline
-                                autoPlay={false} // Autoplay handled by useEffect
-                            />
-                            {!(stream && hasCameraPermission) && (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted text-muted-foreground p-2">
-                                    <UserCircle className="w-24 h-24" />
-                                    {hasCameraPermission === false && <p className="text-xs mt-2 text-center">Camera access denied. Please allow in browser settings.</p>}
-                                </div>
-                            )}
-                          </>
+                        ) : !(stream && hasCameraPermission) && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted text-muted-foreground p-2">
+                                <UserCircle className="w-24 h-24" />
+                                {hasCameraPermission === false && <p className="text-xs mt-2 text-center">Camera access denied. Please allow in browser settings.</p>}
+                            </div>
                         )}
                     </div>
                     <canvas ref={canvasRef} className="hidden"></canvas>
                   </div>
                   
-                  {/* Info Column */}
                   <div className="space-y-4">
                      <div className="space-y-4">
                         <h3 className="text-md font-semibold border-b pb-1">Personal Information</h3>
@@ -387,6 +405,7 @@ export default function PatientRegistrationPage() {
                             <Controller
                               control={form.control}
                               name="dateOfBirth"
+                              rules={{ required: "Date of birth is required."}}
                               render={({ field }) => (
                                 <Popover>
                                   <PopoverTrigger asChild>
@@ -434,6 +453,11 @@ export default function PatientRegistrationPage() {
                             <Label htmlFor="allergies">Allergies (comma-separated if multiple)</Label>
                             <Textarea id="allergies" placeholder="e.g., Penicillin, Dust mites, Peanuts" {...form.register("allergies")} />
                             {form.formState.errors.allergies && <p className="text-xs text-destructive">{form.formState.errors.allergies.message}</p>}
+                        </div>
+                        <div className="space-y-2"> {/* Added Chronic Conditions */}
+                            <Label htmlFor="chronicConditions">Chronic Conditions (comma-separated)</Label>
+                            <Textarea id="chronicConditions" placeholder="e.g., Hypertension, Diabetes, Asthma" {...form.register("chronicConditions")} />
+                            {form.formState.errors.chronicConditions && <p className="text-xs text-destructive">{form.formState.errors.chronicConditions.message}</p>}
                         </div>
                     </div>
                     
