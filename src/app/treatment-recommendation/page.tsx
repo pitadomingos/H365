@@ -1,27 +1,23 @@
 
-'use server'; 
+"use client"; // Add this directive
 
-import { ClipboardEdit, ListChecks, Bell, Users, FlaskConical, FileClock } from "lucide-react";
+import { ClipboardEdit, ListChecks, Bell, Users, FileClock, Loader2 } from "lucide-react";
 import { ConsultationForm } from "./consultation-form";
 import { getTreatmentRecommendationAction } from "./actions";
 import Image from "next/image";
-import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import React from 'react'; // useEffect and useState are client-side
-
-// These would typically be client components if they fetch data dynamically
-// For now, keeping them as server components with static mock data.
+import React, { useState, useEffect } from 'react';
 
 interface MockListItem {
   id: string;
   patientName: string;
-  timeAdded?: string; 
-  location?: string; 
-  status?: string; 
-  message?: string; 
-  time?: string; 
-  read?: boolean; 
+  timeAdded?: string;
+  location?: string;
+  status?: string;
+  message?: string;
+  time?: string;
+  read?: boolean;
   photoUrl: string;
   gender?: "Male" | "Female" | "Other";
 }
@@ -31,21 +27,20 @@ interface DraftedConsultationItem extends MockListItem {
   lastSavedTime: string;
 }
 
-const mockWaitingListData: MockListItem[] = [
+const initialMockWaitingListData: MockListItem[] = [
   { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/32x32.png" },
   { id: "WL002", patientName: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "With Doctor", photoUrl: "https://placehold.co/32x32.png" },
 ];
 
-const mockLabNotificationsData: MockListItem[] = [
+const initialMockLabNotificationsData: MockListItem[] = [
   { id: "NOTIF001", patientName: "Charlie Brown", gender: "Male", message: "Lab results are ready.", time: "5 mins ago", read: false, photoUrl: "https://placehold.co/32x32.png" },
   { id: "NOTIF002", patientName: "Diana Prince", gender: "Female", message: "Imaging report available.", time: "15 mins ago", read: true, photoUrl: "https://placehold.co/32x32.png" },
 ];
 
-const mockDraftedConsultationsData: DraftedConsultationItem[] = [
+const initialMockDraftedConsultationsData: DraftedConsultationItem[] = [
     { id: "DRAFT001", patientName: "Edward Scissorhands", gender: "Male", reasonForDraft: "Awaiting Chest X-Ray results", lastSavedTime: "Yesterday 04:30 PM", photoUrl: "https://placehold.co/32x32.png" },
     { id: "DRAFT002", patientName: "Fiona Gallagher", gender: "Female", reasonForDraft: "Pending Full Blood Count", lastSavedTime: "Today 09:15 AM", photoUrl: "https://placehold.co/32x32.png" },
 ];
-
 
 const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
   if (gender === "Male") return "male avatar";
@@ -53,15 +48,17 @@ const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
   return "patient avatar";
 };
 
-// This page itself is a Server Component if it doesn't use hooks directly.
-// The child components (WaitingList, Notifications, Drafts) would be client components
-// if they were to fetch data dynamically with useEffect.
-// For this prototype with mock data, we can keep it simple.
-
 function WaitingList() {
-  // In a real app, this would use useState and useEffect to fetch data
-  const waitingList = mockWaitingListData; 
-  const isLoading = false; // Simulate loading state
+  const [waitingList, setWaitingList] = useState<MockListItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setWaitingList(initialMockWaitingListData);
+      setIsLoading(false);
+    }, 1000);
+  }, []);
 
   return (
     <Card className="shadow-sm">
@@ -71,9 +68,12 @@ function WaitingList() {
         </CardTitle>
         <CardDescription className="text-xs">Patients waiting for consultation.</CardDescription>
       </CardHeader>
-      <CardContent className="max-h-[calc(33vh-80px)] overflow-y-auto"> {/* Adjusted height */}
+      <CardContent className="max-h-[calc(33vh-80px)] overflow-y-auto">
         {isLoading ? (
-          <p className="text-sm text-muted-foreground text-center py-4">Loading waiting list...</p>
+           <div className="flex items-center justify-center py-6 text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+            Loading waiting list...
+          </div>
         ) : waitingList.length > 0 ? (
           <ul className="space-y-3">
             {waitingList.map((patient) => (
@@ -106,8 +106,16 @@ function WaitingList() {
 }
 
 function LabNotifications() {
-  const labNotifications = mockLabNotificationsData;
-  const isLoading = false;
+  const [labNotifications, setLabNotifications] = useState<MockListItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setLabNotifications(initialMockLabNotificationsData);
+      setIsLoading(false);
+    }, 1200);
+  }, []);
 
   return (
     <Card className="shadow-sm">
@@ -117,9 +125,12 @@ function LabNotifications() {
         </CardTitle>
          <CardDescription className="text-xs">Updates on lab results & imaging.</CardDescription>
       </CardHeader>
-      <CardContent className="max-h-[calc(33vh-80px)] overflow-y-auto"> {/* Adjusted height */}
+      <CardContent className="max-h-[calc(33vh-80px)] overflow-y-auto">
         {isLoading ? (
-           <p className="text-sm text-muted-foreground text-center py-4">Loading notifications...</p>
+            <div className="flex items-center justify-center py-6 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                Loading notifications...
+            </div>
         ) : labNotifications.length > 0 ? (
           <ul className="space-y-2.5">
             {labNotifications.map((notif) => (
@@ -127,7 +138,7 @@ function LabNotifications() {
                   <Image
                     src={notif.photoUrl}
                     alt={notif.patientName}
-                    width={24} 
+                    width={24}
                     height={24}
                     className="rounded-full mt-0.5"
                     data-ai-hint={getAvatarHint(notif.gender)}
@@ -153,8 +164,16 @@ function LabNotifications() {
 }
 
 function IncompleteConsultations() {
-    const draftedConsultations = mockDraftedConsultationsData;
-    const isLoading = false;
+    const [draftedConsultations, setDraftedConsultations] = useState<DraftedConsultationItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        setIsLoading(true);
+        setTimeout(() => {
+            setDraftedConsultations(initialMockDraftedConsultationsData);
+            setIsLoading(false);
+        }, 1500);
+    }, []);
 
     return (
         <Card className="shadow-sm">
@@ -164,9 +183,12 @@ function IncompleteConsultations() {
                 </CardTitle>
                 <CardDescription className="text-xs">Consultations awaiting results or further action.</CardDescription>
             </CardHeader>
-            <CardContent className="max-h-[calc(34vh-80px)] overflow-y-auto"> {/* Adjusted height */}
+            <CardContent className="max-h-[calc(34vh-80px)] overflow-y-auto">
                 {isLoading ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">Loading drafts...</p>
+                     <div className="flex items-center justify-center py-6 text-muted-foreground">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                        Loading drafts...
+                    </div>
                 ) : draftedConsultations.length > 0 ? (
                     <ul className="space-y-3">
                         {draftedConsultations.map((consult) => (
@@ -204,7 +226,7 @@ function IncompleteConsultations() {
 }
 
 
-export default async function ConsultationRoomPage() {
+export default function ConsultationRoomPage() { // Removed async
   return (
       <div className="grid lg:grid-cols-[300px_1fr] xl:grid-cols-[350px_1fr] gap-6 h-full items-start">
         {/* Left Panel */}
@@ -226,4 +248,3 @@ export default async function ConsultationRoomPage() {
       </div>
   )
 }
-
