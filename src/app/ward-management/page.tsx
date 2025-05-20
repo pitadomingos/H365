@@ -120,6 +120,58 @@ const mockWardSummariesData: WardSummary[] = [
     { id: "W004", name: "Maternity Ward D" },
 ];
 
+// Define mockWardDetailsData here
+const mockWardDetailsData: Record<string, WardDetails> = {
+    "W001": {
+        id: "W001", name: "General Medicine Ward A", totalBeds: 20, occupiedBeds: 2, availableBeds: 18, occupancyRate: 10,
+        patients: [
+            { admissionId: "ADM001", patientId: "P001", name: "Eva Green", bedNumber: "Bed 3", admittedDate: "2024-07-28", primaryDiagnosis: "Pneumonia" },
+            { admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", bedNumber: "Bed 5", admittedDate: "2024-07-29", primaryDiagnosis: "Heart Failure Exacerbation" },
+        ],
+        beds: [
+            { id: "B001-A", bedNumber: "Bed 1", status: "Available" }, { id: "B002-A", bedNumber: "Bed 2", status: "Cleaning" },
+            { id: "B003-A", bedNumber: "Bed 3", status: "Occupied", patientName: "Eva Green", patientId: "P001" },
+            { id: "B004-A", bedNumber: "Bed 4", status: "Available" },
+            { id: "B005-A", bedNumber: "Bed 5", status: "Occupied", patientName: "Tom Hanks", patientId: "P002" },
+            // ... add up to 20 beds for Ward A
+            ...Array.from({ length: 15 }, (_, i) => ({ id: `B${(i + 6).toString().padStart(3, '0')}-A`, bedNumber: `Bed ${i + 6}`, status: "Available" as "Available" }))
+        ],
+    },
+    "W002": {
+        id: "W002", name: "Surgical Ward B", totalBeds: 15, occupiedBeds: 1, availableBeds: 14, occupancyRate: 6.67,
+        patients: [
+            { admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", bedNumber: "Bed 1", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Appendectomy" },
+        ],
+        beds: [
+            { id: "B001-B", bedNumber: "Bed 1", status: "Occupied", patientName: "Lucy Liu", patientId: "P003" },
+            // ... add up to 15 beds for Ward B
+            ...Array.from({ length: 14 }, (_, i) => ({ id: `B${(i + 2).toString().padStart(3, '0')}-B`, bedNumber: `Bed ${i + 2}`, status: "Available" as "Available" }))
+        ],
+    },
+    "W003": {
+        id: "W003", name: "Pediatrics Ward C", totalBeds: 10, occupiedBeds: 1, availableBeds: 9, occupancyRate: 10,
+        patients: [
+            { admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", bedNumber: "Bed 2", admittedDate: "2024-07-29", primaryDiagnosis: "Asthma Attack" },
+        ],
+        beds: [
+            { id: "B001-C", bedNumber: "Bed 1", status: "Available" },
+            { id: "B002-C", bedNumber: "Bed 2", status: "Occupied", patientName: "Kevin McCallister", patientId: "P004" },
+             ...Array.from({ length: 8 }, (_, i) => ({ id: `B${(i + 3).toString().padStart(3, '0')}-C`, bedNumber: `Bed ${i + 3}`, status: "Available" as "Available" }))
+        ],
+    },
+    "W004": {
+        id: "W004", name: "Maternity Ward D", totalBeds: 12, occupiedBeds: 1, availableBeds: 11, occupancyRate: 8.33,
+        patients: [
+             { admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", bedNumber: "Bed 7", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Natal Care" },
+        ],
+        beds: [
+             { id: "B007-D", bedNumber: "Bed 7", status: "Occupied", patientName: "Sarah Connor", patientId: "P005" },
+            ...Array.from({ length: 11 }, (_, i) => ({ id: `B${(i + 1).toString().padStart(3, '0')}-D`, bedNumber: `Bed ${i + 1}`, status: i === 6 ? "Occupied" : "Available" as "Available", patientName: i === 6 ? "Sarah Connor" : undefined, patientId: i===6 ? "P005" : undefined  })).filter(b => b.id !== "B007-D") // ensure no duplicates
+        ],
+    },
+};
+
+
 const mockHospitalPendingAdmissionsData: PendingAdmission[] = [
     { id: "PEND001", patientId: "P101", patientName: "Alice Smith", referringDepartment: "Emergency", reasonForAdmission: "Severe Pneumonia, requires inpatient care." },
     { id: "PEND002", patientId: "P102", patientName: "Robert Jones", referringDepartment: "Outpatient Clinic", reasonForAdmission: "Uncontrolled Diabetes, needs stabilization." },
@@ -136,35 +188,35 @@ const mockAdmittedPatientFullDetailsData: Record<string, AdmittedPatientFullDeta
       { medicationItemId: "MEDSCH001-C-1", medication: "Salbutamol Neb", dosage: "2.5mg", time: "14:00", status: "Pending", notes: "Check O2 sats before/after." },
     ],
     doctorNotes: [{ noteId: "DN001-A-1", date: new Date(Date.now() - 86400000).toISOString(), doctor: "Dr. Smith", note: "Patient responding well. Continue plan." }, {noteId: "DN001-B-1", date: new Date().toISOString(), doctor: "Dr. House", note: "Reviewed chest X-ray, slight improvement in consolidation."}],
-    vitals: { bodyTemperature: "37.2", weightKg: "65", heightCm: "168", bloodPressure: "120/80" }
+    vitals: { bodyTemperature: "37.2", weightKg: "65", heightCm: "168", bloodPressure: "120/80", bmi: "23.1", bpStatus: "Normal", bmiStatus: "Normal weight" }
   },
    "ADM002": {
     admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", wardName: "General Medicine Ward A", bedNumber: "Bed 5",
     treatmentPlan: "Furosemide 40mg IV BD. Fluid restriction 1.5L/day. Daily weights. Monitor electrolytes.",
     medicationSchedule: [{ medicationItemId: "MEDSCH002-A-1", medication: "Furosemide 40mg IV", dosage: "40mg", time: "09:00", status: "Administered" }],
     doctorNotes: [{ noteId: "DN002-A-1", date: new Date().toISOString(), doctor: "Dr. House", note: "Mild improvement in edema." }],
-    vitals: { bodyTemperature: "36.8", weightKg: "80", heightCm: "175", bloodPressure: "135/85" }
+    vitals: { bodyTemperature: "36.8", weightKg: "80", heightCm: "175", bloodPressure: "135/85", bmi:"26.1", bpStatus: "Stage 1 HTN", bmiStatus: "Overweight" }
   },
    "ADM003": {
     admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", wardName: "Surgical Ward B", bedNumber: "Bed 1",
     treatmentPlan: "Post-op day 1. Pain management with Tramadol 50mg PO Q6H PRN. Wound care. Encourage mobilization.",
     medicationSchedule: [{ medicationItemId: "MEDSCH003-A-1", medication: "Tramadol 50mg PO", dosage: "50mg", time: "PRN", status: "Pending" }],
     doctorNotes: [{ noteId: "DN003-A-1", date: new Date().toISOString(), doctor: "Dr. Grey", note: "Surgical site clean. Patient ambulating." }],
-    vitals: { bodyTemperature: "37.0", weightKg: "55", heightCm: "160", bloodPressure: "110/70" }
+    vitals: { bodyTemperature: "37.0", weightKg: "55", heightCm: "160", bloodPressure: "110/70", bmi: "21.5", bpStatus: "Normal", bmiStatus: "Normal weight" }
   },
   "ADM004": {
     admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", wardName: "Pediatrics Ward C", bedNumber: "Bed 2",
     treatmentPlan: "Nebulized Salbutamol Q4H. Prednisolone PO. Monitor oxygen saturation.",
     medicationSchedule: [{ medicationItemId: "MEDSCH004-A-1", medication: "Salbutamol Neb", dosage: "2.5mg", time: "10:00", status: "Administered" }],
     doctorNotes: [{ noteId: "DN004-A-1", date: new Date().toISOString(), doctor: "Dr. Carter", note: "Wheezing reduced. Stable." }],
-     vitals: { bodyTemperature: "37.5", weightKg: "30", heightCm: "130", bloodPressure: "100/60" }
+     vitals: { bodyTemperature: "37.5", weightKg: "30", heightCm: "130", bloodPressure: "100/60", bmi:"17.7", bpStatus: "Normal", bmiStatus: "Underweight" }
   },
   "ADM005": {
     admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", wardName: "Maternity Ward D", bedNumber: "Bed 7",
     treatmentPlan: "Routine post-natal care. Monitor for bleeding. Pain relief PRN.",
     medicationSchedule: [{ medicationItemId: "MEDSCH005-A-1", medication: "Ibuprofen 400mg PO", dosage: "400mg", time: "PRN", status: "Pending" }],
     doctorNotes: [{ noteId: "DN005-A-1", date: new Date().toISOString(), doctor: "Dr. Greene", note: "Patient and baby doing well." }],
-    vitals: { bodyTemperature: "36.9", weightKg: "70", heightCm: "170", bloodPressure: "118/78" }
+    vitals: { bodyTemperature: "36.9", weightKg: "70", heightCm: "170", bloodPressure: "118/78", bmi:"24.2", bpStatus: "Normal", bmiStatus: "Normal weight" }
   },
 };
 
@@ -286,7 +338,7 @@ export default function WardManagementPage() {
       setSelectedPatientForDetails(null); 
       setCurrentAdmittedPatientFullDetails(null);
       setTimeout(() => {
-        const details = mockWardDetailsData[selectedWardId];
+        const details = mockWardDetailsData[selectedWardId]; // Use mockWardDetailsData here
         if (details) {
             const occupiedBeds = details.patients.length;
             const availableBeds = details.totalBeds - occupiedBeds;
@@ -382,8 +434,10 @@ export default function WardManagementPage() {
     console.log("Saving vitals to /api/v1/admissions/{admissionId}/vitals (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, vitals: { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status } }) : null);
-    // Update the main mock data source
-    mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].vitals = { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status };
+    
+    if(mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]){
+        mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].vitals = { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status };
+    }
     toast({ title: "Vitals Saved (Mock)", description: "Patient vitals updated successfully." });
     setIsSavingVitals(false);
   };
@@ -452,7 +506,7 @@ export default function WardManagementPage() {
         treatmentPlan: `Initial plan for ${admissionDiagnosis}. Monitor vitals.`,
         medicationSchedule: [],
         doctorNotes: [{noteId: `DN-ADMIT-${Date.now()}`, date: new Date().toISOString(), doctor: admissionDoctor, note: `Admitted for ${admissionDiagnosis}.`}],
-        vitals: {}, // Initialize with empty vitals, to be updated by ward staff
+        vitals: {}, 
     };
 
     setHospitalPendingAdmissions(prev => prev.filter(p => p.id !== selectedPendingPatientId));
@@ -474,8 +528,8 @@ export default function WardManagementPage() {
     await new Promise(resolve => setTimeout(resolve, 1000));
     const newNoteEntry: DoctorNote = { noteId: `DN${Date.now()}`, date: new Date().toISOString(), doctor: "Dr. Current User (Mock)", note: newDoctorNote };
     setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, doctorNotes: [newNoteEntry, ...prev.doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
-    // Update main mock data source
-    if (currentAdmittedPatientFullDetails) {
+    
+    if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
       mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes = [newNoteEntry, ...mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
     toast({title: "Note Saved (Mock)", description: "New doctor's note added."});
@@ -485,6 +539,7 @@ export default function WardManagementPage() {
 
   const handleOpenMedicationModal = () => {
     if (!currentAdmittedPatientFullDetails) return;
+    // Deep copy the schedule to avoid direct state mutation if items are complex
     setMedicationScheduleInModal(currentAdmittedPatientFullDetails.medicationSchedule.map(med => ({ ...med }))); 
     setNewMedName("");
     setNewMedDosage("");
@@ -530,8 +585,7 @@ export default function WardManagementPage() {
     await new Promise(resolve => setTimeout(resolve, 1000));
     setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, medicationSchedule: medicationScheduleInModal }) : null);
     
-    // Also update the main mock data source
-    if (currentAdmittedPatientFullDetails) {
+    if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
         mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].medicationSchedule = medicationScheduleInModal;
     }
 
@@ -868,7 +922,6 @@ export default function WardManagementPage() {
               )}
               {!isLoadingSelectedPatientDetails && currentAdmittedPatientFullDetails && (
                 <>
-                  {/* Vitals Section */}
                   <div className="space-y-3 p-4 border rounded-md bg-muted/20">
                     <h4 className="text-md font-semibold mb-2 flex items-center"><Activity className="mr-2 h-4 w-4 text-primary" /> Current Vitals</h4>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
@@ -1164,3 +1217,6 @@ export default function WardManagementPage() {
       </div>
   );
 }
+
+
+    
