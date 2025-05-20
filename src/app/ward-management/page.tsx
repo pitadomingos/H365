@@ -1,10 +1,10 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { BedDouble, Users, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed, Edit, PlusCircle, Thermometer, Weight, Ruler, Sigma, Save, ActivityIcon as BloodPressureIcon } from "lucide-react";
+import { BedDouble, Users, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed, Edit, PlusCircle, Thermometer, Weight, Ruler, Sigma, Save, ActivityIcon as BloodPressureIcon, AlertTriangle as AlertTriangleIcon, Stethoscope, LayersList, ClipboardCheck } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 interface WardSummary {
   id: string;
@@ -54,6 +56,7 @@ interface PatientInWard {
   bedNumber: string;
   admittedDate: string;
   primaryDiagnosis?: string;
+  keyAlerts?: string[]; // e.g., ["NPO", "Fall Risk", "Isolation"]
 }
 
 interface WardDetails {
@@ -65,6 +68,13 @@ interface WardDetails {
   occupancyRate: number;
   patients: PatientInWard[];
   beds: BedData[];
+  alerts: { // For the new Ward Alerts card
+    criticalLabsPending: number;
+    medicationsOverdue: number;
+    vitalsChecksDue: number;
+    newAdmissionOrders: number;
+    pendingDischarges: number;
+  };
 }
 
 interface MedicationScheduleItem {
@@ -103,6 +113,11 @@ interface AdmittedPatientFullDetails {
   medicationSchedule: MedicationScheduleItem[];
   doctorNotes: DoctorNote[];
   vitals?: VitalsData;
+  allergies?: string[];
+  chronicConditions?: string[];
+  codeStatus?: "Full Code" | "DNR" | "DNI" | "Limited";
+  recentLabSummary?: string;
+  recentImagingSummary?: string;
 }
 
 interface PendingAdmission {
@@ -120,57 +135,57 @@ const mockWardSummariesData: WardSummary[] = [
     { id: "W004", name: "Maternity Ward D" },
 ];
 
-// Define mockWardDetailsData here
 const mockWardDetailsData: Record<string, WardDetails> = {
     "W001": {
         id: "W001", name: "General Medicine Ward A", totalBeds: 20, occupiedBeds: 2, availableBeds: 18, occupancyRate: 10,
         patients: [
-            { admissionId: "ADM001", patientId: "P001", name: "Eva Green", bedNumber: "Bed 3", admittedDate: "2024-07-28", primaryDiagnosis: "Pneumonia" },
-            { admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", bedNumber: "Bed 5", admittedDate: "2024-07-29", primaryDiagnosis: "Heart Failure Exacerbation" },
+            { admissionId: "ADM001", patientId: "P001", name: "Eva Green", bedNumber: "Bed 3", admittedDate: "2024-07-28", primaryDiagnosis: "Pneumonia", keyAlerts: ["Isolation", "Oxygen PRN"] },
+            { admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", bedNumber: "Bed 5", admittedDate: "2024-07-29", primaryDiagnosis: "Heart Failure Exacerbation", keyAlerts: ["Fluid Restriction", "Daily Weight"] },
         ],
         beds: [
             { id: "B001-A", bedNumber: "Bed 1", status: "Available" }, { id: "B002-A", bedNumber: "Bed 2", status: "Cleaning" },
             { id: "B003-A", bedNumber: "Bed 3", status: "Occupied", patientName: "Eva Green", patientId: "P001" },
             { id: "B004-A", bedNumber: "Bed 4", status: "Available" },
             { id: "B005-A", bedNumber: "Bed 5", status: "Occupied", patientName: "Tom Hanks", patientId: "P002" },
-            // ... add up to 20 beds for Ward A
             ...Array.from({ length: 15 }, (_, i) => ({ id: `B${(i + 6).toString().padStart(3, '0')}-A`, bedNumber: `Bed ${i + 6}`, status: "Available" as "Available" }))
         ],
+        alerts: { criticalLabsPending: 2, medicationsOverdue: 1, vitalsChecksDue: 3, newAdmissionOrders: 0, pendingDischarges: 1 }
     },
     "W002": {
         id: "W002", name: "Surgical Ward B", totalBeds: 15, occupiedBeds: 1, availableBeds: 14, occupancyRate: 6.67,
         patients: [
-            { admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", bedNumber: "Bed 1", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Appendectomy" },
+            { admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", bedNumber: "Bed 1", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Appendectomy", keyAlerts: ["NPO", "Pain Control"] },
         ],
         beds: [
             { id: "B001-B", bedNumber: "Bed 1", status: "Occupied", patientName: "Lucy Liu", patientId: "P003" },
-            // ... add up to 15 beds for Ward B
             ...Array.from({ length: 14 }, (_, i) => ({ id: `B${(i + 2).toString().padStart(3, '0')}-B`, bedNumber: `Bed ${i + 2}`, status: "Available" as "Available" }))
         ],
+        alerts: { criticalLabsPending: 0, medicationsOverdue: 0, vitalsChecksDue: 1, newAdmissionOrders: 1, pendingDischarges: 0 }
     },
     "W003": {
         id: "W003", name: "Pediatrics Ward C", totalBeds: 10, occupiedBeds: 1, availableBeds: 9, occupancyRate: 10,
         patients: [
-            { admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", bedNumber: "Bed 2", admittedDate: "2024-07-29", primaryDiagnosis: "Asthma Attack" },
+            { admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", bedNumber: "Bed 2", admittedDate: "2024-07-29", primaryDiagnosis: "Asthma Attack", keyAlerts: ["Parent Present", "Nebs Q4H"] },
         ],
         beds: [
             { id: "B001-C", bedNumber: "Bed 1", status: "Available" },
             { id: "B002-C", bedNumber: "Bed 2", status: "Occupied", patientName: "Kevin McCallister", patientId: "P004" },
              ...Array.from({ length: 8 }, (_, i) => ({ id: `B${(i + 3).toString().padStart(3, '0')}-C`, bedNumber: `Bed ${i + 3}`, status: "Available" as "Available" }))
         ],
+        alerts: { criticalLabsPending: 1, medicationsOverdue: 0, vitalsChecksDue: 2, newAdmissionOrders: 0, pendingDischarges: 0 }
     },
     "W004": {
         id: "W004", name: "Maternity Ward D", totalBeds: 12, occupiedBeds: 1, availableBeds: 11, occupancyRate: 8.33,
         patients: [
-             { admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", bedNumber: "Bed 7", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Natal Care" },
+             { admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", bedNumber: "Bed 7", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Natal Care", keyAlerts: ["Baby with Mother", "Monitor Bleeding"] },
         ],
         beds: [
              { id: "B007-D", bedNumber: "Bed 7", status: "Occupied", patientName: "Sarah Connor", patientId: "P005" },
-            ...Array.from({ length: 11 }, (_, i) => ({ id: `B${(i + 1).toString().padStart(3, '0')}-D`, bedNumber: `Bed ${i + 1}`, status: i === 6 ? "Occupied" : "Available" as "Available", patientName: i === 6 ? "Sarah Connor" : undefined, patientId: i===6 ? "P005" : undefined  })).filter(b => b.id !== "B007-D") // ensure no duplicates
+            ...Array.from({ length: 11 }, (_, i) => ({ id: `B${(i + 1).toString().padStart(3, '0')}-D`, bedNumber: `Bed ${i + 1}`, status: i === 6 ? "Occupied" : "Available" as "Available", patientName: i === 6 ? "Sarah Connor" : undefined, patientId: i===6 ? "P005" : undefined  })).filter(b => b.id !== "B007-D")
         ],
+        alerts: { criticalLabsPending: 0, medicationsOverdue: 1, vitalsChecksDue: 1, newAdmissionOrders: 0, pendingDischarges: 1 }
     },
 };
-
 
 const mockHospitalPendingAdmissionsData: PendingAdmission[] = [
     { id: "PEND001", patientId: "P101", patientName: "Alice Smith", referringDepartment: "Emergency", reasonForAdmission: "Severe Pneumonia, requires inpatient care." },
@@ -188,35 +203,45 @@ const mockAdmittedPatientFullDetailsData: Record<string, AdmittedPatientFullDeta
       { medicationItemId: "MEDSCH001-C-1", medication: "Salbutamol Neb", dosage: "2.5mg", time: "14:00", status: "Pending", notes: "Check O2 sats before/after." },
     ],
     doctorNotes: [{ noteId: "DN001-A-1", date: new Date(Date.now() - 86400000).toISOString(), doctor: "Dr. Smith", note: "Patient responding well. Continue plan." }, {noteId: "DN001-B-1", date: new Date().toISOString(), doctor: "Dr. House", note: "Reviewed chest X-ray, slight improvement in consolidation."}],
-    vitals: { bodyTemperature: "37.2", weightKg: "65", heightCm: "168", bloodPressure: "120/80", bmi: "23.1", bpStatus: "Normal", bmiStatus: "Normal weight" }
+    vitals: { bodyTemperature: "37.2", weightKg: "65", heightCm: "168", bloodPressure: "120/80", bmi: "23.1", bpStatus: "Normal", bmiStatus: "Normal weight" },
+    allergies: ["Penicillin"], chronicConditions: ["Asthma"], codeStatus: "Full Code",
+    recentLabSummary: "WBC: 15.2 (High), CRP: 45 (High)", recentImagingSummary: "Chest X-Ray: Left lower lobe consolidation consistent with pneumonia."
   },
    "ADM002": {
     admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", wardName: "General Medicine Ward A", bedNumber: "Bed 5",
     treatmentPlan: "Furosemide 40mg IV BD. Fluid restriction 1.5L/day. Daily weights. Monitor electrolytes.",
     medicationSchedule: [{ medicationItemId: "MEDSCH002-A-1", medication: "Furosemide 40mg IV", dosage: "40mg", time: "09:00", status: "Administered" }],
     doctorNotes: [{ noteId: "DN002-A-1", date: new Date().toISOString(), doctor: "Dr. House", note: "Mild improvement in edema." }],
-    vitals: { bodyTemperature: "36.8", weightKg: "80", heightCm: "175", bloodPressure: "135/85", bmi:"26.1", bpStatus: "Stage 1 HTN", bmiStatus: "Overweight" }
+    vitals: { bodyTemperature: "36.8", weightKg: "80", heightCm: "175", bloodPressure: "135/85", bmi:"26.1", bpStatus: "Stage 1 HTN", bmiStatus: "Overweight" },
+    allergies: ["Sulfa Drugs"], chronicConditions: ["Hypertension", "Type 2 Diabetes"], codeStatus: "Full Code",
+    recentLabSummary: "K+: 3.2 (Low), Creatinine: 1.5 (High)", recentImagingSummary: "Echocardiogram: EF 35%."
   },
    "ADM003": {
     admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", wardName: "Surgical Ward B", bedNumber: "Bed 1",
     treatmentPlan: "Post-op day 1. Pain management with Tramadol 50mg PO Q6H PRN. Wound care. Encourage mobilization.",
     medicationSchedule: [{ medicationItemId: "MEDSCH003-A-1", medication: "Tramadol 50mg PO", dosage: "50mg", time: "PRN", status: "Pending" }],
     doctorNotes: [{ noteId: "DN003-A-1", date: new Date().toISOString(), doctor: "Dr. Grey", note: "Surgical site clean. Patient ambulating." }],
-    vitals: { bodyTemperature: "37.0", weightKg: "55", heightCm: "160", bloodPressure: "110/70", bmi: "21.5", bpStatus: "Normal", bmiStatus: "Normal weight" }
+    vitals: { bodyTemperature: "37.0", weightKg: "55", heightCm: "160", bloodPressure: "110/70", bmi: "21.5", bpStatus: "Normal", bmiStatus: "Normal weight" },
+    allergies: ["None Known"], chronicConditions: [], codeStatus: "Full Code",
+    recentLabSummary: "Hgb: 11.8 (Stable)", recentImagingSummary: "N/A for this admission."
   },
   "ADM004": {
     admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", wardName: "Pediatrics Ward C", bedNumber: "Bed 2",
     treatmentPlan: "Nebulized Salbutamol Q4H. Prednisolone PO. Monitor oxygen saturation.",
     medicationSchedule: [{ medicationItemId: "MEDSCH004-A-1", medication: "Salbutamol Neb", dosage: "2.5mg", time: "10:00", status: "Administered" }],
     doctorNotes: [{ noteId: "DN004-A-1", date: new Date().toISOString(), doctor: "Dr. Carter", note: "Wheezing reduced. Stable." }],
-     vitals: { bodyTemperature: "37.5", weightKg: "30", heightCm: "130", bloodPressure: "100/60", bmi:"17.7", bpStatus: "Normal", bmiStatus: "Underweight" }
+     vitals: { bodyTemperature: "37.5", weightKg: "30", heightCm: "130", bloodPressure: "100/60", bmi:"17.7", bpStatus: "Normal", bmiStatus: "Underweight" },
+     allergies: ["Peanuts"], chronicConditions: ["Childhood Asthma"], codeStatus: "Full Code",
+     recentLabSummary: "N/A", recentImagingSummary: "Chest X-ray: Clear."
   },
   "ADM005": {
     admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", wardName: "Maternity Ward D", bedNumber: "Bed 7",
     treatmentPlan: "Routine post-natal care. Monitor for bleeding. Pain relief PRN.",
     medicationSchedule: [{ medicationItemId: "MEDSCH005-A-1", medication: "Ibuprofen 400mg PO", dosage: "400mg", time: "PRN", status: "Pending" }],
     doctorNotes: [{ noteId: "DN005-A-1", date: new Date().toISOString(), doctor: "Dr. Greene", note: "Patient and baby doing well." }],
-    vitals: { bodyTemperature: "36.9", weightKg: "70", heightCm: "170", bloodPressure: "118/78", bmi:"24.2", bpStatus: "Normal", bmiStatus: "Normal weight" }
+    vitals: { bodyTemperature: "36.9", weightKg: "70", heightCm: "170", bloodPressure: "118/78", bmi:"24.2", bpStatus: "Normal", bmiStatus: "Normal weight" },
+    allergies: ["Codeine"], chronicConditions: [], codeStatus: "Full Code",
+    recentLabSummary: "Hgb: 10.5 (Low Normal)", recentImagingSummary: "Post-delivery ultrasound: Normal involution."
   },
 };
 
@@ -309,7 +334,6 @@ export default function WardManagementPage() {
   const [admissionDiagnosis, setAdmissionDiagnosis] = useState("");
   const [isAdmittingPatient, setIsAdmittingPatient] = useState(false);
 
-  // Vitals state for editing in the patient details section
   const [editableVitals, setEditableVitals] = useState<VitalsData>({});
   const [isSavingVitals, setIsSavingVitals] = useState(false);
   const [calculatedBmi, setCalculatedBmi] = useState<string | null>(null);
@@ -338,7 +362,7 @@ export default function WardManagementPage() {
       setSelectedPatientForDetails(null); 
       setCurrentAdmittedPatientFullDetails(null);
       setTimeout(() => {
-        const details = mockWardDetailsData[selectedWardId]; // Use mockWardDetailsData here
+        const details = mockWardDetailsData[selectedWardId];
         if (details) {
             const occupiedBeds = details.patients.length;
             const availableBeds = details.totalBeds - occupiedBeds;
@@ -431,7 +455,7 @@ export default function WardManagementPage() {
     if (!currentAdmittedPatientFullDetails) return;
     setIsSavingVitals(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, vitals: editableVitals };
-    console.log("Saving vitals to /api/v1/admissions/{admissionId}/vitals (mock):", payload);
+    // console.log("Saving vitals to /api/v1/admissions/{admissionId}/vitals (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, vitals: { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status } }) : null);
     
@@ -468,7 +492,7 @@ export default function WardManagementPage() {
         primaryDiagnosis: admissionDiagnosis,
         admissionDate: new Date().toISOString(),
     };
-    console.log("Submitting to /api/v1/admissions (mock):", payload);
+    // console.log("Submitting to /api/v1/admissions (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const newPatientInWard: PatientInWard = {
@@ -478,6 +502,7 @@ export default function WardManagementPage() {
         bedNumber: bedToOccupy.bedNumber,
         admittedDate: new Date().toISOString().split('T')[0],
         primaryDiagnosis: admissionDiagnosis,
+        keyAlerts: ["New Admission"]
     };
 
     setCurrentWardDetails(prev => {
@@ -507,6 +532,7 @@ export default function WardManagementPage() {
         medicationSchedule: [],
         doctorNotes: [{noteId: `DN-ADMIT-${Date.now()}`, date: new Date().toISOString(), doctor: admissionDoctor, note: `Admitted for ${admissionDiagnosis}.`}],
         vitals: {}, 
+        allergies: [], chronicConditions: [], codeStatus: "Full Code"
     };
 
     setHospitalPendingAdmissions(prev => prev.filter(p => p.id !== selectedPendingPatientId));
@@ -524,7 +550,7 @@ export default function WardManagementPage() {
     if (!newDoctorNote.trim() || !currentAdmittedPatientFullDetails) return;
     setIsAddingNote(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, doctorId: "doc-currentUser-mockId", note: newDoctorNote };
-    console.log("Submitting to /api/v1/admissions/{admissionId}/doctor-notes (mock):", payload);
+    // console.log("Submitting to /api/v1/admissions/{admissionId}/doctor-notes (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
     const newNoteEntry: DoctorNote = { noteId: `DN${Date.now()}`, date: new Date().toISOString(), doctor: "Dr. Current User (Mock)", note: newDoctorNote };
     setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, doctorNotes: [newNoteEntry, ...prev.doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
@@ -539,7 +565,6 @@ export default function WardManagementPage() {
 
   const handleOpenMedicationModal = () => {
     if (!currentAdmittedPatientFullDetails) return;
-    // Deep copy the schedule to avoid direct state mutation if items are complex
     setMedicationScheduleInModal(currentAdmittedPatientFullDetails.medicationSchedule.map(med => ({ ...med }))); 
     setNewMedName("");
     setNewMedDosage("");
@@ -581,7 +606,7 @@ export default function WardManagementPage() {
     if (!currentAdmittedPatientFullDetails) return;
     setIsSavingMedicationUpdates(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, updatedSchedule: medicationScheduleInModal };
-    console.log("Submitting to /api/v1/admissions/{admissionId}/medication-schedule (mock with full schedule):", payload);
+    // console.log("Submitting to /api/v1/admissions/{admissionId}/medication-schedule (mock with full schedule):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, medicationSchedule: medicationScheduleInModal }) : null);
     
@@ -598,7 +623,7 @@ export default function WardManagementPage() {
     if (!currentAdmittedPatientFullDetails || !selectedWardId) return;
     setIsDischarging(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, dischargeDate: new Date().toISOString(), dischargeSummary: "Patient stable for discharge.", dischargedBy: "doc-currentUser-mockId" };
-    console.log("Submitting to /api/v1/admissions/{admissionId}/discharge (mock):", payload);
+    // console.log("Submitting to /api/v1/admissions/{admissionId}/discharge (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({ title: "Patient Discharged (Mock)", description: `${currentAdmittedPatientFullDetails.name} processed for discharge.` });
     
@@ -660,7 +685,7 @@ export default function WardManagementPage() {
         transferReason: transferReason,
         transferredBy: "doc-currentUser-mockId" 
     };
-    console.log("Submitting to /api/v1/admissions/{admissionId}/transfer (mock):", payload);
+    // console.log("Submitting to /api/v1/admissions/{admissionId}/transfer (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
     const destinationName = transferType === "internal_ward" 
         ? allWardsData.find(w => w.id === targetInternalWardId)?.name || "Selected Ward" 
@@ -735,16 +760,45 @@ export default function WardManagementPage() {
             )}
 
             {currentWardDetails && !isLoadingCurrentWardDetails && (
-              <div className="mt-4 p-4 border rounded-lg bg-muted/30 space-y-3">
-                <h3 className="text-lg font-semibold">{currentWardDetails.name} - Dashboard</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div><strong>Total Beds:</strong> {currentWardDetails.totalBeds}</div>
-                  <div><strong>Occupied:</strong> {currentWardDetails.occupiedBeds}</div>
-                  <div><strong>Available:</strong> {currentWardDetails.availableBeds}</div>
-                  <div><strong>Occupancy:</strong> {currentWardDetails.occupancyRate.toFixed(1)}%</div>
+              <>
+                <div className="mt-4 p-4 border rounded-lg bg-muted/30 space-y-3">
+                  <h3 className="text-lg font-semibold">{currentWardDetails.name} - Dashboard</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div><strong>Total Beds:</strong> {currentWardDetails.totalBeds}</div>
+                    <div><strong>Occupied:</strong> {currentWardDetails.occupiedBeds}</div>
+                    <div><strong>Available:</strong> {currentWardDetails.availableBeds}</div>
+                    <div><strong>Occupancy:</strong> {currentWardDetails.occupancyRate.toFixed(1)}%</div>
+                  </div>
+                  <Progress value={currentWardDetails.occupancyRate} className="h-3 mt-1" />
                 </div>
-                <Progress value={currentWardDetails.occupancyRate} className="h-3 mt-1" />
-              </div>
+                 <Card className="shadow-sm mt-4">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2 text-md"><AlertTriangleIcon className="h-5 w-5 text-orange-500"/> Ward Alerts & Key Tasks</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-sm">
+                        <div className="p-2.5 border rounded-md bg-background text-center shadow-xs">
+                            <p className="font-semibold text-lg text-destructive">{currentWardDetails.alerts.criticalLabsPending}</p>
+                            <p className="text-xs text-muted-foreground">Critical Labs Pending</p>
+                        </div>
+                        <div className="p-2.5 border rounded-md bg-background text-center shadow-xs">
+                            <p className="font-semibold text-lg text-amber-600">{currentWardDetails.alerts.medicationsOverdue}</p>
+                            <p className="text-xs text-muted-foreground">Meds Overdue</p>
+                        </div>
+                        <div className="p-2.5 border rounded-md bg-background text-center shadow-xs">
+                            <p className="font-semibold text-lg text-blue-600">{currentWardDetails.alerts.vitalsChecksDue}</p>
+                            <p className="text-xs text-muted-foreground">Vitals Checks Due</p>
+                        </div>
+                        <div className="p-2.5 border rounded-md bg-background text-center shadow-xs">
+                            <p className="font-semibold text-lg text-green-600">{currentWardDetails.alerts.newAdmissionOrders}</p>
+                            <p className="text-xs text-muted-foreground">New Admission Orders</p>
+                        </div>
+                         <div className="p-2.5 border rounded-md bg-background text-center shadow-xs">
+                            <p className="font-semibold text-lg text-purple-600">{currentWardDetails.alerts.pendingDischarges}</p>
+                            <p className="text-xs text-muted-foreground">Pending Discharges</p>
+                        </div>
+                    </CardContent>
+                </Card>
+              </>
             )}
           </CardContent>
         </Card>
@@ -844,8 +898,7 @@ export default function WardManagementPage() {
                         <TableRow>
                             <TableHead>Patient Name</TableHead>
                             <TableHead>Bed</TableHead>
-                            <TableHead>Admitted</TableHead>
-                            <TableHead>Diagnosis</TableHead>
+                            <TableHead>Key Alerts</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -860,8 +913,12 @@ export default function WardManagementPage() {
                             >
                             <TableCell className="font-medium">{patient.name}</TableCell>
                             <TableCell>{patient.bedNumber}</TableCell>
-                            <TableCell className="text-xs">{new Date(patient.admittedDate+"T00:00:00").toLocaleDateString()}</TableCell>
-                            <TableCell className="text-xs">{patient.primaryDiagnosis || "N/A"}</TableCell>
+                            <TableCell className="space-x-1">
+                                {patient.keyAlerts && patient.keyAlerts.map(alert => (
+                                    <Badge key={alert} variant="secondary" className="text-xs">{alert}</Badge>
+                                ))}
+                                {!patient.keyAlerts && <span className="text-xs text-muted-foreground">None</span>}
+                            </TableCell>
                             </TableRow>
                         ))}
                         </TableBody>
@@ -922,6 +979,33 @@ export default function WardManagementPage() {
               )}
               {!isLoadingSelectedPatientDetails && currentAdmittedPatientFullDetails && (
                 <>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm mb-4">
+                    <Card className="shadow-xs">
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Allergies</CardTitle></CardHeader>
+                      <CardContent>
+                        {currentAdmittedPatientFullDetails.allergies && currentAdmittedPatientFullDetails.allergies.length > 0 ? 
+                          currentAdmittedPatientFullDetails.allergies.map(a => <Badge key={a} variant="destructive" className="mr-1 mb-1">{a}</Badge>) : 
+                          <p className="text-muted-foreground">None reported</p>}
+                      </CardContent>
+                    </Card>
+                     <Card className="shadow-xs">
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Chronic Conditions</CardTitle></CardHeader>
+                      <CardContent>
+                        {currentAdmittedPatientFullDetails.chronicConditions && currentAdmittedPatientFullDetails.chronicConditions.length > 0 ? 
+                          currentAdmittedPatientFullDetails.chronicConditions.map(c => <Badge key={c} variant="outline" className="mr-1 mb-1">{c}</Badge>) : 
+                          <p className="text-muted-foreground">None reported</p>}
+                      </CardContent>
+                    </Card>
+                     <Card className="shadow-xs">
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Code Status</CardTitle></CardHeader>
+                      <CardContent>
+                        <Badge variant={currentAdmittedPatientFullDetails.codeStatus === "DNR" ? "destructive" : "secondary"}>
+                            {currentAdmittedPatientFullDetails.codeStatus || "N/A"}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  </div>
+                  <Separator/>
                   <div className="space-y-3 p-4 border rounded-md bg-muted/20">
                     <h4 className="text-md font-semibold mb-2 flex items-center"><Activity className="mr-2 h-4 w-4 text-primary" /> Current Vitals</h4>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
@@ -966,6 +1050,17 @@ export default function WardManagementPage() {
                         {isSavingVitals ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
                         Save Vitals
                     </Button>
+                  </div>
+                  <Separator />
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 className="text-md font-semibold mb-2 flex items-center"><ClipboardCheck className="mr-2 h-4 w-4 text-primary" /> Recent Key Lab Summary</h4>
+                        <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md min-h-[60px] whitespace-pre-wrap">{currentAdmittedPatientFullDetails.recentLabSummary || "No recent lab summary available."}</p>
+                    </div>
+                    <div>
+                        <h4 className="text-md font-semibold mb-2 flex items-center"><LayersList className="mr-2 h-4 w-4 text-primary" /> Recent Key Imaging Summary</h4>
+                        <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md min-h-[60px] whitespace-pre-wrap">{currentAdmittedPatientFullDetails.recentImagingSummary || "No recent imaging summary available."}</p>
+                    </div>
                   </div>
                   <Separator />
 
@@ -1218,5 +1313,3 @@ export default function WardManagementPage() {
   );
 }
 
-
-    
