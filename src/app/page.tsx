@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2 } from "lucide-react";
+import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2, FileClock } from "lucide-react";
 import Link from "next/link";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator, type Locale, defaultLocale } from '@/lib/i18n';
@@ -14,11 +14,11 @@ import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/compone
 interface SummaryCardData {
   id: string;
   titleKey: string;
-  value: string;
-  iconName: "TrendingUp" | "CalendarCheck" | "BedDouble" | "Siren" | "Users" | "HeartPulse" | "PillIcon";
+  value: string | string[]; // Can be a single value or an array for Top 5 Prescriptions
+  iconName: "TrendingUp" | "CalendarCheck" | "BedDouble" | "Siren" | "Users" | "HeartPulse" | "PillIcon" | "FileClock";
   color: string;
   descriptionKey: string;
-  link: string;
+  link?: string; // Link is optional
 }
 
 interface QuickActionData {
@@ -45,8 +45,15 @@ interface DailyAttendanceItem {
     fill: string;
 }
 
+interface DraftedConsultationItem {
+  id: string;
+  patientName: string;
+  specialtyOrReason: string;
+  lastSavedTime: string;
+}
+
 const ICONS_MAP: { [key: string]: React.ElementType } = {
-  TrendingUp, CalendarCheck, BedDouble, Siren, Users, HeartPulse, PillIcon, Briefcase, Microscope, Baby,
+  TrendingUp, CalendarCheck, BedDouble, Siren, Users, HeartPulse, PillIcon, Briefcase, Microscope, Baby, FileClock
 };
 
 
@@ -69,10 +76,13 @@ export default function DashboardPage() {
   const [dailyAttendanceData, setDailyAttendanceData] = useState<DailyAttendanceItem[]>([]);
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
 
-  // Fetch Summary Cards Data
+  const [draftedConsultations, setDraftedConsultations] = useState<DraftedConsultationItem[]>([]);
+  const [isLoadingDraftedConsultations, setIsLoadingDraftedConsultations] = useState(true);
+
+
   useEffect(() => {
     setIsLoadingSummary(true);
-    const currentT = getTranslator(currentLocale); // Use locale-specific translator for data generation if needed
+    const currentT = getTranslator(currentLocale); 
     setTimeout(() => {
       const fetchedSummary: SummaryCardData[] = [
         { id: "sc1", titleKey: "dashboard.card.totalPatients.title", value: "156", iconName: "TrendingUp", color: "text-green-500", descriptionKey: "dashboard.card.totalPatients.description", link: "#" },
@@ -81,17 +91,15 @@ export default function DashboardPage() {
         { id: "sc4", titleKey: "dashboard.card.erStatus.title", value: "12 Active", iconName: "Siren", color: "text-red-500", descriptionKey: "dashboard.card.erStatus.description", link: "/emergency-room" },
         { id: "sc5", titleKey: "dashboard.card.newPatients.title", value: "5", iconName: "Users", color: "text-emerald-500", descriptionKey: "dashboard.card.newPatients.description", link: "/patient-registration" },
         { id: "sc6", titleKey: "dashboard.card.commonCondition.title", value: "Flu", iconName: "HeartPulse", color: "text-orange-500", descriptionKey: "dashboard.card.commonCondition.description", link: "#" },
-        { id: "sc7", titleKey: "dashboard.card.prescribedDrug.title", value: "Paracetamol", iconName: "PillIcon", color: "text-purple-500", descriptionKey: "dashboard.card.prescribedDrug.description", link: "#" },
+        { id: "sc7", titleKey: "dashboard.card.prescribedDrug.title", value: "Paracetamol,Amoxicillin,Ibuprofen,Omeprazole,Salbutamol", iconName: "PillIcon", color: "text-purple-500", descriptionKey: "dashboard.card.prescribedDrug.description", link: "#" },
       ];
       setSummaryCardsData(fetchedSummary);
       setIsLoadingSummary(false);
     }, 1000);
-  }, [currentLocale]); // Re-fetch if locale changes, as titleKey/descriptionKey might change presentation
+  }, [currentLocale]); 
 
-  // Fetch Quick Actions Data
   useEffect(() => {
     setIsLoadingQuickActions(true);
-    // Quick actions labels are translated in JSX, so data itself is not locale-dependent
     setTimeout(() => {
         const fetchedQuickActions: QuickActionData[] = [
             { labelKey: "dashboard.quickActions.registerPatient", href: "/patient-registration", iconName: "Users" },
@@ -104,12 +112,10 @@ export default function DashboardPage() {
         setQuickActionsData(fetchedQuickActions);
         setIsLoadingQuickActions(false);
     }, 800);
-  }, []); // Runs once on mount
+  }, []); 
 
-  // Fetch Recent Activity Data
   useEffect(() => {
     setIsLoadingActivity(true);
-    // Recent activity data is usually language-agnostic strings from backend/logs
     setTimeout(() => {
         const fetchedActivity: RecentActivityItem[] = [
             {user: "Dr. Smith", action: "updated patient chart for Alice Johnson.", time: "2 min ago"},
@@ -121,12 +127,11 @@ export default function DashboardPage() {
         setRecentActivity(fetchedActivity);
         setIsLoadingActivity(false);
     }, 1200);
-  }, []); // Runs once on mount
+  }, []); 
   
-  // Fetch Patient Entry Points Data
   useEffect(() => {
     setIsLoadingEntryPoints(true);
-    const currentT = getTranslator(currentLocale); // Get translator for current locale
+    const currentT = getTranslator(currentLocale); 
     setTimeout(() => {
         const fetchedEntryPoints: ChartDataItem[] = [
             { name: currentT('dashboard.charts.entryPoints.outpatient'), value: 400, fill: "hsl(var(--chart-1))" },
@@ -136,12 +141,10 @@ export default function DashboardPage() {
         setPatientEntryPointsData(fetchedEntryPoints);
         setIsLoadingEntryPoints(false);
     }, 1500);
-  }, [currentLocale]); // Re-fetch if locale changes because 'name' in data is translated
+  }, [currentLocale]); 
 
-  // Fetch Daily Attendance Data
   useEffect(() => {
     setIsLoadingAttendance(true);
-    // Day labels are static, patient count is numeric - not directly locale-dependent for data generation
     setTimeout(() => {
         const fetchedAttendanceData: DailyAttendanceItem[] = [
             { day: "Mon", patients: 120, fill: "hsl(var(--chart-4))" },
@@ -155,7 +158,20 @@ export default function DashboardPage() {
         setDailyAttendanceData(fetchedAttendanceData);
         setIsLoadingAttendance(false);
     }, 1600);
-  }, []); // Runs once on mount
+  }, []); 
+
+  useEffect(() => {
+    setIsLoadingDraftedConsultations(true);
+    setTimeout(() => {
+      const fetchedDrafts: DraftedConsultationItem[] = [
+        { id: "draft1", patientName: "Pending: John Doe", specialtyOrReason: "Awaiting Lab Results (Cardiology)", lastSavedTime: "2h ago" },
+        { id: "draft2", patientName: "Pending: Jane Smith", specialtyOrReason: "Imaging Ordered (Neurology)", lastSavedTime: "Yesterday" },
+        { id: "draft3", patientName: "Pending: Mike Brown", specialtyOrReason: "Follow-up Scheduled", lastSavedTime: "3 days ago" },
+      ];
+      setDraftedConsultations(fetchedDrafts);
+      setIsLoadingDraftedConsultations(false);
+    }, 1400);
+  }, []);
 
   const chartConfig = {
     outpatient: { label: t('dashboard.charts.entryPoints.outpatient'), color: "hsl(var(--chart-1))" },
@@ -183,8 +199,9 @@ export default function DashboardPage() {
             </div>
         ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {summaryCardsData.slice(0,4).map((item) => {
+            {summaryCardsData.map((item) => {
                 const Icon = ICONS_MAP[item.iconName];
+                const isPrescriptionCard = item.titleKey === "dashboard.card.prescribedDrug.title";
                 return (
                 <Card key={item.id} className="shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -192,9 +209,15 @@ export default function DashboardPage() {
                     {Icon && <Icon className={`h-5 w-5 ${item.color}`} />}
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{item.value}</div>
+                    {isPrescriptionCard && typeof item.value === 'string' ? (
+                       <ul className="text-sm font-semibold list-decimal list-inside space-y-0.5">
+                          {(item.value as string).split(',').slice(0,5).map((drug, idx) => <li key={idx} className="text-xs">{drug.trim()}</li>)}
+                        </ul>
+                    ) : (
+                      <div className="text-2xl font-bold">{Array.isArray(item.value) ? item.value.join(', ') : item.value}</div>
+                    )}
                     <p className="text-xs text-muted-foreground pt-1">{t(item.descriptionKey)}</p>
-                    {item.link !== "#" && (
+                    {item.link && item.link !== "#" && (
                     <Button variant="link" asChild className="px-0 pt-2 h-auto text-sm">
                         <Link href={item.link}>{t('dashboard.card.viewDetails')}</Link>
                     </Button>
@@ -202,42 +225,38 @@ export default function DashboardPage() {
                 </CardContent>
                 </Card>
             )})}
+             {/* Drafted Consultations Card */}
+             <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{t('dashboard.card.draftedConsultations.title')}</CardTitle>
+                  <FileClock className="h-5 w-5 text-blue-500" />
+                </CardHeader>
+                <CardContent>
+                  {isLoadingDraftedConsultations ? (
+                     <div className="flex items-center justify-center py-3">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" /> 
+                        <span className="text-xs text-muted-foreground">Loading drafts...</span>
+                    </div>
+                  ) : draftedConsultations.length > 0 ? (
+                    <ul className="space-y-1.5 text-xs">
+                      {draftedConsultations.slice(0,3).map(draft => (
+                        <li key={draft.id}>
+                          <p className="font-medium truncate">{draft.patientName}</p>
+                          <p className="text-muted-foreground truncate text-[11px]">{draft.specialtyOrReason} - {draft.lastSavedTime}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-muted-foreground text-center py-2">No pending drafts.</p>
+                  )}
+                  <Button variant="link" asChild className="px-0 pt-2 h-auto text-sm">
+                    <Link href="/treatment-recommendation">{t('dashboard.card.viewAllDrafts')}</Link>
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
         )}
         
-        {isLoadingSummary ? (
-             <div className="grid gap-4 md:grid-cols-3">
-                {Array.from({length: 3}).map((_, index) => (
-                     <Card key={`skl-sum-b-${index}`} className="shadow-sm">
-                        <CardHeader className="pb-2"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/></CardHeader>
-                        <CardContent><div className="h-5 w-3/4 bg-muted rounded animate-pulse"/><div className="h-3 w-1/2 bg-muted rounded mt-1 animate-pulse"/></CardContent>
-                    </Card>
-                ))}
-            </div>
-        ) : (
-            <div className="grid gap-4 md:grid-cols-3">
-            {summaryCardsData.slice(4).map((item) => {
-                const Icon = ICONS_MAP[item.iconName];
-                return (
-                <Card key={item.id} className="shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{t(item.titleKey)}</CardTitle>
-                    {Icon && <Icon className={`h-5 w-5 ${item.color}`} />}
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{item.value}</div>
-                    <p className="text-xs text-muted-foreground pt-1">{t(item.descriptionKey)}</p>
-                    {item.link !== "#" && (
-                    <Button variant="link" asChild className="px-0 pt-2 h-auto text-sm">
-                        <Link href={item.link}>{t('dashboard.card.viewDetails')}</Link>
-                    </Button>
-                    )}
-                </CardContent>
-                </Card>
-            )})}
-            </div>
-        )}
-
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="shadow-sm">
@@ -404,3 +423,5 @@ export default function DashboardPage() {
   );
 }
 
+
+    
