@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { BedDouble, Users, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed, Edit, PlusCircle, Thermometer, Weight, Ruler, Sigma, Save, ActivityIcon as BloodPressureIcon, AlertTriangle as AlertTriangleIcon, Stethoscope, Layers, ClipboardCheck } from "lucide-react";
+import { BedDouble, Users, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed, Edit, PlusCircle, Thermometer, Weight, Ruler, Sigma, Save, ActivityIcon as BloodPressureIcon, AlertTriangle as AlertTriangleIcon, Stethoscope, Layers, ClipboardCheck, History as HistoryIcon } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -77,6 +77,15 @@ interface WardDetails {
   };
 }
 
+interface VisitHistoryItem {
+  id: string;
+  date: string;
+  facilityName: string;
+  department: string;
+  doctor: string;
+  reason: string;
+}
+
 interface MedicationScheduleItem {
   medicationItemId: string;
   medication: string;
@@ -118,6 +127,7 @@ interface AdmittedPatientFullDetails {
   codeStatus?: "Full Code" | "DNR" | "DNI" | "Limited";
   recentLabSummary?: string;
   recentImagingSummary?: string;
+  visitHistory?: VisitHistoryItem[];
 }
 
 interface PendingAdmission {
@@ -135,9 +145,73 @@ const mockWardSummariesData: WardSummary[] = [
     { id: "W004", name: "Maternity Ward D" },
 ];
 
+const mockAdmittedPatientFullDetailsData: Record<string, AdmittedPatientFullDetails> = {
+  "ADM001": {
+    admissionId: "ADM001", patientId: "P001", name: "Eva Green", wardName: "General Medicine Ward A", bedNumber: "Bed 3",
+    treatmentPlan: "IV Ceftriaxone 1g OD. Oxygen support PRN. Monitor vitals Q4H. Chest physiotherapy BID.",
+    medicationSchedule: [
+      { medicationItemId: "MEDSCH001-A-1", medication: "Ceftriaxone 1g IV", dosage: "1g", time: "08:00", status: "Administered", notes: "Given slowly over 30 mins." },
+      { medicationItemId: "MEDSCH001-B-1", medication: "Paracetamol 500mg PO", dosage: "500mg", time: "12:00", status: "Pending" },
+      { medicationItemId: "MEDSCH001-C-1", medication: "Salbutamol Neb", dosage: "2.5mg", time: "14:00", status: "Pending", notes: "Check O2 sats before/after." },
+    ],
+    doctorNotes: [{ noteId: "DN001-A-1", date: new Date(Date.now() - 86400000).toISOString(), doctor: "Dr. Smith", note: "Patient responding well. Continue plan." }, {noteId: "DN001-B-1", date: new Date().toISOString(), doctor: "Dr. House", note: "Reviewed chest X-ray, slight improvement in consolidation."}],
+    vitals: { bodyTemperature: "37.2", weightKg: "65", heightCm: "168", bloodPressure: "120/80", bmi: "23.1", bpStatus: "Normal", bmiStatus: "Normal weight" },
+    allergies: ["Penicillin"], chronicConditions: ["Asthma"], codeStatus: "Full Code",
+    recentLabSummary: "WBC: 15.2 (High), CRP: 45 (High)", recentImagingSummary: "Chest X-Ray: Left lower lobe consolidation consistent with pneumonia.",
+    visitHistory: [
+        { id: "VH001", date: "2024-07-15", facilityName: "City Central Clinic", department: "Outpatient", doctor: "Dr. Primary", reason: "Routine Checkup" },
+        { id: "VH002", date: "2024-06-20", facilityName: "HealthFlow Central Hospital", department: "Emergency", doctor: "Dr. ER Shift", reason: "Minor Fall" },
+        { id: "VH003", date: "2024-05-01", facilityName: "Community Health Post", department: "Vaccination", doctor: "Nurse Jane", reason: "Flu Vaccine" },
+        { id: "VH004", date: "2024-03-10", facilityName: "HealthFlow Central Hospital", department: "Specialist", doctor: "Dr. Ortho", reason: "Knee Pain" },
+    ]
+  },
+   "ADM002": {
+    admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", wardName: "General Medicine Ward A", bedNumber: "Bed 5",
+    treatmentPlan: "Furosemide 40mg IV BD. Fluid restriction 1.5L/day. Daily weights. Monitor electrolytes.",
+    medicationSchedule: [{ medicationItemId: "MEDSCH002-A-1", medication: "Furosemide 40mg IV", dosage: "40mg", time: "09:00", status: "Administered" }],
+    doctorNotes: [{ noteId: "DN002-A-1", date: new Date().toISOString(), doctor: "Dr. House", note: "Mild improvement in edema." }],
+    vitals: { bodyTemperature: "36.8", weightKg: "80", heightCm: "175", bloodPressure: "135/85", bmi:"26.1", bpStatus: "Stage 1 HTN", bmiStatus: "Overweight" },
+    allergies: ["Sulfa Drugs"], chronicConditions: ["Hypertension", "Type 2 Diabetes"], codeStatus: "Full Code",
+    recentLabSummary: "K+: 3.2 (Low), Creatinine: 1.5 (High)", recentImagingSummary: "Echocardiogram: EF 35%.",
+    visitHistory: [
+        { id: "VH005", date: "2024-07-01", facilityName: "HealthFlow Central Hospital", department: "Cardiology", doctor: "Dr. Heart", reason: "Chest Pain Assessment" },
+    ]
+  },
+   "ADM003": {
+    admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", wardName: "Surgical Ward B", bedNumber: "Bed 1",
+    treatmentPlan: "Post-op day 1. Pain management with Tramadol 50mg PO Q6H PRN. Wound care. Encourage mobilization.",
+    medicationSchedule: [{ medicationItemId: "MEDSCH003-A-1", medication: "Tramadol 50mg PO", dosage: "50mg", time: "PRN", status: "Pending" }],
+    doctorNotes: [{ noteId: "DN003-A-1", date: new Date().toISOString(), doctor: "Dr. Grey", note: "Surgical site clean. Patient ambulating." }],
+    vitals: { bodyTemperature: "37.0", weightKg: "55", heightCm: "160", bloodPressure: "110/70", bmi: "21.5", bpStatus: "Normal", bmiStatus: "Normal weight" },
+    allergies: ["None Known"], chronicConditions: [], codeStatus: "Full Code",
+    recentLabSummary: "Hgb: 11.8 (Stable)", recentImagingSummary: "N/A for this admission.",
+    visitHistory: []
+  },
+  "ADM004": {
+    admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", wardName: "Pediatrics Ward C", bedNumber: "Bed 2",
+    treatmentPlan: "Nebulized Salbutamol Q4H. Prednisolone PO. Monitor oxygen saturation.",
+    medicationSchedule: [{ medicationItemId: "MEDSCH004-A-1", medication: "Salbutamol Neb", dosage: "2.5mg", time: "10:00", status: "Administered" }],
+    doctorNotes: [{ noteId: "DN004-A-1", date: new Date().toISOString(), doctor: "Dr. Carter", note: "Wheezing reduced. Stable." }],
+     vitals: { bodyTemperature: "37.5", weightKg: "30", heightCm: "130", bloodPressure: "100/60", bmi:"17.7", bpStatus: "Normal", bmiStatus: "Underweight" },
+     allergies: ["Peanuts"], chronicConditions: ["Childhood Asthma"], codeStatus: "Full Code",
+     recentLabSummary: "N/A", recentImagingSummary: "Chest X-ray: Clear.",
+     visitHistory: []
+  },
+  "ADM005": {
+    admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", wardName: "Maternity Ward D", bedNumber: "Bed 7",
+    treatmentPlan: "Routine post-natal care. Monitor for bleeding. Pain relief PRN.",
+    medicationSchedule: [{ medicationItemId: "MEDSCH005-A-1", medication: "Ibuprofen 400mg PO", dosage: "400mg", time: "PRN", status: "Pending" }],
+    doctorNotes: [{ noteId: "DN005-A-1", date: new Date().toISOString(), doctor: "Dr. Greene", note: "Patient and baby doing well." }],
+    vitals: { bodyTemperature: "36.9", weightKg: "70", heightCm: "170", bloodPressure: "118/78", bmi:"24.2", bpStatus: "Normal", bmiStatus: "Normal weight" },
+    allergies: ["Codeine"], chronicConditions: [], codeStatus: "Full Code",
+    recentLabSummary: "Hgb: 10.5 (Low Normal)", recentImagingSummary: "Post-delivery ultrasound: Normal involution.",
+    visitHistory: []
+  },
+};
+
 const mockWardDetailsData: Record<string, WardDetails> = {
     "W001": {
-        id: "W001", name: "General Medicine Ward A", totalBeds: 20, occupiedBeds: 2, availableBeds: 17, occupancyRate: 10,
+        id: "W001", name: "General Medicine Ward A", totalBeds: 20, occupiedBeds: 2, availableBeds: 18, occupancyRate: 10,
         patients: [
             { admissionId: "ADM001", patientId: "P001", name: "Eva Green", bedNumber: "Bed 3", admittedDate: "2024-07-28", primaryDiagnosis: "Pneumonia", keyAlerts: ["Isolation", "Oxygen PRN"] },
             { admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", bedNumber: "Bed 5", admittedDate: "2024-07-29", primaryDiagnosis: "Heart Failure Exacerbation", keyAlerts: ["Fluid Restriction", "Daily Weight"] },
@@ -192,58 +266,6 @@ const mockHospitalPendingAdmissionsData: PendingAdmission[] = [
     { id: "PEND002", patientId: "P102", patientName: "Robert Jones", referringDepartment: "Outpatient Clinic", reasonForAdmission: "Uncontrolled Diabetes, needs stabilization." },
     { id: "PEND003", patientId: "P103", patientName: "Maria Garcia", referringDepartment: "Specialist Consultation (Cardiology)", reasonForAdmission: "Post-MI observation and cardiac rehab." },
 ];
-
-const mockAdmittedPatientFullDetailsData: Record<string, AdmittedPatientFullDetails> = {
-  "ADM001": {
-    admissionId: "ADM001", patientId: "P001", name: "Eva Green", wardName: "General Medicine Ward A", bedNumber: "Bed 3",
-    treatmentPlan: "IV Ceftriaxone 1g OD. Oxygen support PRN. Monitor vitals Q4H. Chest physiotherapy BID.",
-    medicationSchedule: [
-      { medicationItemId: "MEDSCH001-A-1", medication: "Ceftriaxone 1g IV", dosage: "1g", time: "08:00", status: "Administered", notes: "Given slowly over 30 mins." },
-      { medicationItemId: "MEDSCH001-B-1", medication: "Paracetamol 500mg PO", dosage: "500mg", time: "12:00", status: "Pending" },
-      { medicationItemId: "MEDSCH001-C-1", medication: "Salbutamol Neb", dosage: "2.5mg", time: "14:00", status: "Pending", notes: "Check O2 sats before/after." },
-    ],
-    doctorNotes: [{ noteId: "DN001-A-1", date: new Date(Date.now() - 86400000).toISOString(), doctor: "Dr. Smith", note: "Patient responding well. Continue plan." }, {noteId: "DN001-B-1", date: new Date().toISOString(), doctor: "Dr. House", note: "Reviewed chest X-ray, slight improvement in consolidation."}],
-    vitals: { bodyTemperature: "37.2", weightKg: "65", heightCm: "168", bloodPressure: "120/80", bmi: "23.1", bpStatus: "Normal", bmiStatus: "Normal weight" },
-    allergies: ["Penicillin"], chronicConditions: ["Asthma"], codeStatus: "Full Code",
-    recentLabSummary: "WBC: 15.2 (High), CRP: 45 (High)", recentImagingSummary: "Chest X-Ray: Left lower lobe consolidation consistent with pneumonia."
-  },
-   "ADM002": {
-    admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", wardName: "General Medicine Ward A", bedNumber: "Bed 5",
-    treatmentPlan: "Furosemide 40mg IV BD. Fluid restriction 1.5L/day. Daily weights. Monitor electrolytes.",
-    medicationSchedule: [{ medicationItemId: "MEDSCH002-A-1", medication: "Furosemide 40mg IV", dosage: "40mg", time: "09:00", status: "Administered" }],
-    doctorNotes: [{ noteId: "DN002-A-1", date: new Date().toISOString(), doctor: "Dr. House", note: "Mild improvement in edema." }],
-    vitals: { bodyTemperature: "36.8", weightKg: "80", heightCm: "175", bloodPressure: "135/85", bmi:"26.1", bpStatus: "Stage 1 HTN", bmiStatus: "Overweight" },
-    allergies: ["Sulfa Drugs"], chronicConditions: ["Hypertension", "Type 2 Diabetes"], codeStatus: "Full Code",
-    recentLabSummary: "K+: 3.2 (Low), Creatinine: 1.5 (High)", recentImagingSummary: "Echocardiogram: EF 35%."
-  },
-   "ADM003": {
-    admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", wardName: "Surgical Ward B", bedNumber: "Bed 1",
-    treatmentPlan: "Post-op day 1. Pain management with Tramadol 50mg PO Q6H PRN. Wound care. Encourage mobilization.",
-    medicationSchedule: [{ medicationItemId: "MEDSCH003-A-1", medication: "Tramadol 50mg PO", dosage: "50mg", time: "PRN", status: "Pending" }],
-    doctorNotes: [{ noteId: "DN003-A-1", date: new Date().toISOString(), doctor: "Dr. Grey", note: "Surgical site clean. Patient ambulating." }],
-    vitals: { bodyTemperature: "37.0", weightKg: "55", heightCm: "160", bloodPressure: "110/70", bmi: "21.5", bpStatus: "Normal", bmiStatus: "Normal weight" },
-    allergies: ["None Known"], chronicConditions: [], codeStatus: "Full Code",
-    recentLabSummary: "Hgb: 11.8 (Stable)", recentImagingSummary: "N/A for this admission."
-  },
-  "ADM004": {
-    admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", wardName: "Pediatrics Ward C", bedNumber: "Bed 2",
-    treatmentPlan: "Nebulized Salbutamol Q4H. Prednisolone PO. Monitor oxygen saturation.",
-    medicationSchedule: [{ medicationItemId: "MEDSCH004-A-1", medication: "Salbutamol Neb", dosage: "2.5mg", time: "10:00", status: "Administered" }],
-    doctorNotes: [{ noteId: "DN004-A-1", date: new Date().toISOString(), doctor: "Dr. Carter", note: "Wheezing reduced. Stable." }],
-     vitals: { bodyTemperature: "37.5", weightKg: "30", heightCm: "130", bloodPressure: "100/60", bmi:"17.7", bpStatus: "Normal", bmiStatus: "Underweight" },
-     allergies: ["Peanuts"], chronicConditions: ["Childhood Asthma"], codeStatus: "Full Code",
-     recentLabSummary: "N/A", recentImagingSummary: "Chest X-ray: Clear."
-  },
-  "ADM005": {
-    admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", wardName: "Maternity Ward D", bedNumber: "Bed 7",
-    treatmentPlan: "Routine post-natal care. Monitor for bleeding. Pain relief PRN.",
-    medicationSchedule: [{ medicationItemId: "MEDSCH005-A-1", medication: "Ibuprofen 400mg PO", dosage: "400mg", time: "PRN", status: "Pending" }],
-    doctorNotes: [{ noteId: "DN005-A-1", date: new Date().toISOString(), doctor: "Dr. Greene", note: "Patient and baby doing well." }],
-    vitals: { bodyTemperature: "36.9", weightKg: "70", heightCm: "170", bloodPressure: "118/78", bmi:"24.2", bpStatus: "Normal", bmiStatus: "Normal weight" },
-    allergies: ["Codeine"], chronicConditions: [], codeStatus: "Full Code",
-    recentLabSummary: "Hgb: 10.5 (Low Normal)", recentImagingSummary: "Post-delivery ultrasound: Normal involution."
-  },
-};
 
 const getBmiStatusAndColor = (bmi: number | null): { status: string; colorClass: string; textColorClass: string; } => {
   if (bmi === null || isNaN(bmi)) {
@@ -345,6 +367,7 @@ export default function WardManagementPage() {
     setIsLoadingAllWards(true);
     setTimeout(async () => {
       try {
+        // Simulate API call: GET /api/v1/wards
         setAllWardsData(mockWardSummariesData);
       } catch (error) {
         console.error("Error fetching wards:", error);
@@ -352,11 +375,12 @@ export default function WardManagementPage() {
       } finally {
         setIsLoadingAllWards(false);
       }
-    }, 800);
+    }, 500);
 
     setIsLoadingPendingAdmissions(true);
     setTimeout(async () => {
         try {
+            // Simulate API call: GET /api/v1/admissions/pending
              setHospitalPendingAdmissions(mockHospitalPendingAdmissionsData);
         } catch (error) {
             console.error("Error fetching pending admissions:", error);
@@ -364,7 +388,7 @@ export default function WardManagementPage() {
         } finally {
             setIsLoadingPendingAdmissions(false);
         }
-    }, 1000);
+    }, 700);
   }, []);
 
   useEffect(() => {
@@ -375,6 +399,7 @@ export default function WardManagementPage() {
       setCurrentAdmittedPatientFullDetails(null); 
       setTimeout(async () => {
         try {
+            // Simulate API call: GET /api/v1/wards/{selectedWardId}/details
             const details = mockWardDetailsData[selectedWardId];
             if (details) {
                 const occupiedBeds = details.patients.length;
@@ -397,7 +422,7 @@ export default function WardManagementPage() {
         } finally {
             setIsLoadingCurrentWardDetails(false);
         }
-      }, 1000);
+      }, 600);
     } else {
       setCurrentWardDetails(null);
       setSelectedPatientForDetails(null);
@@ -411,6 +436,7 @@ export default function WardManagementPage() {
       setCurrentAdmittedPatientFullDetails(null);
       setTimeout(async () => {
         try {
+            // Simulate API call: GET /api/v1/admissions/{selectedPatientForDetails.admissionId}
             const fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
             setCurrentAdmittedPatientFullDetails(fullDetails || null);
             setEditableVitals(fullDetails?.vitals || {});
@@ -444,7 +470,7 @@ export default function WardManagementPage() {
         } finally {
             setIsLoadingSelectedPatientDetails(false);
         }
-      }, 800);
+      }, 500);
     } else {
         setCurrentAdmittedPatientFullDetails(null);
         setEditableVitals({});
@@ -481,12 +507,16 @@ export default function WardManagementPage() {
     if (!currentAdmittedPatientFullDetails) return;
     setIsSavingVitals(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, vitals: editableVitals };
-    console.log("Saving vitals (mock):", payload);
+    // console.log("Saving vitals (mock):", payload); // Keep for debugging backend
     try {
+        // Simulate API call: PUT /api/v1/admissions/{admissionId}/vitals
         await new Promise(resolve => setTimeout(resolve, 1000));
         const updatedVitalsWithCalculated = { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status };
+        
+        // Update local state for immediate UI feedback
         setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, vitals: updatedVitalsWithCalculated }) : null);
         
+        // Update the main mock data store (simulating backend update)
         if(mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]){
             mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].vitals = updatedVitalsWithCalculated;
         }
@@ -524,8 +554,9 @@ export default function WardManagementPage() {
         primaryDiagnosis: admissionDiagnosis,
         admissionDate: new Date().toISOString(),
     };
-    console.log("Submitting admission (mock):", payload);
+    // console.log("Submitting admission (mock):", payload); // Keep for debugging backend
     try {
+        // Simulate API call: POST /api/v1/admissions
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         const newPatientInWard: PatientInWard = {
@@ -537,7 +568,8 @@ export default function WardManagementPage() {
             primaryDiagnosis: admissionDiagnosis,
             keyAlerts: ["New Admission"] 
         };
-
+        
+        // Update local state for immediate UI feedback
         setCurrentWardDetails(prev => {
             if (!prev) return null;
             const updatedPatients = [...prev.patients, newPatientInWard];
@@ -556,6 +588,7 @@ export default function WardManagementPage() {
             };
         });
         
+        // Add to the main mock data store (simulating backend update)
         mockAdmittedPatientFullDetailsData[newAdmissionId] = {
             admissionId: newAdmissionId,
             patientId: patientToAdmit.patientId,
@@ -565,7 +598,7 @@ export default function WardManagementPage() {
             treatmentPlan: `Initial plan for ${admissionDiagnosis}. Monitor vitals.`,
             medicationSchedule: [],
             doctorNotes: [{noteId: `DN-ADMIT-${Date.now()}`, date: new Date().toISOString(), doctor: admissionDoctor, note: `Admitted for ${admissionDiagnosis}.`}],
-            vitals: {}, allergies: [], chronicConditions: [], codeStatus: "Full Code"
+            vitals: {}, allergies: [], chronicConditions: [], codeStatus: "Full Code", visitHistory: []
         };
 
         setHospitalPendingAdmissions(prev => prev.filter(p => p.id !== selectedPendingPatientId));
@@ -587,12 +620,16 @@ export default function WardManagementPage() {
     if (!newDoctorNote.trim() || !currentAdmittedPatientFullDetails) return;
     setIsAddingNote(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, doctorId: "doc-currentUser-mockId", note: newDoctorNote };
-    console.log("Submitting note (mock):", payload);
+    // console.log("Submitting note (mock):", payload); // Keep for debugging backend
     try {
+        // Simulate API call: POST /api/v1/admissions/{admissionId}/doctor-notes
         await new Promise(resolve => setTimeout(resolve, 1000));
         const newNoteEntry: DoctorNote = { noteId: `DN${Date.now()}`, date: new Date().toISOString(), doctor: "Dr. Current User (Mock)", note: newDoctorNote };
+        
+        // Update local state
         setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, doctorNotes: [newNoteEntry, ...prev.doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
         
+        // Update main mock data store
         if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
           mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes = [newNoteEntry, ...mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         }
@@ -648,11 +685,15 @@ export default function WardManagementPage() {
     if (!currentAdmittedPatientFullDetails) return;
     setIsSavingMedicationUpdates(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, updatedSchedule: medicationScheduleInModal };
-    console.log("Submitting medication updates (mock):", payload);
+    // console.log("Submitting medication updates (mock):", payload); // Keep for debugging backend
      try {
+        // Simulate API call: PUT /api/v1/admissions/{admissionId}/medication-schedule
         await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Update local state
         setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, medicationSchedule: medicationScheduleInModal }) : null);
         
+        // Update main mock data store
         if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
             mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].medicationSchedule = medicationScheduleInModal;
         }
@@ -670,8 +711,9 @@ export default function WardManagementPage() {
     if (!currentAdmittedPatientFullDetails || !selectedWardId) return;
     setIsDischarging(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, dischargeDate: new Date().toISOString(), dischargeSummary: "Patient stable for discharge.", dischargedBy: "doc-currentUser-mockId" };
-    console.log("Submitting discharge (mock):", payload);
+    // console.log("Submitting discharge (mock):", payload); // Keep for debugging backend
     try {
+        // Simulate API call: PUT /api/v1/admissions/{admissionId}/discharge
         await new Promise(resolve => setTimeout(resolve, 1500));
         toast({ title: "Patient Discharged (Mock)", description: `${currentAdmittedPatientFullDetails.name} processed for discharge.` });
         
@@ -681,6 +723,7 @@ export default function WardManagementPage() {
         setSelectedPatientForDetails(null); 
         setCurrentAdmittedPatientFullDetails(null);
         
+        // Update Ward Details (remove patient, update bed status)
         setCurrentWardDetails(prevDetails => {
             if (!prevDetails) return null;
             const updatedPatients = prevDetails.patients.filter(p => p.admissionId !== admissionIdToDischarge);
@@ -738,8 +781,9 @@ export default function WardManagementPage() {
         transferReason: transferReason,
         transferredBy: "doc-currentUser-mockId" 
     };
-    console.log("Submitting transfer (mock):", payload);
+    // console.log("Submitting transfer (mock):", payload); // Keep for debugging backend
     try {
+        // Simulate API call: PUT /api/v1/admissions/{admissionId}/transfer
         await new Promise(resolve => setTimeout(resolve, 1500));
         const destinationName = transferType === "internal_ward" 
             ? allWardsData.find(w => w.id === targetInternalWardId)?.name || "Selected Ward" 
@@ -1036,247 +1080,268 @@ export default function WardManagementPage() {
                 </div>
               )}
               {!isLoadingSelectedPatientDetails && currentAdmittedPatientFullDetails && (
-                <>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm mb-4">
-                    <Card className="shadow-xs">
-                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Allergies</CardTitle></CardHeader>
-                      <CardContent>
-                        {currentAdmittedPatientFullDetails.allergies && currentAdmittedPatientFullDetails.allergies.length > 0 ? 
-                          currentAdmittedPatientFullDetails.allergies.map(a => <Badge key={a} variant="destructive" className="mr-1 mb-1 text-xs">{a}</Badge>) : 
-                          <p className="text-muted-foreground text-xs">None reported</p>}
-                      </CardContent>
-                    </Card>
-                     <Card className="shadow-xs">
-                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Chronic Conditions</CardTitle></CardHeader>
-                      <CardContent>
-                        {currentAdmittedPatientFullDetails.chronicConditions && currentAdmittedPatientFullDetails.chronicConditions.length > 0 ? 
-                          currentAdmittedPatientFullDetails.chronicConditions.map(c => <Badge key={c} variant="outline" className="mr-1 mb-1 text-xs">{c}</Badge>) : 
-                          <p className="text-muted-foreground text-xs">None reported</p>}
-                      </CardContent>
-                    </Card>
-                     <Card className="shadow-xs">
-                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Code Status</CardTitle></CardHeader>
-                      <CardContent>
-                        <Badge variant={currentAdmittedPatientFullDetails.codeStatus === "DNR" ? "destructive" : "secondary"} className="text-xs">
-                            {currentAdmittedPatientFullDetails.codeStatus || "N/A"}
-                        </Badge>
-                      </CardContent>
-                    </Card>
-                  </div>
-                  <Separator/>
-
-                  <div className="space-y-3 p-4 border rounded-md bg-muted/20">
-                    <h4 className="text-md font-semibold mb-2 flex items-center"><Activity className="mr-2 h-4 w-4 text-primary" /> Current Vitals</h4>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-                        <div className="space-y-1">
-                            <Label htmlFor="wardBodyTemperature" className="flex items-center text-xs"><Thermometer className="mr-1.5 h-3 w-3" />Temp (°C)</Label>
-                            <Input id="wardBodyTemperature" value={editableVitals.bodyTemperature || ""} onChange={(e) => handleEditableVitalsChange("bodyTemperature", e.target.value)} placeholder="e.g., 37.5" disabled={isSavingVitals} />
-                        </div>
-                        <div className="space-y-1">
-                            <Label htmlFor="wardWeight" className="flex items-center text-xs"><Weight className="mr-1.5 h-3 w-3" />Weight (kg)</Label>
-                            <Input id="wardWeight" value={editableVitals.weightKg || ""} onChange={(e) => handleEditableVitalsChange("weightKg", e.target.value)} placeholder="e.g., 70" disabled={isSavingVitals} />
-                        </div>
-                        <div className="space-y-1">
-                            <Label htmlFor="wardHeight" className="flex items-center text-xs"><Ruler className="mr-1.5 h-3 w-3" />Height (cm)</Label>
-                            <Input id="wardHeight" value={editableVitals.heightCm || ""} onChange={(e) => handleEditableVitalsChange("heightCm", e.target.value)} placeholder="e.g., 175" disabled={isSavingVitals} />
-                        </div>
-                        <div className="space-y-1">
-                            <Label htmlFor="wardBloodPressure" className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />BP (mmHg)</Label>
-                            <Input id="wardBloodPressure" value={editableVitals.bloodPressure || ""} onChange={(e) => handleEditableVitalsChange("bloodPressure", e.target.value)} placeholder="e.g., 120/80" disabled={isSavingVitals} />
-                        </div>
-                        <div className="space-y-1">
-                            <Label className="flex items-center text-xs"><Sigma className="mr-1.5 h-3 w-3" />BMI (kg/m²)</Label>
-                            <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-background min-w-[150px]">
-                                <span className="text-sm font-medium">{calculatedBmi || "N/A"}</span>
-                                {bmiDisplay && bmiDisplay.status !== "N/A" && (
-                                    <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", bmiDisplay.colorClass, bmiDisplay.textColorClass)}>{bmiDisplay.status}</Badge>
-                                )}
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            <Label className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />BP Status</Label>
-                             <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-background min-w-[150px]">
-                                {bpDisplay && bpDisplay.status !== "N/A" && bpDisplay.status !== "Invalid" && (
-                                    <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", bpDisplay.colorClass, bpDisplay.textColorClass)}>{bpDisplay.status}</Badge>
-                                )}
-                                {(bpDisplay?.status === "N/A" || bpDisplay?.status === "Invalid") && (
-                                   <span className="text-sm font-medium">{bpDisplay.status}</span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                     <Button size="sm" onClick={handleSaveVitals} disabled={isSavingVitals || !currentAdmittedPatientFullDetails} className="mt-2">
-                        {isSavingVitals ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
-                        Save Vitals
-                    </Button>
-                  </div>
-                  <Separator />
-                  
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <h4 className="text-md font-semibold mb-2 flex items-center"><ClipboardCheck className="mr-2 h-4 w-4 text-primary" /> Recent Key Lab Summary</h4>
-                        <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md min-h-[60px] whitespace-pre-wrap">{currentAdmittedPatientFullDetails.recentLabSummary || "No recent lab summary available."}</p>
-                    </div>
-                    <div>
-                        <h4 className="text-md font-semibold mb-2 flex items-center"><Layers className="mr-2 h-4 w-4 text-primary" /> Recent Key Imaging Summary</h4>
-                        <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md min-h-[60px] whitespace-pre-wrap">{currentAdmittedPatientFullDetails.recentImagingSummary || "No recent imaging summary available."}</p>
-                    </div>
-                  </div>
-                  <Separator />
-
-                  <div>
-                    <h4 className="text-md font-semibold mb-2 flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" /> Treatment Plan Summary</h4>
-                    <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md whitespace-pre-wrap">{currentAdmittedPatientFullDetails.treatmentPlan}</p>
-                  </div>
-                  <Separator />
-
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                        <h4 className="text-md font-semibold flex items-center"><Pill className="mr-2 h-4 w-4 text-primary" /> Medication Schedule</h4>
-                        <Dialog open={isMedicationModalOpen} onOpenChange={(open) => { if(!open) {setNewMedName(""); setNewMedDosage(""); setNewMedTime(""); setNewMedNotes("");} setIsMedicationModalOpen(open);}}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={handleOpenMedicationModal} disabled={isSavingMedicationUpdates || isDischarging || isProcessingTransfer || isAddingNote || isSavingVitals}>
-                                <Edit className="mr-2 h-3 w-3" /> Manage Medication Log
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-2xl"> 
-                                <DialogHeader>
-                                <DialogTitle>Manage Medication Log for {currentAdmittedPatientFullDetails.name}</DialogTitle>
-                                <DialogDescription>
-                                    Update status, edit details, or add new medications to the schedule.
-                                </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                                    {medicationScheduleInModal.map((med, index) => (
-                                        <div key={med.medicationItemId} className="p-3 border rounded-md space-y-3 bg-background shadow-sm">
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <div className="space-y-1">
-                                                    <Label htmlFor={`medName-${index}`} className="text-xs">Medication</Label>
-                                                    <Input id={`medName-${index}`} value={med.medication} onChange={(e) => handleMedicationItemChangeInModal(index, "medication", e.target.value)} disabled={isSavingMedicationUpdates} />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <Label htmlFor={`medDosage-${index}`} className="text-xs">Dosage</Label>
-                                                    <Input id={`medDosage-${index}`} value={med.dosage} onChange={(e) => handleMedicationItemChangeInModal(index, "dosage", e.target.value)} disabled={isSavingMedicationUpdates} />
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end"> 
-                                                <div className="space-y-1">
-                                                    <Label htmlFor={`medTime-${index}`} className="text-xs">Time</Label>
-                                                    <Input id={`medTime-${index}`} value={med.time} onChange={(e) => handleMedicationItemChangeInModal(index, "time", e.target.value)} disabled={isSavingMedicationUpdates} />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <Label htmlFor={`medStatus-${index}`} className="text-xs">Status</Label>
-                                                    <Select
-                                                        value={med.status}
-                                                        onValueChange={(value) => handleMedicationItemChangeInModal(index, "status", value as MedicationScheduleItem["status"])}
-                                                        disabled={isSavingMedicationUpdates}
-                                                    >
-                                                        <SelectTrigger id={`medStatus-${index}`} className="h-10 text-sm">
-                                                            <SelectValue placeholder="Status" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="Pending">Pending</SelectItem>
-                                                            <SelectItem value="Administered">Administered</SelectItem>
-                                                            <SelectItem value="Skipped">Skipped</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                            </div>
-                                             <div className="space-y-1">
-                                                <Label htmlFor={`medNotes-${index}`} className="text-xs">Notes/Reason for Change</Label>
-                                                <Textarea id={`medNotes-${index}`} value={med.notes || ""} onChange={(e) => handleMedicationItemChangeInModal(index, "notes", e.target.value)} placeholder="e.g., Administered by Nurse Jane, Patient refused..." rows={2} disabled={isSavingMedicationUpdates} />
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {medicationScheduleInModal.length === 0 && <p className="text-sm text-muted-foreground text-center">No medications currently scheduled.</p>}
-                                    
-                                    <Separator className="my-4" />
-                                    
-                                    <div className="p-3 border rounded-md space-y-3 bg-muted/30">
-                                        <h5 className="font-semibold text-md flex items-center gap-2"><PlusCircle className="h-5 w-5 text-primary" />Add New Medication to Schedule</h5>
-                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div className="space-y-1">
-                                                <Label htmlFor="newMedName" className="text-xs">Medication Name <span className="text-destructive">*</span></Label>
-                                                <Input id="newMedName" value={newMedName} onChange={(e) => setNewMedName(e.target.value)} placeholder="e.g., Amoxicillin" disabled={isSavingMedicationUpdates}/>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <Label htmlFor="newMedDosage" className="text-xs">Dosage <span className="text-destructive">*</span></Label>
-                                                <Input id="newMedDosage" value={newMedDosage} onChange={(e) => setNewMedDosage(e.target.value)} placeholder="e.g., 500mg PO" disabled={isSavingMedicationUpdates}/>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="newMedTime" className="text-xs">Time <span className="text-destructive">*</span></Label>
-                                            <Input id="newMedTime" value={newMedTime} onChange={(e) => setNewMedTime(e.target.value)} placeholder="e.g., 08:00, TID, PRN" disabled={isSavingMedicationUpdates}/>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label htmlFor="newMedNotes" className="text-xs">Notes/Reason for Addition</Label>
-                                            <Textarea id="newMedNotes" value={newMedNotes} onChange={(e) => setNewMedNotes(e.target.value)} placeholder="e.g., Started for new infection" rows={2} disabled={isSavingMedicationUpdates}/>
-                                        </div>
-                                        <Button type="button" size="sm" variant="outline" onClick={handleAddNewMedicationToModalSchedule} disabled={isSavingMedicationUpdates || !newMedName.trim() || !newMedDosage.trim() || !newMedTime.trim()}>
-                                            <PlusCircle className="mr-2 h-4 w-4"/> Add to Current Schedule
-                                        </Button>
-                                    </div>
+                <div className="grid md:grid-cols-3 gap-6 items-start">
+                  {/* Left Column: Visit History */}
+                  <div className="md:col-span-1 space-y-4">
+                    <h4 className="text-md font-semibold flex items-center"><HistoryIcon className="mr-2 h-4 w-4 text-primary" /> Recent Visit History (Last 10)</h4>
+                    {currentAdmittedPatientFullDetails.visitHistory && currentAdmittedPatientFullDetails.visitHistory.length > 0 ? (
+                        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 border rounded-md p-3 bg-muted/10">
+                            {currentAdmittedPatientFullDetails.visitHistory.slice(0, 10).map(visit => (
+                                <div key={visit.id} className="text-xs p-2 border rounded-md bg-background shadow-sm">
+                                    <p className="font-medium">{new Date(visit.date).toLocaleDateString()} - {visit.facilityName}</p>
+                                    <p className="text-muted-foreground">Dept: {visit.department} | Dr: {visit.doctor}</p>
+                                    <p className="text-muted-foreground mt-0.5">Reason: {visit.reason}</p>
                                 </div>
-                                <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingMedicationUpdates}>Cancel</Button></DialogClose>
-                                <Button onClick={handleSaveMedicationUpdates} disabled={isSavingMedicationUpdates}>
-                                    {isSavingMedicationUpdates ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                    Save All Changes to Medication Log
-                                </Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
-                    {currentAdmittedPatientFullDetails.medicationSchedule.length > 0 ? (
-                        <Table>
-                        <TableHeader>
-                            <TableRow>
-                            <TableHead className="text-xs">Medication</TableHead>
-                            <TableHead className="text-xs">Time</TableHead>
-                            <TableHead className="text-xs text-right">Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {currentAdmittedPatientFullDetails.medicationSchedule.map((med) => (
-                            <TableRow key={med.medicationItemId}>
-                                <TableCell className="text-xs font-medium">{med.medication} <span className="text-muted-foreground">({med.dosage})</span></TableCell>
-                                <TableCell className="text-xs">{med.time}</TableCell>
-                                <TableCell className="text-xs text-right">
-                                <Badge variant={med.status === "Administered" ? "default" : med.status === "Pending" ? "secondary" : "outline"} className="text-xs">
-                                    {med.status}
-                                </Badge>
-                                </TableCell>
-                            </TableRow>
                             ))}
-                        </TableBody>
-                        </Table>
+                        </div>
                     ) : (
-                        <p className="text-xs text-muted-foreground text-center py-2">No medication schedule found.</p>
+                        <p className="text-xs text-muted-foreground text-center py-2">No prior visit history available.</p>
                     )}
                   </div>
-                  <Separator />
-                  
-                  <div>
-                    <h4 className="text-md font-semibold mb-2 flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-primary" /> Doctor's Notes</h4>
-                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                      {currentAdmittedPatientFullDetails.doctorNotes.length > 0 ? (
-                        currentAdmittedPatientFullDetails.doctorNotes.map((note) => (
-                            <div key={note.noteId} className="text-xs p-2 border rounded-md bg-muted/30">
-                            <p className="font-medium">{note.doctor} - <span className="text-muted-foreground">{new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span></p>
-                            <p className="mt-0.5 whitespace-pre-wrap">{note.note}</p>
-                            </div>
-                        ))
-                      ) : (
-                        <p className="text-xs text-muted-foreground text-center py-2">No notes recorded yet.</p>
-                      )}
+
+                  {/* Right Column: Current Care Details */}
+                  <div className="md:col-span-2 space-y-6">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                        <Card className="shadow-xs">
+                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Allergies</CardTitle></CardHeader>
+                        <CardContent>
+                            {currentAdmittedPatientFullDetails.allergies && currentAdmittedPatientFullDetails.allergies.length > 0 ? 
+                            currentAdmittedPatientFullDetails.allergies.map(a => <Badge key={a} variant="destructive" className="mr-1 mb-1 text-xs">{a}</Badge>) : 
+                            <p className="text-muted-foreground text-xs">None reported</p>}
+                        </CardContent>
+                        </Card>
+                        <Card className="shadow-xs">
+                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Chronic Conditions</CardTitle></CardHeader>
+                        <CardContent>
+                            {currentAdmittedPatientFullDetails.chronicConditions && currentAdmittedPatientFullDetails.chronicConditions.length > 0 ? 
+                            currentAdmittedPatientFullDetails.chronicConditions.map(c => <Badge key={c} variant="outline" className="mr-1 mb-1 text-xs">{c}</Badge>) : 
+                            <p className="text-muted-foreground text-xs">None reported</p>}
+                        </CardContent>
+                        </Card>
+                        <Card className="shadow-xs">
+                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Code Status</CardTitle></CardHeader>
+                        <CardContent>
+                            <Badge variant={currentAdmittedPatientFullDetails.codeStatus === "DNR" ? "destructive" : "secondary"} className="text-xs">
+                                {currentAdmittedPatientFullDetails.codeStatus || "N/A"}
+                            </Badge>
+                        </CardContent>
+                        </Card>
                     </div>
-                    <Textarea placeholder="Add new note..." className="mt-2 text-xs" rows={2} value={newDoctorNote} onChange={(e) => setNewDoctorNote(e.target.value)} disabled={isAddingNote}/>
-                    <Button variant="outline" size="sm" className="mt-2 w-full" onClick={handleAddNote} disabled={isAddingNote || !newDoctorNote.trim() || isDischarging || isProcessingTransfer || isSavingMedicationUpdates || isSavingVitals}>
-                       {isAddingNote ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                       {isAddingNote ? "Adding..." : "Add Note"}
-                    </Button>
+                    <Separator/>
+
+                    <div className="space-y-3 p-4 border rounded-md bg-muted/20">
+                        <h4 className="text-md font-semibold mb-2 flex items-center"><Activity className="mr-2 h-4 w-4 text-primary" /> Current Vitals</h4>
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+                            <div className="space-y-1">
+                                <Label htmlFor="wardBodyTemperature" className="flex items-center text-xs"><Thermometer className="mr-1.5 h-3 w-3" />Temp (°C)</Label>
+                                <Input id="wardBodyTemperature" value={editableVitals.bodyTemperature || ""} onChange={(e) => handleEditableVitalsChange("bodyTemperature", e.target.value)} placeholder="e.g., 37.5" disabled={isSavingVitals} />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="wardWeight" className="flex items-center text-xs"><Weight className="mr-1.5 h-3 w-3" />Weight (kg)</Label>
+                                <Input id="wardWeight" value={editableVitals.weightKg || ""} onChange={(e) => handleEditableVitalsChange("weightKg", e.target.value)} placeholder="e.g., 70" disabled={isSavingVitals} />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="wardHeight" className="flex items-center text-xs"><Ruler className="mr-1.5 h-3 w-3" />Height (cm)</Label>
+                                <Input id="wardHeight" value={editableVitals.heightCm || ""} onChange={(e) => handleEditableVitalsChange("heightCm", e.target.value)} placeholder="e.g., 175" disabled={isSavingVitals} />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="wardBloodPressure" className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />BP (mmHg)</Label>
+                                <Input id="wardBloodPressure" value={editableVitals.bloodPressure || ""} onChange={(e) => handleEditableVitalsChange("bloodPressure", e.target.value)} placeholder="e.g., 120/80" disabled={isSavingVitals} />
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="flex items-center text-xs"><Sigma className="mr-1.5 h-3 w-3" />BMI (kg/m²)</Label>
+                                <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-background min-w-[150px]">
+                                    <span className="text-sm font-medium">{calculatedBmi || "N/A"}</span>
+                                    {bmiDisplay && bmiDisplay.status !== "N/A" && (
+                                        <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", bmiDisplay.colorClass, bmiDisplay.textColorClass)}>{bmiDisplay.status}</Badge>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <Label className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />BP Status</Label>
+                                <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-background min-w-[150px]">
+                                    {bpDisplay && bpDisplay.status !== "N/A" && bpDisplay.status !== "Invalid" && (
+                                        <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", bpDisplay.colorClass, bpDisplay.textColorClass)}>{bpDisplay.status}</Badge>
+                                    )}
+                                    {(bpDisplay?.status === "N/A" || bpDisplay?.status === "Invalid") && (
+                                    <span className="text-sm font-medium">{bpDisplay.status}</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <Button size="sm" onClick={handleSaveVitals} disabled={isSavingVitals || !currentAdmittedPatientFullDetails} className="mt-2">
+                            {isSavingVitals ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                            Save Vitals
+                        </Button>
+                    </div>
+                    <Separator />
+                    
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 className="text-md font-semibold mb-2 flex items-center"><ClipboardCheck className="mr-2 h-4 w-4 text-primary" /> Recent Key Lab Summary</h4>
+                            <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md min-h-[60px] whitespace-pre-wrap">{currentAdmittedPatientFullDetails.recentLabSummary || "No recent lab summary available."}</p>
+                        </div>
+                        <div>
+                            <h4 className="text-md font-semibold mb-2 flex items-center"><Layers className="mr-2 h-4 w-4 text-primary" /> Recent Key Imaging Summary</h4>
+                            <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md min-h-[60px] whitespace-pre-wrap">{currentAdmittedPatientFullDetails.recentImagingSummary || "No recent imaging summary available."}</p>
+                        </div>
+                    </div>
+                    <Separator />
+
+                    <div>
+                        <h4 className="text-md font-semibold mb-2 flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" /> Treatment Plan Summary</h4>
+                        <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md whitespace-pre-wrap">{currentAdmittedPatientFullDetails.treatmentPlan}</p>
+                    </div>
+                    <Separator />
+
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-md font-semibold flex items-center"><Pill className="mr-2 h-4 w-4 text-primary" /> Medication Schedule</h4>
+                            <Dialog open={isMedicationModalOpen} onOpenChange={(open) => { if(!open) {setNewMedName(""); setNewMedDosage(""); setNewMedTime(""); setNewMedNotes("");} setIsMedicationModalOpen(open);}}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm" onClick={handleOpenMedicationModal} disabled={isSavingMedicationUpdates || isDischarging || isProcessingTransfer || isAddingNote || isSavingVitals}>
+                                    <Edit className="mr-2 h-3 w-3" /> Manage Medication Log
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-2xl"> 
+                                    <DialogHeader>
+                                    <DialogTitle>Manage Medication Log for {currentAdmittedPatientFullDetails.name}</DialogTitle>
+                                    <DialogDescription>
+                                        Update status, edit details, or add new medications to the schedule.
+                                    </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                                        {medicationScheduleInModal.map((med, index) => (
+                                            <div key={med.medicationItemId} className="p-3 border rounded-md space-y-3 bg-background shadow-sm">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <div className="space-y-1">
+                                                        <Label htmlFor={`medName-${index}`} className="text-xs">Medication</Label>
+                                                        <Input id={`medName-${index}`} value={med.medication} onChange={(e) => handleMedicationItemChangeInModal(index, "medication", e.target.value)} disabled={isSavingMedicationUpdates} />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label htmlFor={`medDosage-${index}`} className="text-xs">Dosage</Label>
+                                                        <Input id={`medDosage-${index}`} value={med.dosage} onChange={(e) => handleMedicationItemChangeInModal(index, "dosage", e.target.value)} disabled={isSavingMedicationUpdates} />
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end"> 
+                                                    <div className="space-y-1">
+                                                        <Label htmlFor={`medTime-${index}`} className="text-xs">Time</Label>
+                                                        <Input id={`medTime-${index}`} value={med.time} onChange={(e) => handleMedicationItemChangeInModal(index, "time", e.target.value)} disabled={isSavingMedicationUpdates} />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label htmlFor={`medStatus-${index}`} className="text-xs">Status</Label>
+                                                        <Select
+                                                            value={med.status}
+                                                            onValueChange={(value) => handleMedicationItemChangeInModal(index, "status", value as MedicationScheduleItem["status"])}
+                                                            disabled={isSavingMedicationUpdates}
+                                                        >
+                                                            <SelectTrigger id={`medStatus-${index}`} className="h-10 text-sm">
+                                                                <SelectValue placeholder="Status" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="Pending">Pending</SelectItem>
+                                                                <SelectItem value="Administered">Administered</SelectItem>
+                                                                <SelectItem value="Skipped">Skipped</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor={`medNotes-${index}`} className="text-xs">Notes/Reason for Change</Label>
+                                                    <Textarea id={`medNotes-${index}`} value={med.notes || ""} onChange={(e) => handleMedicationItemChangeInModal(index, "notes", e.target.value)} placeholder="e.g., Administered by Nurse Jane, Patient refused..." rows={2} disabled={isSavingMedicationUpdates} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {medicationScheduleInModal.length === 0 && <p className="text-sm text-muted-foreground text-center">No medications currently scheduled.</p>}
+                                        
+                                        <Separator className="my-4" />
+                                        
+                                        <div className="p-3 border rounded-md space-y-3 bg-muted/30">
+                                            <h5 className="font-semibold text-md flex items-center gap-2"><PlusCircle className="h-5 w-5 text-primary" />Add New Medication to Schedule</h5>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div className="space-y-1">
+                                                    <Label htmlFor="newMedName" className="text-xs">Medication Name <span className="text-destructive">*</span></Label>
+                                                    <Input id="newMedName" value={newMedName} onChange={(e) => setNewMedName(e.target.value)} placeholder="e.g., Amoxicillin" disabled={isSavingMedicationUpdates}/>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor="newMedDosage" className="text-xs">Dosage <span className="text-destructive">*</span></Label>
+                                                    <Input id="newMedDosage" value={newMedDosage} onChange={(e) => setNewMedDosage(e.target.value)} placeholder="e.g., 500mg PO" disabled={isSavingMedicationUpdates}/>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label htmlFor="newMedTime" className="text-xs">Time <span className="text-destructive">*</span></Label>
+                                                <Input id="newMedTime" value={newMedTime} onChange={(e) => setNewMedTime(e.target.value)} placeholder="e.g., 08:00, TID, PRN" disabled={isSavingMedicationUpdates}/>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label htmlFor="newMedNotes" className="text-xs">Notes/Reason for Addition</Label>
+                                                <Textarea id="newMedNotes" value={newMedNotes} onChange={(e) => setNewMedNotes(e.target.value)} placeholder="e.g., Started for new infection" rows={2} disabled={isSavingMedicationUpdates}/>
+                                            </div>
+                                            <Button type="button" size="sm" variant="outline" onClick={handleAddNewMedicationToModalSchedule} disabled={isSavingMedicationUpdates || !newMedName.trim() || !newMedDosage.trim() || !newMedTime.trim()}>
+                                                <PlusCircle className="mr-2 h-4 w-4"/> Add to Current Schedule
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <DialogFooter>
+                                    <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingMedicationUpdates}>Cancel</Button></DialogClose>
+                                    <Button onClick={handleSaveMedicationUpdates} disabled={isSavingMedicationUpdates}>
+                                        {isSavingMedicationUpdates ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                        Save All Changes to Medication Log
+                                    </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                        {currentAdmittedPatientFullDetails.medicationSchedule.length > 0 ? (
+                            <Table>
+                            <TableHeader>
+                                <TableRow>
+                                <TableHead className="text-xs">Medication</TableHead>
+                                <TableHead className="text-xs">Time</TableHead>
+                                <TableHead className="text-xs text-right">Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {currentAdmittedPatientFullDetails.medicationSchedule.map((med) => (
+                                <TableRow key={med.medicationItemId}>
+                                    <TableCell className="text-xs font-medium">{med.medication} <span className="text-muted-foreground">({med.dosage})</span></TableCell>
+                                    <TableCell className="text-xs">{med.time}</TableCell>
+                                    <TableCell className="text-xs text-right">
+                                    <Badge variant={med.status === "Administered" ? "default" : med.status === "Pending" ? "secondary" : "outline"} className="text-xs">
+                                        {med.status}
+                                    </Badge>
+                                    </TableCell>
+                                </TableRow>
+                                ))}
+                            </TableBody>
+                            </Table>
+                        ) : (
+                            <p className="text-xs text-muted-foreground text-center py-2">No medication schedule found.</p>
+                        )}
+                    </div>
+                    <Separator />
+                    
+                    <div>
+                        <h4 className="text-md font-semibold mb-2 flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-primary" /> Doctor's Notes</h4>
+                        <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                        {currentAdmittedPatientFullDetails.doctorNotes.length > 0 ? (
+                            currentAdmittedPatientFullDetails.doctorNotes.map((note) => (
+                                <div key={note.noteId} className="text-xs p-2 border rounded-md bg-muted/30">
+                                <p className="font-medium">{note.doctor} - <span className="text-muted-foreground">{new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span></p>
+                                <p className="mt-0.5 whitespace-pre-wrap">{note.note}</p>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-xs text-muted-foreground text-center py-2">No notes recorded yet.</p>
+                        )}
+                        </div>
+                        <Textarea placeholder="Add new note..." className="mt-2 text-xs" rows={2} value={newDoctorNote} onChange={(e) => setNewDoctorNote(e.target.value)} disabled={isAddingNote}/>
+                        <Button variant="outline" size="sm" className="mt-2 w-full" onClick={handleAddNote} disabled={isAddingNote || !newDoctorNote.trim() || isDischarging || isProcessingTransfer || isSavingMedicationUpdates || isSavingVitals}>
+                        {isAddingNote ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        {isAddingNote ? "Adding..." : "Add Note"}
+                        </Button>
+                    </div>
                   </div>
-                </>
+                </div>
               )}
               {!isLoadingSelectedPatientDetails && !currentAdmittedPatientFullDetails && selectedPatientForDetails && (
                  <p className="text-center py-6 text-muted-foreground">Could not load full details for this patient.</p>
