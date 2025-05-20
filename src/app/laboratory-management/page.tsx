@@ -2,10 +2,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Microscope, ClipboardList, FlaskConical, AlertTriangle, CheckCircle2, PlusCircle, Users, RefreshCw, FileText, Edit3, Loader2, ListOrdered, BellDot, Layers } from "lucide-react";
+import { Microscope, ClipboardList, FlaskConical, AlertTriangle as AlertTriangleIcon, CheckCircle2, PlusCircle, Users, RefreshCw, FileText, Edit3, Loader2, ListOrdered, BellDot, Layers, Wrench } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -90,6 +89,12 @@ interface LabRequisitionLogItem {
   status: "Pending" | "Partially Fulfilled" | "Fulfilled" | "Cancelled";
 }
 
+interface LabInstrument {
+  id: string;
+  assetNumber: string;
+  name: string;
+}
+
 // --- Mock Data ---
 const MOCK_TEST_DEFINITIONS: Record<string, TestDetail> = {
   "glucose_random": { id: "glucose_random", name: "Glucose, Random", unit: "mg/dL", normalRangeMin: 70, normalRangeMax: 140, normalRangeDisplay: "70-140", isNumeric: true, interpretRanges: { low: 70, high: 140, veryHigh: 200 } },
@@ -105,6 +110,13 @@ const MOCK_TEST_DEFINITIONS: Record<string, TestDetail> = {
   "hiv_screen": { id: "hiv_screen", name: "HIV 1/2 Antibody/Antigen Screen", unit: "", normalRangeDisplay: "Non-Reactive", isNumeric: false},
   "urinalysis_re": { id: "urinalysis_re", name: "Urinalysis, Routine & Microscopy", unit: "", normalRangeDisplay: "Refer to report", isNumeric: false},
 };
+
+const MOCK_LAB_INSTRUMENTS: LabInstrument[] = [
+    { id: "LI001", assetNumber: "LAB-CENT-001", name: "Centrifuge Model X" },
+    { id: "LI002", assetNumber: "LAB-MICR-005", name: "Microscope Olympus BH2" },
+    { id: "LI003", assetNumber: "LAB-HEMA-002", name: "Hematology Analyzer Sysmex-XN" },
+    { id: "LI004", assetNumber: "LAB-CHEM-007", name: "Chemistry Analyzer Roche Cobas" },
+];
 
 const initialLabRequestsData: LabRequest[] = [
     { id: "LR001", patientName: "Alice Wonderland", nationalId: "NID001", testsRequested: ["hemoglobin", "glucose_random", "urinalysis_re"], orderingDoctor: "Dr. Smith", requestDate: "2024-07-30", status: "Sample Pending" },
@@ -145,6 +157,13 @@ export default function LaboratoryManagementPage() {
 
   const [clientTime, setClientTime] = useState<Date | null>(null);
 
+  const [isMalfunctionModalOpen, setIsMalfunctionModalOpen] = useState(false);
+  const [malfunctionAssetNumber, setMalfunctionAssetNumber] = useState("");
+  const [malfunctionInstrumentName, setMalfunctionInstrumentName] = useState("");
+  const [malfunctionProblemDescription, setMalfunctionProblemDescription] = useState("");
+  const [isSubmittingMalfunction, setIsSubmittingMalfunction] = useState(false);
+  const [labInstruments, setLabInstruments] = useState<LabInstrument[]>(MOCK_LAB_INSTRUMENTS); // Using mock for now
+
   useEffect(() => {
     setClientTime(new Date()); 
     const timerId = setInterval(() => {
@@ -155,20 +174,41 @@ export default function LaboratoryManagementPage() {
     };
   }, []); 
 
+  useEffect(() => {
+    if (malfunctionAssetNumber) {
+      const foundInstrument = labInstruments.find(inst => inst.assetNumber.toLowerCase() === malfunctionAssetNumber.toLowerCase());
+      setMalfunctionInstrumentName(foundInstrument ? foundInstrument.name : "Instrument not found");
+    } else {
+      setMalfunctionInstrumentName("");
+    }
+  }, [malfunctionAssetNumber, labInstruments]);
+
 
   const fetchAllLabData = async () => {
     setIsLoadingLabRequests(true);
     setIsLoadingReagents(true);
     setIsLoadingRequisitionLog(true);
     
+    // Simulate fetching lab requests
+    // const reqResponse = await fetch('/api/v1/lab/requests');
+    // const reqData = await reqResponse.json();
+    // setLabRequests(reqData);
     await new Promise(resolve => setTimeout(resolve, 1200));
     setLabRequests(initialLabRequestsData);
     setIsLoadingLabRequests(false);
 
+    // Simulate fetching reagents
+    // const reagentResponse = await fetch('/api/v1/lab/reagents');
+    // const reagentData = await reagentResponse.json();
+    // setReagents(reagentData);
     await new Promise(resolve => setTimeout(resolve, 500));
     setReagents(initialReagentsData);
     setIsLoadingReagents(false);
 
+    // Simulate fetching requisition log
+    // const logResponse = await fetch('/api/v1/lab/reagents/requisitions/log');
+    // const logData = await logResponse.json();
+    // setRequisitionLog(logData);
     await new Promise(resolve => setTimeout(resolve, 300));
     setRequisitionLog(initialLabRequisitionLogData);
     setIsLoadingRequisitionLog(false);
@@ -190,6 +230,9 @@ export default function LaboratoryManagementPage() {
   const criticalReagentAlerts = reagents.filter(r => r.currentStock < r.threshold).length;
 
   const handleUpdateStatus = async (requestId: string, newStatus: LabRequest["status"]) => {
+    // Simulate API call: PUT /api/v1/lab/requests/{requestId}/status
+    // const response = await fetch(`/api/v1/lab/requests/${requestId}/status`, { method: 'PUT', body: JSON.stringify({ status: newStatus }), headers: {'Content-Type': 'application/json'} });
+    // if (!response.ok) { /* handle error */ }
     await new Promise(resolve => setTimeout(resolve, 500));
     setLabRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req));
     toast({ title: "Status Updated", description: `Request ${requestId} status changed to ${newStatus}.` });
@@ -229,7 +272,7 @@ export default function LaboratoryManagementPage() {
             existingResultValue = foundResult.value;
             existingInterpretation = foundResult.interpretation;
         }
-      } else if (typeof request.results === 'string' && !testDef) { // Fallback for old string results
+      } else if (typeof request.results === 'string' && !testDef) { 
         existingResultValue = request.results; 
       }
 
@@ -244,10 +287,9 @@ export default function LaboratoryManagementPage() {
           isNumeric: testDef.isNumeric,
         };
       }
-      // Fallback for tests not in MOCK_TEST_DEFINITIONS (e.g. panels)
       return {
         testId: testIdOrName,
-        testName: testIdOrName, // Or fetch from a more comprehensive list if available
+        testName: testIdOrName, 
         value: existingResultValue,
         unit: "",
         normalRangeDisplay: "N/A",
@@ -266,7 +308,7 @@ export default function LaboratoryManagementPage() {
           const testDef = MOCK_TEST_DEFINITIONS[input.testId];
           const interpretation = testDef && testDef.isNumeric 
             ? interpretNumericResult(newValue, testDef) 
-            : (input.isNumeric ? "N/A" : "See Report"); // Handle non-numeric or unknown numeric
+            : (input.isNumeric ? "N/A" : "See Report"); 
           return { ...input, value: newValue, interpretation };
         }
         return input;
@@ -278,10 +320,18 @@ export default function LaboratoryManagementPage() {
     if (!selectedRequestForResults) return;
     setIsSavingResults(true);
     const payload = {
+        requestId: selectedRequestForResults.id,
         results: currentResultInputs,
         labTechnicianComments: (document.getElementById('labTechComments') as HTMLTextAreaElement)?.value || ""
     };
     console.log("Saving lab results (mock):", payload);
+    // const response = await fetch(`/api/v1/lab/requests/${selectedRequestForResults.id}/results`, {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(payload),
+    // });
+    // if (!response.ok) { /* handle error */ setIsSavingResults(false); return; }
+
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     setLabRequests(prevReqs => prevReqs.map(req => 
@@ -289,7 +339,33 @@ export default function LaboratoryManagementPage() {
         ? { ...req, results: currentResultInputs, status: "Results Ready" as LabRequest["status"] } 
         : req
     ));
-    toast({ title: "Results Saved (Mock)", description: `Results for ${selectedRequestForResults.patientName} saved and (mock) sent to consultation.` });
+
+    // Simulate reagent consumption
+    let consumedReagentsMessages: string[] = [];
+    const reagentConsumptionMap: Record<string, { reagentName: string, amount: number }> = {
+        "glucose_random": { reagentName: "Glucose Test Strips", amount: 1 },
+        "hemoglobin": { reagentName: "Hematology Reagent Pack", amount: 0.1 },
+        "wbc_count": { reagentName: "Hematology Reagent Pack", amount: 0.1 },
+        "platelet_count": { reagentName: "Hematology Reagent Pack", amount: 0.1 },
+    };
+
+    let tempReagents = [...reagents];
+    selectedRequestForResults.testsRequested.forEach(testId => {
+        const consumption = reagentConsumptionMap[testId];
+        if (consumption) {
+            const reagentIndex = tempReagents.findIndex(r => r.name === consumption.reagentName);
+            if (reagentIndex !== -1) {
+                tempReagents[reagentIndex] = {
+                    ...tempReagents[reagentIndex],
+                    currentStock: Math.max(0, tempReagents[reagentIndex].currentStock - consumption.amount)
+                };
+                // consumedReagentsMessages.push(`${consumption.amount} unit(s) of ${consumption.reagentName} consumed.`);
+            }
+        }
+    });
+    setReagents(tempReagents);
+    
+    toast({ title: "Results Saved (Mock)", description: `Results for ${selectedRequestForResults.patientName} saved and (mock) sent to consultation. Reagent stock levels updated based on tests processed.` });
     setIsResultModalOpen(false);
     setSelectedRequestForResults(null);
     setCurrentResultInputs([]);
@@ -299,7 +375,7 @@ export default function LaboratoryManagementPage() {
   const isReagentPendingRequisition = (reagentId: string): boolean => {
     return requisitionLog.some(log => 
       log.status === "Pending" && 
-      log.requestedItemsSummary.includes(reagents.find(r => r.id === reagentId)?.name || '###') // Basic check
+      log.requestedItemsSummary.includes(reagents.find(r => r.id === reagentId)?.name || '###') 
     );
   };
 
@@ -321,6 +397,10 @@ export default function LaboratoryManagementPage() {
       notes: `Low stock for ${reagent.name}. Automatic requisition.`
     };
     console.log("Submitting reagent requisition (mock):", payload);
+    // const response = await fetch('/api/v1/lab/reagents/requisitions', { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'}});
+    // if (!response.ok) { /* handle error */ setIsRequisitioningReagentId(null); return; }
+    // const newLogData = await response.json(); // Assuming backend returns the new log entry
+
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     const newLogEntry: LabRequisitionLogItem = {
@@ -362,6 +442,10 @@ export default function LaboratoryManagementPage() {
       notes: `Bulk requisition for all eligible low stock reagents.`
     };
     console.log("Submitting bulk reagent requisition (mock):", payload);
+    // const response = await fetch('/api/v1/lab/reagents/requisitions', { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'}});
+    // if (!response.ok) { /* handle error */ setIsRequisitioningAllReagents(false); return; }
+    // const newLogData = await response.json(); // Backend might return a single log entry for bulk or multiple
+
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     const summary = reagentsToRequisition.length > 1 ? `${reagentsToRequisition.length} low stock reagents` : `${reagentsToRequisition[0].name}`;
@@ -388,9 +472,35 @@ export default function LaboratoryManagementPage() {
     (r.threshold * 2 - r.currentStock) > 0
   ).length;
 
+  const handleReportLabMalfunctionSubmit = async () => {
+    if (!malfunctionAssetNumber.trim() || !malfunctionProblemDescription.trim()) {
+      toast({ variant: "destructive", title: "Missing Information", description: "Please provide Asset Number and Problem Description." });
+      return;
+    }
+    setIsSubmittingMalfunction(true);
+    const payload = {
+      assetNumber: malfunctionAssetNumber,
+      instrumentName: malfunctionInstrumentName,
+      problemDescription: malfunctionProblemDescription,
+      reportedBy: "Current Lab Tech (Mock)",
+      reportDateTime: new Date().toISOString(),
+      department: "Laboratory"
+    };
+    console.log("Submitting Lab Equipment Malfunction Report (Mock):", payload);
+    // const response = await fetch('/api/v1/equipment/malfunctions', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } });
+    // if (!response.ok) { /* handle error */ setIsSubmittingMalfunction(false); return; }
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    toast({ title: "Malfunction Reported (Mock)", description: `Report for ${malfunctionInstrumentName || malfunctionAssetNumber} submitted.` });
+    setIsMalfunctionModalOpen(false);
+    setMalfunctionAssetNumber("");
+    setMalfunctionInstrumentName("");
+    setMalfunctionProblemDescription("");
+    setIsSubmittingMalfunction(false);
+  };
+
 
   return (
-    <AppShell>
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -447,6 +557,7 @@ export default function LaboratoryManagementPage() {
                           <Select 
                               value={req.status} 
                               onValueChange={(value) => handleUpdateStatus(req.id, value as LabRequest["status"])}
+                              disabled={isSavingResults}
                           >
                               <SelectTrigger className="h-8 text-xs w-[150px]">
                                   <SelectValue placeholder="Update Status" />
@@ -581,7 +692,7 @@ export default function LaboratoryManagementPage() {
                     Requisition All Low Stock Reagents ({eligibleLowStockReagentsCount})
                 </Button>
                  <Alert variant="default" className="border-primary/50 mt-2">
-                    <AlertTriangle className="h-4 w-4 text-primary" />
+                    <AlertTriangleIcon className="h-4 w-4 text-primary" />
                     <AlertTitle className="text-sm">System Note</AlertTitle>
                     <AlertDescription className="text-xs">
                         Automated reagent requisition from central stores is a backend process.
@@ -589,6 +700,61 @@ export default function LaboratoryManagementPage() {
                 </Alert>
                </CardFooter>
             </Card>
+
+            <Card className="shadow-sm">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Wrench className="h-5 w-5 text-primary"/> Lab Equipment Actions
+                    </CardTitle>
+                    <CardDescription className="text-xs">Report equipment malfunctions.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Dialog open={isMalfunctionModalOpen} onOpenChange={(open) => {
+                        if (!open) {
+                            setMalfunctionAssetNumber("");
+                            setMalfunctionInstrumentName("");
+                            setMalfunctionProblemDescription("");
+                        }
+                        setIsMalfunctionModalOpen(open);
+                    }}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="w-full">
+                                <AlertTriangleIcon className="mr-2 h-4 w-4"/> Report Malfunction
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Report Lab Equipment Malfunction</DialogTitle>
+                                <DialogDescription>
+                                    Fill in the details for the malfunctioning equipment.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="space-y-1">
+                                    <Label htmlFor="malfunctionAssetNumber">Asset Number <span className="text-destructive">*</span></Label>
+                                    <Input id="malfunctionAssetNumber" value={malfunctionAssetNumber} onChange={(e) => setMalfunctionAssetNumber(e.target.value)} placeholder="e.g., LAB-CENT-001" disabled={isSubmittingMalfunction}/>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="malfunctionInstrumentName">Instrument Name</Label>
+                                    <Input id="malfunctionInstrumentName" value={malfunctionInstrumentName} readOnly disabled placeholder="Auto-populated from Asset Number"/>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="malfunctionProblemDescription">Problem Description <span className="text-destructive">*</span></Label>
+                                    <Textarea id="malfunctionProblemDescription" value={malfunctionProblemDescription} onChange={(e) => setMalfunctionProblemDescription(e.target.value)} placeholder="Describe the issue..." rows={3} disabled={isSubmittingMalfunction}/>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingMalfunction}>Cancel</Button></DialogClose>
+                                <Button onClick={handleReportLabMalfunctionSubmit} disabled={isSubmittingMalfunction || !malfunctionAssetNumber.trim() || !malfunctionProblemDescription.trim()}>
+                                    {isSubmittingMalfunction ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                    {isSubmittingMalfunction ? "Submitting..." : "Submit Report"}
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </CardContent>
+            </Card>
+
           </div>
         </div>
         
@@ -719,7 +885,6 @@ export default function LaboratoryManagementPage() {
         </Dialog>
 
       </div>
-    </AppShell>
   );
 }
 
