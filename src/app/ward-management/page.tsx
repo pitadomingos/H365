@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { BedDouble, Users, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed, Edit, PlusCircle, Thermometer, Weight, Ruler, Sigma, Save, ActivityIcon as BloodPressureIcon, AlertTriangle as AlertTriangleIcon, Stethoscope, LayersList, ClipboardCheck } from "lucide-react";
+import { BedDouble, Users, LogOutIcon, CheckCircle2, ArrowRightLeft, FileText, Pill, MessageSquare, Loader2, Hospital, Activity, UserCheck, Bed, Edit, PlusCircle, Thermometer, Weight, Ruler, Sigma, Save, ActivityIcon as BloodPressureIcon, AlertTriangle as AlertTriangleIcon, Stethoscope, Layers, ClipboardCheck } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -56,7 +56,7 @@ interface PatientInWard {
   bedNumber: string;
   admittedDate: string;
   primaryDiagnosis?: string;
-  keyAlerts?: string[]; // e.g., ["NPO", "Fall Risk", "Isolation"]
+  keyAlerts?: string[];
 }
 
 interface WardDetails {
@@ -68,7 +68,7 @@ interface WardDetails {
   occupancyRate: number;
   patients: PatientInWard[];
   beds: BedData[];
-  alerts: { // For the new Ward Alerts card
+  alerts: {
     criticalLabsPending: number;
     medicationsOverdue: number;
     vitalsChecksDue: number;
@@ -121,7 +121,7 @@ interface AdmittedPatientFullDetails {
 }
 
 interface PendingAdmission {
-  id: string; 
+  id: string;
   patientId: string;
   patientName: string;
   referringDepartment: string;
@@ -137,7 +137,7 @@ const mockWardSummariesData: WardSummary[] = [
 
 const mockWardDetailsData: Record<string, WardDetails> = {
     "W001": {
-        id: "W001", name: "General Medicine Ward A", totalBeds: 20, occupiedBeds: 2, availableBeds: 18, occupancyRate: 10,
+        id: "W001", name: "General Medicine Ward A", totalBeds: 20, occupiedBeds: 0, availableBeds: 0, occupancyRate: 0,
         patients: [
             { admissionId: "ADM001", patientId: "P001", name: "Eva Green", bedNumber: "Bed 3", admittedDate: "2024-07-28", primaryDiagnosis: "Pneumonia", keyAlerts: ["Isolation", "Oxygen PRN"] },
             { admissionId: "ADM002", patientId: "P002", name: "Tom Hanks", bedNumber: "Bed 5", admittedDate: "2024-07-29", primaryDiagnosis: "Heart Failure Exacerbation", keyAlerts: ["Fluid Restriction", "Daily Weight"] },
@@ -152,7 +152,7 @@ const mockWardDetailsData: Record<string, WardDetails> = {
         alerts: { criticalLabsPending: 2, medicationsOverdue: 1, vitalsChecksDue: 3, newAdmissionOrders: 0, pendingDischarges: 1 }
     },
     "W002": {
-        id: "W002", name: "Surgical Ward B", totalBeds: 15, occupiedBeds: 1, availableBeds: 14, occupancyRate: 6.67,
+        id: "W002", name: "Surgical Ward B", totalBeds: 15, occupiedBeds: 0, availableBeds: 0, occupancyRate: 0,
         patients: [
             { admissionId: "ADM003", patientId: "P003", name: "Lucy Liu", bedNumber: "Bed 1", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Appendectomy", keyAlerts: ["NPO", "Pain Control"] },
         ],
@@ -163,7 +163,7 @@ const mockWardDetailsData: Record<string, WardDetails> = {
         alerts: { criticalLabsPending: 0, medicationsOverdue: 0, vitalsChecksDue: 1, newAdmissionOrders: 1, pendingDischarges: 0 }
     },
     "W003": {
-        id: "W003", name: "Pediatrics Ward C", totalBeds: 10, occupiedBeds: 1, availableBeds: 9, occupancyRate: 10,
+        id: "W003", name: "Pediatrics Ward C", totalBeds: 10, occupiedBeds: 0, availableBeds: 0, occupancyRate: 0,
         patients: [
             { admissionId: "ADM004", patientId: "P004", name: "Kevin McCallister", bedNumber: "Bed 2", admittedDate: "2024-07-29", primaryDiagnosis: "Asthma Attack", keyAlerts: ["Parent Present", "Nebs Q4H"] },
         ],
@@ -175,7 +175,7 @@ const mockWardDetailsData: Record<string, WardDetails> = {
         alerts: { criticalLabsPending: 1, medicationsOverdue: 0, vitalsChecksDue: 2, newAdmissionOrders: 0, pendingDischarges: 0 }
     },
     "W004": {
-        id: "W004", name: "Maternity Ward D", totalBeds: 12, occupiedBeds: 1, availableBeds: 11, occupancyRate: 8.33,
+        id: "W004", name: "Maternity Ward D", totalBeds: 12, occupiedBeds: 0, availableBeds: 0, occupancyRate: 0,
         patients: [
              { admissionId: "ADM005", patientId: "P005", name: "Sarah Connor", bedNumber: "Bed 7", admittedDate: "2024-07-30", primaryDiagnosis: "Post-Natal Care", keyAlerts: ["Baby with Mother", "Monitor Bleeding"] },
         ],
@@ -343,15 +343,35 @@ export default function WardManagementPage() {
 
   useEffect(() => {
     setIsLoadingAllWards(true);
-    setTimeout(() => {
-      setAllWardsData(mockWardSummariesData);
-      setIsLoadingAllWards(false);
+    setTimeout(async () => {
+      try {
+        // const response = await fetch('/api/v1/wards');
+        // if (!response.ok) throw new Error('Failed to fetch wards');
+        // const data = await response.json();
+        // setAllWardsData(data);
+        setAllWardsData(mockWardSummariesData);
+      } catch (error) {
+        console.error("Error fetching wards:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load wards list." });
+      } finally {
+        setIsLoadingAllWards(false);
+      }
     }, 800);
 
     setIsLoadingPendingAdmissions(true);
-    setTimeout(() => {
-        setHospitalPendingAdmissions(mockHospitalPendingAdmissionsData);
-        setIsLoadingPendingAdmissions(false);
+    setTimeout(async () => {
+        try {
+            // const response = await fetch('/api/v1/admissions/pending');
+            // if (!response.ok) throw new Error('Failed to fetch pending admissions');
+            // const data = await response.json();
+            // setHospitalPendingAdmissions(data);
+             setHospitalPendingAdmissions(mockHospitalPendingAdmissionsData);
+        } catch (error) {
+            console.error("Error fetching pending admissions:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not load pending admissions." });
+        } finally {
+            setIsLoadingPendingAdmissions(false);
+        }
     }, 1000);
   }, []);
 
@@ -360,24 +380,35 @@ export default function WardManagementPage() {
       setIsLoadingCurrentWardDetails(true);
       setCurrentWardDetails(null); 
       setSelectedPatientForDetails(null); 
-      setCurrentAdmittedPatientFullDetails(null);
-      setTimeout(() => {
-        const details = mockWardDetailsData[selectedWardId];
-        if (details) {
-            const occupiedBeds = details.patients.length;
-            const availableBeds = details.totalBeds - occupiedBeds;
-            const occupancyRate = details.totalBeds > 0 ? (occupiedBeds / details.totalBeds) * 100 : 0;
-            setCurrentWardDetails({
-                ...details,
-                occupiedBeds,
-                availableBeds,
-                occupancyRate,
-            });
-        } else {
-            setCurrentWardDetails(null);
-            toast({variant: "destructive", title: "Error", description: `Could not load details for ward ID ${selectedWardId}`});
+      setCurrentAdmittedPatientFullDetails(null); 
+      setTimeout(async () => {
+        try {
+            // const response = await fetch(`/api/v1/wards/${selectedWardId}/details`);
+            // if (!response.ok) throw new Error(`Failed to fetch details for ward ${selectedWardId}`);
+            // const data = await response.json();
+            // setCurrentWardDetails(data);
+            const details = mockWardDetailsData[selectedWardId];
+            if (details) {
+                const occupiedBeds = details.patients.length;
+                const availableBeds = details.totalBeds - occupiedBeds;
+                const occupancyRate = details.totalBeds > 0 ? (occupiedBeds / details.totalBeds) * 100 : 0;
+                setCurrentWardDetails({
+                    ...details,
+                    occupiedBeds,
+                    availableBeds,
+                    occupancyRate,
+                });
+            } else {
+                setCurrentWardDetails(null);
+                toast({variant: "destructive", title: "Error", description: `Could not load details for ward ID ${selectedWardId}`});
+            }
+        } catch (error) {
+             console.error(`Error fetching ward ${selectedWardId} details:`, error);
+             toast({ variant: "destructive", title: "Error", description: `Could not load details for ward ID ${selectedWardId}.` });
+             setCurrentWardDetails(null);
+        } finally {
+            setIsLoadingCurrentWardDetails(false);
         }
-        setIsLoadingCurrentWardDetails(false);
       }, 1000);
     } else {
       setCurrentWardDetails(null);
@@ -390,34 +421,44 @@ export default function WardManagementPage() {
     if (selectedPatientForDetails) {
       setIsLoadingSelectedPatientDetails(true);
       setCurrentAdmittedPatientFullDetails(null);
-      setTimeout(() => {
-        const fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
-        setCurrentAdmittedPatientFullDetails(fullDetails || null);
-        setEditableVitals(fullDetails?.vitals || {});
-        if (fullDetails && fullDetails.vitals) {
-          const w = parseFloat(fullDetails.vitals.weightKg || '0');
-          const h = parseFloat(fullDetails.vitals.heightCm || '0');
-          if (w > 0 && h > 0) {
-            const hM = h / 100;
-            const bmiVal = w / (hM * hM);
-            setCalculatedBmi(bmiVal.toFixed(2));
-            setBmiDisplay(getBmiStatusAndColor(bmiVal));
-          } else {
-            setCalculatedBmi(null);
-            setBmiDisplay(getBmiStatusAndColor(null));
-          }
-          setBpDisplay(getBloodPressureStatus(fullDetails.vitals.bloodPressure || ""));
-        } else {
-          setCalculatedBmi(null);
-          setBmiDisplay(getBmiStatusAndColor(null));
-          setBpDisplay(getBloodPressureStatus(""));
+      setTimeout(async () => {
+        try {
+            // const response = await fetch(`/api/v1/admissions/${selectedPatientForDetails.admissionId}`);
+            // if (!response.ok) throw new Error(`Failed to fetch details for admission ${selectedPatientForDetails.admissionId}`);
+            // const fullDetails = await response.json();
+            const fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
+            setCurrentAdmittedPatientFullDetails(fullDetails || null);
+            setEditableVitals(fullDetails?.vitals || {});
+            if (fullDetails && fullDetails.vitals) {
+              const w = parseFloat(fullDetails.vitals.weightKg || '0');
+              const h = parseFloat(fullDetails.vitals.heightCm || '0');
+              if (w > 0 && h > 0) {
+                const hM = h / 100;
+                const bmiVal = w / (hM * hM);
+                setCalculatedBmi(bmiVal.toFixed(2));
+                setBmiDisplay(getBmiStatusAndColor(bmiVal));
+              } else {
+                setCalculatedBmi(null);
+                setBmiDisplay(getBmiStatusAndColor(null));
+              }
+              setBpDisplay(getBloodPressureStatus(fullDetails.vitals.bloodPressure || ""));
+            } else {
+              setCalculatedBmi(null);
+              setBmiDisplay(getBmiStatusAndColor(null));
+              setBpDisplay(getBloodPressureStatus(""));
+            }
+            if (fullDetails) {
+              setMedicationScheduleInModal(fullDetails.medicationSchedule.map(item => ({...item}))); 
+            } else {
+              setMedicationScheduleInModal([]);
+            }
+        } catch (error) {
+             console.error(`Error fetching admission ${selectedPatientForDetails.admissionId} details:`, error);
+             toast({ variant: "destructive", title: "Error", description: `Could not load details for patient ${selectedPatientForDetails.name}.` });
+             setCurrentAdmittedPatientFullDetails(null);
+        } finally {
+            setIsLoadingSelectedPatientDetails(false);
         }
-        if (fullDetails) {
-          setMedicationScheduleInModal(fullDetails.medicationSchedule.map(item => ({...item}))); 
-        } else {
-          setMedicationScheduleInModal([]);
-        }
-        setIsLoadingSelectedPatientDetails(false);
       }, 800);
     } else {
         setCurrentAdmittedPatientFullDetails(null);
@@ -455,15 +496,28 @@ export default function WardManagementPage() {
     if (!currentAdmittedPatientFullDetails) return;
     setIsSavingVitals(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, vitals: editableVitals };
-    // console.log("Saving vitals to /api/v1/admissions/{admissionId}/vitals (mock):", payload);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, vitals: { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status } }) : null);
-    
-    if(mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]){
-        mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].vitals = { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status };
+    console.log("Saving vitals (mock):", payload);
+    try {
+        // const response = await fetch(`/api/v1/admissions/${currentAdmittedPatientFullDetails.admissionId}/vitals`, {
+        //     method: 'PUT',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify(payload.vitals),
+        // });
+        // if (!response.ok) throw new Error('Failed to save vitals.');
+        // const updatedPatient = await response.json();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const updatedVitalsWithCalculated = { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status };
+        setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, vitals: updatedVitalsWithCalculated }) : null);
+        
+        if(mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]){
+            mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].vitals = updatedVitalsWithCalculated;
+        }
+        toast({ title: "Vitals Saved (Mock)", description: "Patient vitals updated successfully." });
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Error", description: error.message || "Could not save vitals." });
+    } finally {
+        setIsSavingVitals(false);
     }
-    toast({ title: "Vitals Saved (Mock)", description: "Patient vitals updated successfully." });
-    setIsSavingVitals(false);
   };
 
 
@@ -492,57 +546,69 @@ export default function WardManagementPage() {
         primaryDiagnosis: admissionDiagnosis,
         admissionDate: new Date().toISOString(),
     };
-    // console.log("Submitting to /api/v1/admissions (mock):", payload);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    console.log("Submitting admission (mock):", payload);
+    try {
+        // const response = await fetch('/api/v1/admissions', {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify(payload),
+        // });
+        // if (!response.ok) throw new Error('Failed to admit patient.');
+        // const newAdmission = await response.json(); // Assuming backend returns the new admission object
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const newPatientInWard: PatientInWard = {
-        admissionId: newAdmissionId,
-        patientId: patientToAdmit.patientId,
-        name: patientToAdmit.patientName,
-        bedNumber: bedToOccupy.bedNumber,
-        admittedDate: new Date().toISOString().split('T')[0],
-        primaryDiagnosis: admissionDiagnosis,
-        keyAlerts: ["New Admission"]
-    };
-
-    setCurrentWardDetails(prev => {
-        if (!prev) return null;
-        const updatedPatients = [...prev.patients, newPatientInWard];
-        const updatedBeds = prev.beds.map(b => 
-            b.id === selectedAvailableBedId ? { ...b, status: "Occupied" as "Occupied", patientId: patientToAdmit.patientId, patientName: patientToAdmit.patientName } : b
-        );
-        const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
-        return {
-            ...prev,
-            patients: updatedPatients,
-            beds: updatedBeds,
-            occupiedBeds: occupiedBeds,
-            availableBeds: prev.totalBeds - occupiedBeds,
-            occupancyRate: (occupiedBeds / prev.totalBeds) * 100,
+        const newPatientInWard: PatientInWard = {
+            admissionId: newAdmissionId, // Use newAdmission.id from backend
+            patientId: patientToAdmit.patientId,
+            name: patientToAdmit.patientName,
+            bedNumber: bedToOccupy.bedNumber,
+            admittedDate: new Date().toISOString().split('T')[0],
+            primaryDiagnosis: admissionDiagnosis,
+            keyAlerts: ["New Admission"] 
         };
-    });
-    
-    mockAdmittedPatientFullDetailsData[newAdmissionId] = {
-        admissionId: newAdmissionId,
-        patientId: patientToAdmit.patientId,
-        name: patientToAdmit.patientName,
-        wardName: currentWardDetails.name,
-        bedNumber: bedToOccupy.bedNumber,
-        treatmentPlan: `Initial plan for ${admissionDiagnosis}. Monitor vitals.`,
-        medicationSchedule: [],
-        doctorNotes: [{noteId: `DN-ADMIT-${Date.now()}`, date: new Date().toISOString(), doctor: admissionDoctor, note: `Admitted for ${admissionDiagnosis}.`}],
-        vitals: {}, 
-        allergies: [], chronicConditions: [], codeStatus: "Full Code"
-    };
 
-    setHospitalPendingAdmissions(prev => prev.filter(p => p.id !== selectedPendingPatientId));
-    toast({ title: "Patient Admitted (Mock)", description: `${patientToAdmit.patientName} admitted to ${currentWardDetails.name}, ${bedToOccupy.bedNumber}.` });
+        setCurrentWardDetails(prev => {
+            if (!prev) return null;
+            const updatedPatients = [...prev.patients, newPatientInWard];
+            const updatedBeds = prev.beds.map(b => 
+                b.id === selectedAvailableBedId ? { ...b, status: "Occupied" as "Occupied", patientId: patientToAdmit.patientId, patientName: patientToAdmit.patientName } : b
+            );
+            const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
+            return {
+                ...prev,
+                patients: updatedPatients,
+                beds: updatedBeds,
+                occupiedBeds: occupiedBeds,
+                availableBeds: prev.totalBeds - occupiedBeds,
+                occupancyRate: (occupiedBeds / prev.totalBeds) * 100,
+                 alerts: { ...prev.alerts, newAdmissionOrders: prev.alerts.newAdmissionOrders + 1 }
+            };
+        });
+        
+        mockAdmittedPatientFullDetailsData[newAdmissionId] = {
+            admissionId: newAdmissionId,
+            patientId: patientToAdmit.patientId,
+            name: patientToAdmit.patientName,
+            wardName: currentWardDetails.name,
+            bedNumber: bedToOccupy.bedNumber,
+            treatmentPlan: `Initial plan for ${admissionDiagnosis}. Monitor vitals.`,
+            medicationSchedule: [],
+            doctorNotes: [{noteId: `DN-ADMIT-${Date.now()}`, date: new Date().toISOString(), doctor: admissionDoctor, note: `Admitted for ${admissionDiagnosis}.`}],
+            vitals: {}, allergies: [], chronicConditions: [], codeStatus: "Full Code"
+        };
 
-    setSelectedPendingPatientId("");
-    setSelectedAvailableBedId("");
-    setAdmissionDoctor("");
-    setAdmissionDiagnosis("");
-    setIsAdmittingPatient(false);
+        setHospitalPendingAdmissions(prev => prev.filter(p => p.id !== selectedPendingPatientId));
+        toast({ title: "Patient Admitted (Mock)", description: `${patientToAdmit.patientName} admitted to ${currentWardDetails.name}, ${bedToOccupy.bedNumber}.` });
+
+        setSelectedPendingPatientId("");
+        setSelectedAvailableBedId("");
+        setAdmissionDoctor("");
+        setAdmissionDiagnosis("");
+    } catch (error: any) {
+         toast({ variant: "destructive", title: "Admission Error", description: error.message || "Could not admit patient." });
+    } finally {
+        setIsAdmittingPatient(false);
+    }
   };
 
 
@@ -550,17 +616,29 @@ export default function WardManagementPage() {
     if (!newDoctorNote.trim() || !currentAdmittedPatientFullDetails) return;
     setIsAddingNote(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, doctorId: "doc-currentUser-mockId", note: newDoctorNote };
-    // console.log("Submitting to /api/v1/admissions/{admissionId}/doctor-notes (mock):", payload);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const newNoteEntry: DoctorNote = { noteId: `DN${Date.now()}`, date: new Date().toISOString(), doctor: "Dr. Current User (Mock)", note: newDoctorNote };
-    setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, doctorNotes: [newNoteEntry, ...prev.doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
-    
-    if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
-      mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes = [newNoteEntry, ...mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    console.log("Submitting note (mock):", payload);
+    try {
+        // const response = await fetch(`/api/v1/admissions/${currentAdmittedPatientFullDetails.admissionId}/doctor-notes`, {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify({ doctorId: payload.doctorId, note: payload.note }),
+        // });
+        // if (!response.ok) throw new Error('Failed to add note.');
+        // const newNoteEntry = await response.json(); // Assuming backend returns the new note
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const newNoteEntry: DoctorNote = { noteId: `DN${Date.now()}`, date: new Date().toISOString(), doctor: "Dr. Current User (Mock)", note: newDoctorNote };
+        setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, doctorNotes: [newNoteEntry, ...prev.doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
+        
+        if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
+          mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes = [newNoteEntry, ...mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        }
+        toast({title: "Note Saved (Mock)", description: "New doctor's note added."});
+        setNewDoctorNote("");
+    } catch (error: any) {
+         toast({ variant: "destructive", title: "Note Error", description: error.message || "Could not add note." });
+    } finally {
+        setIsAddingNote(false);
     }
-    toast({title: "Note Saved (Mock)", description: "New doctor's note added."});
-    setNewDoctorNote("");
-    setIsAddingNote(false);
   };
 
   const handleOpenMedicationModal = () => {
@@ -606,50 +684,74 @@ export default function WardManagementPage() {
     if (!currentAdmittedPatientFullDetails) return;
     setIsSavingMedicationUpdates(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, updatedSchedule: medicationScheduleInModal };
-    // console.log("Submitting to /api/v1/admissions/{admissionId}/medication-schedule (mock with full schedule):", payload);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, medicationSchedule: medicationScheduleInModal }) : null);
-    
-    if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
-        mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].medicationSchedule = medicationScheduleInModal;
-    }
+    console.log("Submitting medication updates (mock):", payload);
+     try {
+        // const response = await fetch(`/api/v1/admissions/${currentAdmittedPatientFullDetails.admissionId}/medication-schedule`, {
+        //     method: 'PUT',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify({ schedule: medicationScheduleInModal }), // Send the whole updated schedule
+        // });
+        // if (!response.ok) throw new Error('Failed to update medication schedule.');
+        // const updatedScheduleFromApi = await response.json();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, medicationSchedule: medicationScheduleInModal }) : null);
+        
+        if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
+            mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].medicationSchedule = medicationScheduleInModal;
+        }
 
-    toast({title: "Medication Log Updated (Mock)", description: "Medication schedule has been updated."});
-    setIsMedicationModalOpen(false);
-    setIsSavingMedicationUpdates(false);
+        toast({title: "Medication Log Updated (Mock)", description: "Medication schedule has been updated."});
+        setIsMedicationModalOpen(false);
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Medication Error", description: error.message || "Could not update medication schedule." });
+    } finally {
+        setIsSavingMedicationUpdates(false);
+    }
   };
 
   const handleDischarge = async () => {
     if (!currentAdmittedPatientFullDetails || !selectedWardId) return;
     setIsDischarging(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, dischargeDate: new Date().toISOString(), dischargeSummary: "Patient stable for discharge.", dischargedBy: "doc-currentUser-mockId" };
-    // console.log("Submitting to /api/v1/admissions/{admissionId}/discharge (mock):", payload);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    toast({ title: "Patient Discharged (Mock)", description: `${currentAdmittedPatientFullDetails.name} processed for discharge.` });
-    
-    const admissionIdToDischarge = currentAdmittedPatientFullDetails.admissionId;
-    const patientIdToClearFromBed = currentAdmittedPatientFullDetails.patientId;
-    
-    setSelectedPatientForDetails(null); 
-    setCurrentAdmittedPatientFullDetails(null);
-    
-    setCurrentWardDetails(prevDetails => {
-        if (!prevDetails) return null;
-        const updatedPatients = prevDetails.patients.filter(p => p.admissionId !== admissionIdToDischarge);
-        const updatedBeds = prevDetails.beds.map(bed => 
-            bed.patientId === patientIdToClearFromBed ? { ...bed, status: "Cleaning" as "Cleaning", patientId: undefined, patientName: undefined } : bed
-        );
-        const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
-        return { 
-            ...prevDetails, 
-            patients: updatedPatients, 
-            beds: updatedBeds, 
-            occupiedBeds: occupiedBeds, 
-            availableBeds: prevDetails.totalBeds - occupiedBeds, 
-            occupancyRate: (occupiedBeds / prevDetails.totalBeds) * 100 
-        };
-    });
-    setIsDischarging(false);
+    console.log("Submitting discharge (mock):", payload);
+    try {
+        // const response = await fetch(`/api/v1/admissions/${currentAdmittedPatientFullDetails.admissionId}/discharge`, {
+        //     method: 'PUT',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify({ dischargeDate: payload.dischargeDate, dischargeSummary: payload.dischargeSummary, dischargedBy: payload.dischargedBy }),
+        // });
+        // if (!response.ok) throw new Error('Failed to discharge patient.');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        toast({ title: "Patient Discharged (Mock)", description: `${currentAdmittedPatientFullDetails.name} processed for discharge.` });
+        
+        const admissionIdToDischarge = currentAdmittedPatientFullDetails.admissionId;
+        const patientIdToClearFromBed = currentAdmittedPatientFullDetails.patientId;
+        
+        setSelectedPatientForDetails(null); 
+        setCurrentAdmittedPatientFullDetails(null);
+        
+        setCurrentWardDetails(prevDetails => {
+            if (!prevDetails) return null;
+            const updatedPatients = prevDetails.patients.filter(p => p.admissionId !== admissionIdToDischarge);
+            const updatedBeds = prevDetails.beds.map(bed => 
+                bed.patientId === patientIdToClearFromBed ? { ...bed, status: "Cleaning" as "Cleaning", patientId: undefined, patientName: undefined } : bed
+            );
+            const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
+            return { 
+                ...prevDetails, 
+                patients: updatedPatients, 
+                beds: updatedBeds, 
+                occupiedBeds: occupiedBeds, 
+                availableBeds: prevDetails.totalBeds - occupiedBeds, 
+                occupancyRate: (occupiedBeds / prevDetails.totalBeds) * 100,
+                alerts: { ...prevDetails.alerts, pendingDischarges: Math.max(0, prevDetails.alerts.pendingDischarges -1) }
+            };
+        });
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Discharge Error", description: error.message || "Could not discharge patient." });
+    } finally {
+        setIsDischarging(false);
+    }
   };
   
   const handleOpenTransferModal = () => {
@@ -685,37 +787,48 @@ export default function WardManagementPage() {
         transferReason: transferReason,
         transferredBy: "doc-currentUser-mockId" 
     };
-    // console.log("Submitting to /api/v1/admissions/{admissionId}/transfer (mock):", payload);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const destinationName = transferType === "internal_ward" 
-        ? allWardsData.find(w => w.id === targetInternalWardId)?.name || "Selected Ward" 
-        : externalHospitalName;
-    toast({ title: "Patient Transfer Initiated (Mock)", description: `Transfer for ${currentAdmittedPatientFullDetails.name} to ${destinationName} initiated.` });
-    
-    const admissionIdToTransfer = currentAdmittedPatientFullDetails.admissionId;
-    const patientIdToClearFromBed = currentAdmittedPatientFullDetails.patientId;
-    
-    setSelectedPatientForDetails(null); 
-    setCurrentAdmittedPatientFullDetails(null);
-    setCurrentWardDetails(prevDetails => {
-        if (!prevDetails) return null;
-        const updatedPatients = prevDetails.patients.filter(p => p.admissionId !== admissionIdToTransfer);
-        const updatedBeds = prevDetails.beds.map(bed => 
-            bed.patientId === patientIdToClearFromBed ? { ...bed, status: "Cleaning" as "Cleaning", patientId: undefined, patientName: undefined } : bed
-        );
-         const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
-        return { 
-            ...prevDetails, 
-            patients: updatedPatients, 
-            beds: updatedBeds, 
-            occupiedBeds: occupiedBeds, 
-            availableBeds: prevDetails.totalBeds - occupiedBeds, 
-            occupancyRate: (occupiedBeds / prevDetails.totalBeds) * 100 
-        };
-    });
-    
-    setIsTransferModalOpen(false);
-    setIsProcessingTransfer(false);
+    console.log("Submitting transfer (mock):", payload);
+    try {
+        // const response = await fetch(`/api/v1/admissions/${currentAdmittedPatientFullDetails.admissionId}/transfer`, {
+        //     method: 'PUT',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify(payload),
+        // });
+        // if (!response.ok) throw new Error('Failed to initiate transfer.');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const destinationName = transferType === "internal_ward" 
+            ? allWardsData.find(w => w.id === targetInternalWardId)?.name || "Selected Ward" 
+            : externalHospitalName;
+        toast({ title: "Patient Transfer Initiated (Mock)", description: `Transfer for ${currentAdmittedPatientFullDetails.name} to ${destinationName} initiated.` });
+        
+        const admissionIdToTransfer = currentAdmittedPatientFullDetails.admissionId;
+        const patientIdToClearFromBed = currentAdmittedPatientFullDetails.patientId;
+        
+        setSelectedPatientForDetails(null); 
+        setCurrentAdmittedPatientFullDetails(null);
+        setCurrentWardDetails(prevDetails => {
+            if (!prevDetails) return null;
+            const updatedPatients = prevDetails.patients.filter(p => p.admissionId !== admissionIdToTransfer);
+            const updatedBeds = prevDetails.beds.map(bed => 
+                bed.patientId === patientIdToClearFromBed ? { ...bed, status: "Cleaning" as "Cleaning", patientId: undefined, patientName: undefined } : bed
+            );
+            const occupiedBeds = updatedBeds.filter(b => b.status === "Occupied").length;
+            return { 
+                ...prevDetails, 
+                patients: updatedPatients, 
+                beds: updatedBeds, 
+                occupiedBeds: occupiedBeds, 
+                availableBeds: prevDetails.totalBeds - occupiedBeds, 
+                occupancyRate: (occupiedBeds / prevDetails.totalBeds) * 100 
+            };
+        });
+        
+        setIsTransferModalOpen(false);
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Transfer Error", description: error.message || "Could not initiate transfer." });
+    } finally {
+        setIsProcessingTransfer(false);
+    }
   };
 
 
@@ -727,6 +840,7 @@ export default function WardManagementPage() {
           </h1>
         </div>
 
+        {/* Ward Selection & Dashboard Card */}
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Hospital className="h-6 w-6 text-primary"/>Select Ward & View Dashboard</CardTitle>
@@ -804,7 +918,6 @@ export default function WardManagementPage() {
         </Card>
 
         {selectedWardId && currentWardDetails && !isLoadingCurrentWardDetails && (
-          <>
             <Card className="shadow-sm">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -884,7 +997,11 @@ export default function WardManagementPage() {
                     </CardFooter>
                 )}
             </Card>
+        )}
 
+
+        {selectedWardId && currentWardDetails && !isLoadingCurrentWardDetails && (
+          <>
             <div className="grid lg:grid-cols-2 gap-6 items-start">
                 <Card className="shadow-sm">
                 <CardHeader>
@@ -898,7 +1015,7 @@ export default function WardManagementPage() {
                         <TableRow>
                             <TableHead>Patient Name</TableHead>
                             <TableHead>Bed</TableHead>
-                            <TableHead>Key Alerts</TableHead>
+                             <TableHead>Key Alerts</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -915,9 +1032,9 @@ export default function WardManagementPage() {
                             <TableCell>{patient.bedNumber}</TableCell>
                             <TableCell className="space-x-1">
                                 {patient.keyAlerts && patient.keyAlerts.map(alert => (
-                                    <Badge key={alert} variant="secondary" className="text-xs">{alert}</Badge>
+                                    <Badge key={alert} variant={alert === "Isolation" || alert === "DNR" ? "destructive" : "secondary"} className="text-xs">{alert}</Badge>
                                 ))}
-                                {!patient.keyAlerts && <span className="text-xs text-muted-foreground">None</span>}
+                                {(!patient.keyAlerts || patient.keyAlerts.length === 0) && <span className="text-xs text-muted-foreground">None</span>}
                             </TableCell>
                             </TableRow>
                         ))}
@@ -984,28 +1101,29 @@ export default function WardManagementPage() {
                       <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Allergies</CardTitle></CardHeader>
                       <CardContent>
                         {currentAdmittedPatientFullDetails.allergies && currentAdmittedPatientFullDetails.allergies.length > 0 ? 
-                          currentAdmittedPatientFullDetails.allergies.map(a => <Badge key={a} variant="destructive" className="mr-1 mb-1">{a}</Badge>) : 
-                          <p className="text-muted-foreground">None reported</p>}
+                          currentAdmittedPatientFullDetails.allergies.map(a => <Badge key={a} variant="destructive" className="mr-1 mb-1 text-xs">{a}</Badge>) : 
+                          <p className="text-muted-foreground text-xs">None reported</p>}
                       </CardContent>
                     </Card>
                      <Card className="shadow-xs">
                       <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Chronic Conditions</CardTitle></CardHeader>
                       <CardContent>
                         {currentAdmittedPatientFullDetails.chronicConditions && currentAdmittedPatientFullDetails.chronicConditions.length > 0 ? 
-                          currentAdmittedPatientFullDetails.chronicConditions.map(c => <Badge key={c} variant="outline" className="mr-1 mb-1">{c}</Badge>) : 
-                          <p className="text-muted-foreground">None reported</p>}
+                          currentAdmittedPatientFullDetails.chronicConditions.map(c => <Badge key={c} variant="outline" className="mr-1 mb-1 text-xs">{c}</Badge>) : 
+                          <p className="text-muted-foreground text-xs">None reported</p>}
                       </CardContent>
                     </Card>
                      <Card className="shadow-xs">
                       <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Code Status</CardTitle></CardHeader>
                       <CardContent>
-                        <Badge variant={currentAdmittedPatientFullDetails.codeStatus === "DNR" ? "destructive" : "secondary"}>
+                        <Badge variant={currentAdmittedPatientFullDetails.codeStatus === "DNR" ? "destructive" : "secondary"} className="text-xs">
                             {currentAdmittedPatientFullDetails.codeStatus || "N/A"}
                         </Badge>
                       </CardContent>
                     </Card>
                   </div>
                   <Separator/>
+
                   <div className="space-y-3 p-4 border rounded-md bg-muted/20">
                     <h4 className="text-md font-semibold mb-2 flex items-center"><Activity className="mr-2 h-4 w-4 text-primary" /> Current Vitals</h4>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
@@ -1052,13 +1170,14 @@ export default function WardManagementPage() {
                     </Button>
                   </div>
                   <Separator />
+                  
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
                         <h4 className="text-md font-semibold mb-2 flex items-center"><ClipboardCheck className="mr-2 h-4 w-4 text-primary" /> Recent Key Lab Summary</h4>
                         <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md min-h-[60px] whitespace-pre-wrap">{currentAdmittedPatientFullDetails.recentLabSummary || "No recent lab summary available."}</p>
                     </div>
                     <div>
-                        <h4 className="text-md font-semibold mb-2 flex items-center"><LayersList className="mr-2 h-4 w-4 text-primary" /> Recent Key Imaging Summary</h4>
+                        <h4 className="text-md font-semibold mb-2 flex items-center"><Layers className="mr-2 h-4 w-4 text-primary" /> Recent Key Imaging Summary</h4>
                         <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md min-h-[60px] whitespace-pre-wrap">{currentAdmittedPatientFullDetails.recentImagingSummary || "No recent imaging summary available."}</p>
                     </div>
                   </div>
@@ -1099,7 +1218,7 @@ export default function WardManagementPage() {
                                                     <Input id={`medDosage-${index}`} value={med.dosage} onChange={(e) => handleMedicationItemChangeInModal(index, "dosage", e.target.value)} disabled={isSavingMedicationUpdates} />
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                                            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end"> 
                                                 <div className="space-y-1">
                                                     <Label htmlFor={`medTime-${index}`} className="text-xs">Time</Label>
                                                     <Input id={`medTime-${index}`} value={med.time} onChange={(e) => handleMedicationItemChangeInModal(index, "time", e.target.value)} disabled={isSavingMedicationUpdates} />
@@ -1302,7 +1421,7 @@ export default function WardManagementPage() {
                 </CardContent>
             </Card>
         )}
-         {!isLoadingAllWards && allWardsData.length === 0 && (
+         {!isLoadingAllWards && allWardsData.length === 0 && ( 
             <Card className="shadow-sm">
                 <CardContent className="py-10">
                     <p className="text-center text-muted-foreground">No wards available. Please configure wards in the system.</p>
@@ -1313,3 +1432,4 @@ export default function WardManagementPage() {
   );
 }
 
+    
