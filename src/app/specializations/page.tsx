@@ -1,9 +1,10 @@
 
-"use client";
+"use client"; // This page uses client-side state for mock data
 
 import React, { useState, useEffect } from 'react'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, Briefcase, Users, Loader2, Star } from "lucide-react"; 
+import { Button } from "@/components/ui/button";
+import { Bell, Briefcase, Users, Loader2, Star, FileClock } from "lucide-react"; 
 import { SpecialistConsultationForm } from "./specialist-consultation-form";
 import { getTreatmentRecommendationAction } from "../treatment-recommendation/actions";
 import Image from "next/image";
@@ -22,6 +23,10 @@ interface MockListItem {
   gender?: "Male" | "Female" | "Other";
 }
 
+interface DraftedConsultationItem extends MockListItem {
+  reasonForDraft: string;
+  lastSavedTime: string;
+}
 
 const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
   if (gender === "Male") return "male avatar";
@@ -34,8 +39,12 @@ export default function SpecializationsPage() {
   const [isLoadingReferrals, setIsLoadingReferrals] = useState(true);
   const [specialistNotifications, setSpecialistNotifications] = useState<MockListItem[]>([]);
   const [isLoadingSpecialistNotifications, setIsLoadingSpecialistNotifications] = useState(true);
+  const [draftedConsultations, setDraftedConsultations] = useState<DraftedConsultationItem[]>([]);
+  const [isLoadingDraftedConsultations, setIsLoadingDraftedConsultations] = useState(true);
+
 
   useEffect(() => {
+    // Simulate fetching referral list
     setIsLoadingReferrals(true);
     setTimeout(() => {
       const mockReferralListData: MockListItem[] = [
@@ -46,6 +55,7 @@ export default function SpecializationsPage() {
       setIsLoadingReferrals(false);
     }, 1200);
 
+    // Simulate fetching specialist notifications
     setIsLoadingSpecialistNotifications(true);
     setTimeout(() => {
       const mockSpecialistNotificationsData: MockListItem[] = [
@@ -55,6 +65,17 @@ export default function SpecializationsPage() {
       setSpecialistNotifications(mockSpecialistNotificationsData);
       setIsLoadingSpecialistNotifications(false);
     }, 1500);
+
+    // Simulate fetching drafted consultations
+    setIsLoadingDraftedConsultations(true);
+    setTimeout(() => {
+      const mockDraftedData: DraftedConsultationItem[] = [
+        { id: "DRAFT_SPEC001", patientName: "Walter White", gender: "Male", reasonForDraft: "Awaiting Lung Function Tests", lastSavedTime: "Yesterday 02:10 PM", photoUrl: "https://placehold.co/32x32.png", specialty: "Oncology" },
+        { id: "DRAFT_SPEC002", patientName: "Skyler White", gender: "Female", reasonForDraft: "Pending EEG results", lastSavedTime: "Today 10:00 AM", photoUrl: "https://placehold.co/32x32.png", specialty: "Neurology" },
+      ];
+      setDraftedConsultations(mockDraftedData);
+      setIsLoadingDraftedConsultations(false);
+    }, 1700);
   }, []);
 
 
@@ -69,7 +90,7 @@ export default function SpecializationsPage() {
               </CardTitle>
               <CardDescription className="text-xs">Patients referred for specialist consultation.</CardDescription>
             </CardHeader>
-            <CardContent className="max-h-[calc(50vh-100px)] overflow-y-auto">
+            <CardContent className="max-h-[calc(33vh-80px)] overflow-y-auto"> {/* Adjusted height */}
               {isLoadingReferrals ? (
                 <div className="flex items-center justify-center py-6 text-muted-foreground">
                   <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
@@ -111,7 +132,7 @@ export default function SpecializationsPage() {
               </CardTitle>
                <CardDescription className="text-xs">Updates relevant to specialist consultations.</CardDescription>
             </CardHeader>
-            <CardContent className="max-h-[calc(50vh-120px)] overflow-y-auto">
+            <CardContent className="max-h-[calc(33vh-80px)] overflow-y-auto"> {/* Adjusted height */}
               {isLoadingSpecialistNotifications ? (
                  <div className="flex items-center justify-center py-6 text-muted-foreground">
                   <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
@@ -127,7 +148,7 @@ export default function SpecializationsPage() {
                           width={24}
                           height={24}
                           className="rounded-full mt-0.5"
-                          data-ai-hint={getAvatarHint(notif.gender)}
+                           data-ai-hint={getAvatarHint(notif.gender)}
                         />
                         <div className="flex-1">
                             <p className={`${notif.read ? 'text-muted-foreground' : 'font-medium'}`}>
@@ -146,6 +167,54 @@ export default function SpecializationsPage() {
               )}
             </CardContent>
           </Card>
+          
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                    <FileClock className="h-5 w-5 text-primary" /> Incomplete Consultations
+                </CardTitle>
+                <CardDescription className="text-xs">Specialist consultations awaiting results or further action.</CardDescription>
+            </CardHeader>
+            <CardContent className="max-h-[calc(34vh-80px)] overflow-y-auto"> {/* Adjusted height */}
+                {isLoadingDraftedConsultations ? (
+                    <div className="flex items-center justify-center py-6 text-muted-foreground">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                        Loading drafts...
+                    </div>
+                ) : draftedConsultations.length > 0 ? (
+                    <ul className="space-y-3">
+                        {draftedConsultations.map((consult) => (
+                            <li key={consult.id} className="p-2.5 border rounded-md shadow-sm bg-background hover:bg-muted/50">
+                                <div className="flex items-center gap-3">
+                                    <Image
+                                        src={consult.photoUrl}
+                                        alt={consult.patientName}
+                                        width={32}
+                                        height={32}
+                                        className="rounded-full"
+                                        data-ai-hint={getAvatarHint(consult.gender)}
+                                    />
+                                    <div className="flex-1">
+                                        <p className="font-semibold text-sm">{consult.patientName}</p>
+                                        <p className="text-xs text-muted-foreground">Reason: {consult.reasonForDraft}</p>
+                                        <p className="text-xs text-muted-foreground">Specialty: {consult.specialty}</p>
+                                        <p className="text-xs text-muted-foreground">Saved: {consult.lastSavedTime}</p>
+                                    </div>
+                                </div>
+                                <Button variant="outline" size="sm" className="w-full mt-2 text-xs" onClick={() => alert(`Resuming specialist consultation for ${consult.patientName} (mock action)`)}>
+                                    Resume Consultation
+                                </Button>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                        <FileClock className="mx-auto h-10 w-10 mb-1" />
+                        <p className="text-sm">No incomplete specialist consultations.</p>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
         </div>
 
         {/* Center Panel */}
@@ -160,3 +229,4 @@ export default function SpecializationsPage() {
 
       </div>
   )
+}
