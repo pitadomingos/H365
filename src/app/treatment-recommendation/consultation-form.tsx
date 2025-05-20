@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Sigma, Edit3, Send, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, FlaskConical, RadioTower, Save } from "lucide-react";
+import { Loader2, Sparkles, FileText, Stethoscope, Pill, UserCircle, Search, Thermometer, Weight, Ruler, Sigma, Edit3, Send, Home, BedDouble, ArrowRightToLine, Users2, Skull, History, HeartPulse, ShieldAlert, FileClock, FlaskConical, RadioTower, Save, ActivityIcon as BloodPressureIcon } from "lucide-react";
 import type { TreatmentRecommendationInput, TreatmentRecommendationOutput } from '@/ai/flows/treatment-recommendation';
 import { Separator } from '@/components/ui/separator';
 import { toast } from "@/hooks/use-toast";
@@ -36,6 +36,7 @@ const FormSchema = z.object({
   bodyTemperature: z.string().optional(),
   weight: z.string().optional(),
   height: z.string().optional(),
+  bloodPressure: z.string().optional(),
   symptoms: z.string().min(1, "Symptoms are required for AI recommendation.").optional(),
   labResultsSummary: z.string().optional(),
   imagingDataSummary: z.string().optional(),
@@ -98,6 +99,34 @@ const getBmiStatusAndColor = (bmi: number | null): { status: string; colorClass:
   }
 };
 
+const getBloodPressureStatus = (bp: string): { status: string; colorClass: string; textColorClass: string; } => {
+  if (!bp || !bp.includes('/')) {
+    return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+  }
+  const parts = bp.split('/');
+  const systolic = parseInt(parts[0], 10);
+  const diastolic = parseInt(parts[1], 10);
+
+  if (isNaN(systolic) || isNaN(diastolic)) {
+    return { status: "Invalid", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+  }
+
+  if (systolic < 90 || diastolic < 60) {
+    return { status: "Hypotension", colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
+  } else if (systolic < 120 && diastolic < 80) {
+    return { status: "Normal", colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
+  } else if (systolic >= 120 && systolic <= 129 && diastolic < 80) {
+    return { status: "Elevated", colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
+  } else if ((systolic >= 130 && systolic <= 139) || (diastolic >= 80 && diastolic <= 89)) {
+    return { status: "Stage 1 HTN", colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
+  } else if (systolic >= 140 || diastolic >= 90) {
+    return { status: "Stage 2 HTN", colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
+  } else if (systolic > 180 || diastolic > 120) {
+    return { status: "Hypertensive Crisis", colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
+  }
+  return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+};
+
 
 export function ConsultationForm({ getRecommendationAction }: ConsultationFormProps) {
   const [isAiPending, startAiTransition] = useTransition();
@@ -105,8 +134,11 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [patientData, setPatientData] = useState<PatientData | null>(null);
+  
   const [bmi, setBmi] = useState<string | null>(null);
   const [bmiDisplay, setBmiDisplay] = useState<{ status: string; colorClass: string, textColorClass: string; } | null>(null);
+  const [bpDisplay, setBpDisplay] = useState<{ status: string; colorClass: string, textColorClass: string; } | null>(null);
+
   const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
   
   const [selectedLabTests, setSelectedLabTests] = useState<Record<string, boolean>>({});
@@ -123,6 +155,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
       bodyTemperature: "",
       weight: "",
       height: "",
+      bloodPressure: "",
       symptoms: "",
       labResultsSummary: "",
       imagingDataSummary: "",
@@ -133,6 +166,8 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
   const { watch } = form;
   const weightKg = watch('weight');
   const heightCm = watch('height');
+  const bloodPressureInput = watch('bloodPressure');
+
 
   useEffect(() => {
     const w = parseFloat(weightKg || '0');
@@ -148,6 +183,14 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     }
   }, [weightKg, heightCm]);
 
+  useEffect(() => {
+    if (bloodPressureInput) {
+      setBpDisplay(getBloodPressureStatus(bloodPressureInput));
+    } else {
+      setBpDisplay(getBloodPressureStatus(""));
+    }
+  }, [bloodPressureInput]);
+
   const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
     if (gender === "Male") return "male avatar";
     if (gender === "Female") return "female avatar";
@@ -161,7 +204,6 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
       return;
     }
     setIsSearching(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000)); 
     if (nationalId === "123456789" || nationalId === "987654321") {
       const fetchedPatientData: PatientData = {
@@ -188,6 +230,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
         bodyTemperature: "",
         weight: "",
         height: "",
+        bloodPressure: "",
         symptoms: "",
         labResultsSummary: "",
         imagingDataSummary: "",
@@ -195,6 +238,7 @@ export function ConsultationForm({ getRecommendationAction }: ConsultationFormPr
     });
     setBmi(null);
     setBmiDisplay(getBmiStatusAndColor(null));
+    setBpDisplay(getBloodPressureStatus(""));
     setSelectedLabTests({});
     setIsSearching(false);
   };
@@ -221,6 +265,7 @@ Body Temperature: ${data.bodyTemperature || 'N/A'}°C
 Weight: ${data.weight || 'N/A'}kg
 Height: ${data.height || 'N/A'}cm
 BMI: ${bmi || 'N/A'} (${bmiDisplay?.status || 'N/A'})
+Blood Pressure: ${data.bloodPressure || 'N/A'} (${bpDisplay?.status || 'N/A'})
 
 Chief Complaint/Symptoms:
 ${data.symptoms || "Not specified."}
@@ -256,13 +301,14 @@ ${visitHistoryString || "No recent visit history available."}
     const payload = {
       patientId: patientData.nationalId,
       consultationDate: new Date().toISOString(),
-      consultingDoctorId: "doc-currentUser-mockId", // Mocked
-      department: "General Consultation", // Or dynamically set
+      consultingDoctorId: "doc-currentUser-mockId", 
+      department: "General Consultation", 
       vitals: {
         bodyTemperatureCelsius: parseFloat(currentFormData.bodyTemperature || "0") || undefined,
         weightKg: parseFloat(currentFormData.weight || "0") || undefined,
         heightCm: parseFloat(currentFormData.height || "0") || undefined,
-        bmi: parseFloat(bmi || "0") || undefined
+        bmi: parseFloat(bmi || "0") || undefined,
+        bloodPressure: currentFormData.bloodPressure || undefined,
       },
       symptoms: currentFormData.symptoms,
       labResultsSummaryInput: currentFormData.labResultsSummary,
@@ -271,7 +317,6 @@ ${visitHistoryString || "No recent visit history available."}
       aiPrescription: recommendation?.prescription,
       aiRecommendations: recommendation?.recommendations,
       doctorNotes: currentFormData.doctorComments,
-      // In a real app, finalDiagnosis and prescription would likely be separate, structured fields
       finalDiagnosis: currentFormData.doctorComments ? `Diagnosis based on notes: ${currentFormData.doctorComments.substring(0,50)}...` : "Diagnosis TBD",
       prescription: recommendation?.prescription ? `Prescription based on AI: ${recommendation.prescription}` : "Prescription TBD",
       outcome: outcome,
@@ -288,6 +333,7 @@ ${visitHistoryString || "No recent visit history available."}
     setError(null);
     setBmi(null);
     setBmiDisplay(getBmiStatusAndColor(null));
+    setBpDisplay(getBloodPressureStatus(""));
     setSelectedLabTests({});
     setIsOutcomeModalOpen(false);
     setIsSubmittingOutcome(false);
@@ -302,13 +348,14 @@ ${visitHistoryString || "No recent visit history available."}
     const currentFormData = form.getValues();
     const payload = {
       patientId: patientData.nationalId,
-      consultingDoctorId: "doc-currentUser-mockId", // Mocked
-      department: "General Consultation", // Or dynamically set
+      consultingDoctorId: "doc-currentUser-mockId", 
+      department: "General Consultation", 
       vitals: {
         bodyTemperatureCelsius: parseFloat(currentFormData.bodyTemperature || "0") || undefined,
         weightKg: parseFloat(currentFormData.weight || "0") || undefined,
         heightCm: parseFloat(currentFormData.height || "0") || undefined,
-        bmi: parseFloat(bmi || "0") || undefined
+        bmi: parseFloat(bmi || "0") || undefined,
+        bloodPressure: currentFormData.bloodPressure || undefined,
       },
       symptoms: currentFormData.symptoms,
       labResultsSummaryInput: currentFormData.labResultsSummary,
@@ -317,7 +364,7 @@ ${visitHistoryString || "No recent visit history available."}
       aiPrescription: recommendation?.prescription,
       aiRecommendations: recommendation?.recommendations,
       doctorNotes: currentFormData.doctorComments,
-      status: "DRAFT" // Indicate it's a draft
+      status: "DRAFT"
     };
 
     console.log("Saving Draft to /api/v1/consultations/drafts (mock):", payload);
@@ -419,9 +466,9 @@ ${visitHistoryString || "No recent visit history available."}
               <CardTitle>Patient Vitals & Symptoms</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 <div className="space-y-1">
-                  <Label htmlFor="bodyTemperature" className="flex items-center"><Thermometer className="mr-1.5 h-4 w-4 text-primary" />Body Temperature (°C)</Label>
+                  <Label htmlFor="bodyTemperature" className="flex items-center"><Thermometer className="mr-1.5 h-4 w-4 text-primary" />Temp (°C)</Label>
                   <Input id="bodyTemperature" placeholder="e.g., 37.5" {...form.register('bodyTemperature')} disabled={isActionDisabled || !patientData} />
                 </div>
                 <div className="space-y-1">
@@ -433,13 +480,30 @@ ${visitHistoryString || "No recent visit history available."}
                   <Input id="height" placeholder="e.g., 175" {...form.register('height')} disabled={isActionDisabled || !patientData}/>
                 </div>
                 <div className="space-y-1">
+                  <Label htmlFor="bloodPressure" className="flex items-center"><BloodPressureIcon className="mr-1.5 h-4 w-4 text-primary" />BP (mmHg)</Label>
+                  <Input id="bloodPressure" placeholder="e.g., 120/80" {...form.register('bloodPressure')} disabled={isActionDisabled || !patientData}/>
+                </div>
+                 <div className="space-y-1">
                   <Label className="flex items-center"><Sigma className="mr-1.5 h-4 w-4 text-primary" />BMI (kg/m²)</Label>
-                  <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-muted/50">
+                  <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-muted/50 min-w-[150px]">
                     <span className="text-sm font-medium">{bmi || "N/A"}</span>
                     {bmiDisplay && bmiDisplay.status !== "N/A" && (
-                      <Badge className={`${bmiDisplay.colorClass} ${bmiDisplay.textColorClass} border-transparent`}>
+                      <Badge className={`${bmiDisplay.colorClass} ${bmiDisplay.textColorClass} border-transparent text-xs px-1.5 py-0.5`} >
                         {bmiDisplay.status}
                       </Badge>
+                    )}
+                  </div>
+                </div>
+                 <div className="space-y-1">
+                  <Label className="flex items-center"><BloodPressureIcon className="mr-1.5 h-4 w-4 text-primary" />BP Status</Label>
+                  <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-muted/50 min-w-[150px]">
+                    {bpDisplay && bpDisplay.status !== "N/A" && bpDisplay.status !== "Invalid" && (
+                      <Badge className={`${bpDisplay.colorClass} ${bpDisplay.textColorClass} border-transparent text-xs px-1.5 py-0.5`}>
+                        {bpDisplay.status}
+                      </Badge>
+                    )}
+                    {(bpDisplay?.status === "N/A" || bpDisplay?.status === "Invalid") && (
+                       <span className="text-sm font-medium">{bpDisplay.status}</span>
                     )}
                   </div>
                 </div>
@@ -467,100 +531,102 @@ ${visitHistoryString || "No recent visit history available."}
                   <CardTitle>Diagnostic Orders</CardTitle>
                   <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-wrap items-center gap-2">
-                  <Dialog onOpenChange={(open) => !open && setSelectedLabTests({})}>
+                <CardContent>
+                    <div className="flex flex-wrap items-center gap-2">
+                    <Dialog onOpenChange={(open) => !open && setSelectedLabTests({})}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
+                        <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
                         <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
-                      </Button>
+                        </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
-                      <DialogHeader>
+                        <DialogHeader>
                         <DialogTitle>Order Lab Tests for {patientData?.fullName}</DialogTitle>
                         <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                         <Label className="text-base font-semibold">Common Lab Tests:</Label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                          {COMMON_ORDERABLE_LAB_TESTS.map((test) => (
+                            {COMMON_ORDERABLE_LAB_TESTS.map((test) => (
                             <div key={test.id} className="flex items-center space-x-2">
-                              <Checkbox 
+                                <Checkbox 
                                 id={`consult-test-${test.id}`} 
                                 checked={!!selectedLabTests[test.id]}
                                 onCheckedChange={(checked) => handleLabTestSelection(test.id, !!checked)}
                                 disabled={isSubmittingLabOrder}
-                              />
-                              <Label htmlFor={`consult-test-${test.id}`} className="text-sm font-normal">
+                                />
+                                <Label htmlFor={`consult-test-${test.id}`} className="text-sm font-normal">
                                 {test.label}
-                              </Label>
+                                </Label>
                             </div>
-                          ))}
+                            ))}
                         </div>
                         <Separator className="my-2" />
                         <div className="space-y-2">
-                          <Label htmlFor="consultLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
-                          <Textarea id="consultLabClinicalNotes" placeholder="e.g., Routine screening, specific concerns..." disabled={isSubmittingLabOrder} />
+                            <Label htmlFor="consultLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
+                            <Textarea id="consultLabClinicalNotes" placeholder="e.g., Routine screening, specific concerns..." disabled={isSubmittingLabOrder} />
                         </div>
-                      </div>
-                      <DialogFooter>
+                        </div>
+                        <DialogFooter>
                         <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingLabOrder}>Cancel</Button></DialogClose>
                         <Button type="button" onClick={handleSubmitLabOrder} disabled={isSubmittingLabOrder || Object.values(selectedLabTests).every(v => !v)}>
-                           {isSubmittingLabOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                           {isSubmittingLabOrder ? "Submitting..." : "Submit Lab Order"}
+                            {isSubmittingLabOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                            {isSubmittingLabOrder ? "Submitting..." : "Submit Lab Order"}
                         </Button>
-                      </DialogFooter>
+                        </DialogFooter>
                     </DialogContent>
-                  </Dialog>
+                    </Dialog>
 
-                  <Dialog>
+                    <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
+                        <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
                         <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
-                      </Button>
+                        </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
-                      <DialogHeader>
+                        <DialogHeader>
                         <DialogTitle>Order Imaging Study for {patientData?.fullName}</DialogTitle>
                         <DialogDescription>Select imaging type, specify details, and add clinical notes.</DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
                         <div className="space-y-2">
-                          <Label htmlFor="consultImagingType">Imaging Type</Label>
-                          <Select disabled={isSubmittingImagingOrder}>
+                            <Label htmlFor="consultImagingType">Imaging Type</Label>
+                            <Select disabled={isSubmittingImagingOrder} name="consultImagingType">
                             <SelectTrigger id="consultImagingType">
-                              <SelectValue placeholder="Select imaging type" />
+                                <SelectValue placeholder="Select imaging type" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="ultrasound">Ultrasound</SelectItem>
-                              <SelectItem value="xray">X-Ray</SelectItem>
-                              <SelectItem value="mri">MRI</SelectItem>
-                              <SelectItem value="ctscan">CT Scan</SelectItem>
+                                <SelectItem value="ultrasound">Ultrasound</SelectItem>
+                                <SelectItem value="xray">X-Ray</SelectItem>
+                                <SelectItem value="mri">MRI</SelectItem>
+                                <SelectItem value="ctscan">CT Scan</SelectItem>
                             </SelectContent>
-                          </Select>
+                            </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="consultImagingRegionDetails">Region / Details of Study</Label>
-                          <Textarea id="consultImagingRegionDetails" placeholder="e.g., Abdominal Ultrasound, Chest X-ray PA view, MRI Brain..." disabled={isSubmittingImagingOrder}/>
+                            <Label htmlFor="consultImagingRegionDetails">Region / Details of Study</Label>
+                            <Textarea id="consultImagingRegionDetails" placeholder="e.g., Abdominal Ultrasound, Chest X-ray PA view, MRI Brain..." disabled={isSubmittingImagingOrder}/>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="consultImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
-                          <Textarea id="consultImagingClinicalNotes" placeholder="e.g., Rule out appendicitis, check for pneumonia..." disabled={isSubmittingImagingOrder}/>
+                            <Label htmlFor="consultImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
+                            <Textarea id="consultImagingClinicalNotes" placeholder="e.g., Rule out appendicitis, check for pneumonia..." disabled={isSubmittingImagingOrder}/>
                         </div>
-                      </div>
-                      <DialogFooter>
+                        </div>
+                        <DialogFooter>
                         <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingImagingOrder}>Cancel</Button></DialogClose>
                         <Button type="button" onClick={handleSubmitImagingOrder} disabled={isSubmittingImagingOrder}>
                             {isSubmittingImagingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                             {isSubmittingImagingOrder ? "Submitting..." : "Submit Imaging Order"}
                         </Button>
-                      </DialogFooter>
+                        </DialogFooter>
                     </DialogContent>
-                  </Dialog>
-                  
-                  <Button variant="outline" className="flex-shrink-0" onClick={handleSaveProgress} disabled={isActionDisabled || !patientData}>
-                    {isSavingProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                    {isSavingProgress ? "Saving..." : "Save Progress"}
-                  </Button>
+                    </Dialog>
+                    
+                    <Button variant="outline" className="flex-shrink-0" onClick={handleSaveProgress} disabled={isActionDisabled || !patientData}>
+                        {isSavingProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                        {isSavingProgress ? "Saving..." : "Save Progress"}
+                    </Button>
+                    </div>
                 </CardContent>
               </Card>
           )}
@@ -654,6 +720,9 @@ ${visitHistoryString || "No recent visit history available."}
                         disabled={isActionDisabled}
                         />
                 </CardContent>
+                <CardFooter>
+                     <Button variant="outline" className="flex-shrink-0 invisible">Placeholder</Button> {/* For spacing if Save was here */}
+                </CardFooter>
             </Card>
 
             <div className="flex justify-end mt-6">
@@ -764,4 +833,3 @@ ${visitHistoryString || "No recent visit history available."}
     </div>
   );
 }
-    

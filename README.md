@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+git push origin main<<<<<<< HEAD
 # Firebase Studio
 
 This is a NextJS starter in Firebase Studio.
