@@ -160,6 +160,8 @@ const mockAdmittedPatientFullDetailsData: Record<string, AdmittedPatientFullDeta
     visitHistory: [
         { id: "VH001", date: "2024-07-15", facilityName: "City Central Clinic", department: "Outpatient", doctor: "Dr. Primary", reason: "Routine Checkup" },
         { id: "VH002", date: "2024-06-20", facilityName: "HealthFlow Central Hospital", department: "Emergency", doctor: "Dr. ER Shift", reason: "Minor Fall" },
+        { id: "VH003", date: "2024-05-10", facilityName: "HealthFlow Central Hospital", department: "Cardiology", doctor: "Dr. Cardio", reason: "Chest Pain eval" },
+        { id: "VH004", date: "2024-04-01", facilityName: "Community Clinic", department: "General", doctor: "Dr. General", reason: "Flu Symptoms" },
     ]
   },
    "ADM002": {
@@ -172,6 +174,7 @@ const mockAdmittedPatientFullDetailsData: Record<string, AdmittedPatientFullDeta
     recentLabSummary: "K+: 3.2 (Low), Creatinine: 1.5 (High)", recentImagingSummary: "Echocardiogram: EF 35%.",
     visitHistory: [
         { id: "VH005", date: "2024-07-01", facilityName: "HealthFlow Central Hospital", department: "Cardiology", doctor: "Dr. Heart", reason: "Chest Pain Assessment" },
+        { id: "VH006", date: "2024-05-15", facilityName: "HealthFlow Central Hospital", department: "Endocrinology", doctor: "Dr. Sugar", reason: "Diabetes Follow-up" },
     ]
   },
   "ADM003": {
@@ -313,7 +316,7 @@ const getBloodPressureStatus = (bp: string): { status: string; colorClass: strin
 
 const formatStayDuration = (admissionDateString: string): string => {
     if (!admissionDateString) return "N/A";
-    const admissionDate = new Date(admissionDateString + "T00:00:00"); // Treat as local date
+    const admissionDate = new Date(admissionDateString + "T00:00:00"); 
     const today = new Date();
     const diffTime = Math.abs(today.getTime() - admissionDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -386,7 +389,6 @@ export default function WardManagementPage() {
     setIsLoadingAllWards(true);
     setTimeout(async () => {
       try {
-        // Simulate API call: GET /api/v1/wards
         setAllWardsData(mockWardSummariesData);
       } catch (error) {
         console.error("Error fetching wards:", error);
@@ -399,7 +401,6 @@ export default function WardManagementPage() {
     setIsLoadingPendingAdmissions(true);
     setTimeout(async () => {
         try {
-            // Simulate API call: GET /api/v1/admissions/pending
              setHospitalPendingAdmissions(mockHospitalPendingAdmissionsData);
         } catch (error) {
             console.error("Error fetching pending admissions:", error);
@@ -416,9 +417,9 @@ export default function WardManagementPage() {
       setCurrentWardDetails(null); 
       setSelectedPatientForDetails(null); 
       setCurrentAdmittedPatientFullDetails(null); 
+      setLongestStayPatients([]);
       setTimeout(async () => {
         try {
-            // Simulate API call: GET /api/v1/wards/{selectedWardId}/details
             const details = mockWardDetailsData[selectedWardId];
             if (details) {
                 const occupiedBeds = details.patients.length;
@@ -430,6 +431,26 @@ export default function WardManagementPage() {
                     availableBeds,
                     occupancyRate,
                 });
+
+                if (details.patients) {
+                    const today = new Date();
+                    const stays = details.patients.map(p => {
+                        const admittedDate = new Date(p.admittedDate + "T00:00:00");
+                        const durationMs = today.getTime() - admittedDate.getTime();
+                        const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
+                        return { ...p, durationDays };
+                    }).sort((a, b) => b.durationDays - a.durationDays);
+
+                    setLongestStayPatients(
+                        stays.slice(0, 5).map(p => ({
+                            name: p.name,
+                            duration: formatStayDuration(p.admittedDate),
+                            admissionId: p.admissionId 
+                        }))
+                    );
+                }
+
+
             } else {
                 setCurrentWardDetails(null);
                 toast({variant: "destructive", title: "Error", description: `Could not load details for ward ID ${selectedWardId}`});
@@ -446,6 +467,7 @@ export default function WardManagementPage() {
       setCurrentWardDetails(null);
       setSelectedPatientForDetails(null);
       setCurrentAdmittedPatientFullDetails(null);
+      setLongestStayPatients([]);
     }
   }, [selectedWardId]);
 
@@ -455,7 +477,6 @@ export default function WardManagementPage() {
       setCurrentAdmittedPatientFullDetails(null);
       setTimeout(async () => {
         try {
-            // Simulate API call: GET /api/v1/admissions/{selectedPatientForDetails.admissionId}
             const fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
             setCurrentAdmittedPatientFullDetails(fullDetails || null);
             setEditableVitals(fullDetails?.vitals || {});
@@ -518,28 +539,6 @@ export default function WardManagementPage() {
     setBpDisplay(getBloodPressureStatus(editableVitals.bloodPressure || ""));
   }, [editableVitals.bloodPressure]);
 
-  useEffect(() => {
-    if (currentWardDetails?.patients) {
-        const today = new Date();
-        const stays = currentWardDetails.patients.map(p => {
-            const admittedDate = new Date(p.admittedDate + "T00:00:00"); // Ensure correct date parsing
-            const durationMs = today.getTime() - admittedDate.getTime();
-            const durationDays = Math.floor(durationMs / (1000 * 60 * 60 * 24));
-            return { ...p, durationDays };
-        }).sort((a, b) => b.durationDays - a.durationDays);
-
-        setLongestStayPatients(
-            stays.slice(0, 5).map(p => ({
-                name: p.name,
-                duration: formatStayDuration(p.admittedDate),
-                admissionId: p.admissionId 
-            }))
-        );
-    } else {
-        setLongestStayPatients([]);
-    }
-  }, [currentWardDetails]);
-
   const handleEditableVitalsChange = (field: keyof VitalsData, value: string) => {
     setEditableVitals(prev => ({ ...prev, [field]: value }));
   };
@@ -550,7 +549,9 @@ export default function WardManagementPage() {
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, vitals: editableVitals };
     
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+        // Simulate API call: PUT /api/v1/admissions/{admissionId}/vitals
+        console.log("Saving vitals (mock):", payload);
+        await new Promise(resolve => setTimeout(resolve, 1000)); 
         const updatedVitalsWithCalculated = { ...editableVitals, bmi: calculatedBmi || undefined, bmiStatus: bmiDisplay?.status, bpStatus: bpDisplay?.status };
         
         setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, vitals: updatedVitalsWithCalculated }) : null);
@@ -594,7 +595,9 @@ export default function WardManagementPage() {
     };
     
     try {
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+        // Simulate API call: POST /api/v1/admissions
+        console.log("Admitting patient (mock):", payload);
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
         const newPatientInWard: PatientInWard = {
             admissionId: newAdmissionId, 
@@ -657,7 +660,9 @@ export default function WardManagementPage() {
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, doctorId: "doc-currentUser-mockId", note: newDoctorNote };
     
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+        // Simulate API call: POST /api/v1/admissions/{admissionId}/doctor-notes
+        console.log("Adding doctor note (mock):", payload);
+        await new Promise(resolve => setTimeout(resolve, 1000)); 
         const newNoteEntry: DoctorNote = { noteId: `DN${Date.now()}`, date: new Date().toISOString(), doctor: "Dr. Current User (Mock)", note: newDoctorNote };
         
         setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, doctorNotes: [newNoteEntry, ...prev.doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
@@ -676,7 +681,7 @@ export default function WardManagementPage() {
 
   const handleOpenMedicationModal = () => {
     if (!currentAdmittedPatientFullDetails) return;
-    setMedicationScheduleInModal(currentAdmittedPatientFullDetails.medicationSchedule.map(med => ({ ...med }))); 
+    setMedicationScheduleInModal(JSON.parse(JSON.stringify(currentAdmittedPatientFullDetails.medicationSchedule))); // Deep copy
     setNewMedName("");
     setNewMedDosage("");
     setNewMedTime("");
@@ -718,7 +723,9 @@ export default function WardManagementPage() {
     setIsSavingMedicationUpdates(true);
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, updatedSchedule: medicationScheduleInModal };
      try {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+        // Simulate API call: PUT /api/v1/admissions/{admissionId}/medication-schedule
+        console.log("Saving medication log (mock):", payload);
+        await new Promise(resolve => setTimeout(resolve, 1000)); 
         
         setCurrentAdmittedPatientFullDetails(prev => prev ? ({ ...prev, medicationSchedule: medicationScheduleInModal }) : null);
         
@@ -741,7 +748,9 @@ export default function WardManagementPage() {
     const payload = { admissionId: currentAdmittedPatientFullDetails.admissionId, dischargeDate: new Date().toISOString(), dischargeSummary: "Patient stable for discharge.", dischargedBy: "doc-currentUser-mockId" };
     
     try {
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+        // Simulate API call: PUT /api/v1/admissions/{admissionId}/discharge
+        console.log("Discharging patient (mock):", payload);
+        await new Promise(resolve => setTimeout(resolve, 1500)); 
         toast({ title: "Patient Discharged (Mock)", description: `${currentAdmittedPatientFullDetails.name} processed for discharge.` });
         
         const admissionIdToDischarge = currentAdmittedPatientFullDetails.admissionId;
@@ -809,7 +818,9 @@ export default function WardManagementPage() {
     };
     
     try {
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+        // Simulate API call: PUT /api/v1/admissions/{admissionId}/transfer
+        console.log("Transferring patient (mock):", payload);
+        await new Promise(resolve => setTimeout(resolve, 1500)); 
         const destinationName = transferType === "internal_ward" 
             ? allWardsData.find(w => w.id === targetInternalWardId)?.name || "Selected Ward" 
             : externalHospitalName;
@@ -942,86 +953,87 @@ export default function WardManagementPage() {
         </Card>
 
         {selectedWardId && currentWardDetails && !isLoadingCurrentWardDetails && (
-            <div className="grid lg:grid-cols-3 gap-6 items-start">
-                <Card className="shadow-sm lg:col-span-1">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <PlusCircle className="h-5 w-5 text-primary"/> Admit Patient to {currentWardDetails.name}
-                        </CardTitle>
-                        <CardDescription>Select a patient from the hospital's pending admissions list and assign them to an available bed in this ward.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {isLoadingPendingAdmissions ? (
-                            <div className="flex items-center justify-center py-4 text-muted-foreground">
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin"/> Loading pending admissions...
+          <>
+            <Card className="shadow-sm mt-6">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <PlusCircle className="h-5 w-5 text-primary"/> Admit Patient to {currentWardDetails.name}
+                    </CardTitle>
+                    <CardDescription>Select a patient from the hospital's pending admissions list and assign them to an available bed in this ward.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {isLoadingPendingAdmissions ? (
+                        <div className="flex items-center justify-center py-4 text-muted-foreground">
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin"/> Loading pending admissions...
+                        </div>
+                    ) : hospitalPendingAdmissions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center">No patients currently pending hospital admission.</p>
+                    ) : (
+                        <>
+                            <div className="space-y-1">
+                                <Label htmlFor="selectPendingPatient">Patient to Admit</Label>
+                                <Select value={selectedPendingPatientId} onValueChange={setSelectedPendingPatientId} disabled={isAdmittingPatient}>
+                                    <SelectTrigger id="selectPendingPatient">
+                                        <SelectValue placeholder="Select patient..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {hospitalPendingAdmissions.map(p => (
+                                            <SelectItem key={p.id} value={p.id}>
+                                                {p.patientName} (From: {p.referringDepartment})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                        ) : hospitalPendingAdmissions.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center">No patients currently pending hospital admission.</p>
-                        ) : (
-                            <>
-                                <div className="space-y-1">
-                                    <Label htmlFor="selectPendingPatient">Patient to Admit</Label>
-                                    <Select value={selectedPendingPatientId} onValueChange={setSelectedPendingPatientId} disabled={isAdmittingPatient}>
-                                        <SelectTrigger id="selectPendingPatient">
-                                            <SelectValue placeholder="Select patient..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {hospitalPendingAdmissions.map(p => (
-                                                <SelectItem key={p.id} value={p.id}>
-                                                    {p.patientName} (From: {p.referringDepartment})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="selectAvailableBed">Available Bed</Label>
-                                    <Select value={selectedAvailableBedId} onValueChange={setSelectedAvailableBedId} disabled={isAdmittingPatient}>
-                                        <SelectTrigger id="selectAvailableBed">
-                                            <SelectValue placeholder="Select an available bed..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {currentWardDetails.beds.filter(b => b.status === "Available").map(bed => (
-                                                <SelectItem key={bed.id} value={bed.id}>{bed.bedNumber}</SelectItem>
-                                            ))}
-                                            {currentWardDetails.beds.filter(b => b.status === "Available").length === 0 && (
-                                                <SelectItem value="no-beds" disabled>No beds available.</SelectItem>
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="admissionDoctor">Admitting Doctor</Label>
-                                    <Input id="admissionDoctor" value={admissionDoctor} onChange={(e) => setAdmissionDoctor(e.target.value)} placeholder="Doctor's name" disabled={isAdmittingPatient}/>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="admissionDiagnosis">Primary Diagnosis/Reason</Label>
-                                    <Textarea 
-                                        id="admissionDiagnosis" 
-                                        value={admissionDiagnosis} 
-                                        onChange={(e) => setAdmissionDiagnosis(e.target.value)} 
-                                        placeholder="Enter primary diagnosis" 
-                                        rows={2}
-                                        disabled={isAdmittingPatient}
-                                    />
-                                </div>
-                            </>
-                        )}
-                    </CardContent>
-                    {hospitalPendingAdmissions.length > 0 && (
-                        <CardFooter>
-                            <Button 
-                                onClick={handleAdmitPatientToWard} 
-                                disabled={isAdmittingPatient || !selectedPendingPatientId || !selectedAvailableBedId || !admissionDoctor.trim() || !admissionDiagnosis.trim()}
-                                className="w-full"
-                            >
-                                {isAdmittingPatient ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PlusCircle className="mr-2 h-4 w-4"/>}
-                                {isAdmittingPatient ? "Admitting..." : "Admit Patient"}
-                            </Button>
-                        </CardFooter>
+                            <div className="space-y-1">
+                                <Label htmlFor="selectAvailableBed">Available Bed</Label>
+                                <Select value={selectedAvailableBedId} onValueChange={setSelectedAvailableBedId} disabled={isAdmittingPatient}>
+                                    <SelectTrigger id="selectAvailableBed">
+                                        <SelectValue placeholder="Select an available bed..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {currentWardDetails.beds.filter(b => b.status === "Available").map(bed => (
+                                            <SelectItem key={bed.id} value={bed.id}>{bed.bedNumber}</SelectItem>
+                                        ))}
+                                        {currentWardDetails.beds.filter(b => b.status === "Available").length === 0 && (
+                                            <SelectItem value="no-beds" disabled>No beds available.</SelectItem>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="admissionDoctor">Admitting Doctor</Label>
+                                <Input id="admissionDoctor" value={admissionDoctor} onChange={(e) => setAdmissionDoctor(e.target.value)} placeholder="Doctor's name" disabled={isAdmittingPatient}/>
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="admissionDiagnosis">Primary Diagnosis/Reason</Label>
+                                <Textarea 
+                                    id="admissionDiagnosis" 
+                                    value={admissionDiagnosis} 
+                                    onChange={(e) => setAdmissionDiagnosis(e.target.value)} 
+                                    placeholder="Enter primary diagnosis" 
+                                    rows={2}
+                                    disabled={isAdmittingPatient}
+                                />
+                            </div>
+                        </>
                     )}
-                </Card>
-
+                </CardContent>
+                {hospitalPendingAdmissions.length > 0 && (
+                    <CardFooter>
+                        <Button 
+                            onClick={handleAdmitPatientToWard} 
+                            disabled={isAdmittingPatient || !selectedPendingPatientId || !selectedAvailableBedId || !admissionDoctor.trim() || !admissionDiagnosis.trim()}
+                            className="w-full"
+                        >
+                            {isAdmittingPatient ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PlusCircle className="mr-2 h-4 w-4"/>}
+                            {isAdmittingPatient ? "Admitting..." : "Admit Patient"}
+                        </Button>
+                    </CardFooter>
+                )}
+            </Card>
+            
+            <div className="grid lg:grid-cols-3 gap-6 items-start mt-6">
                 <Card className="shadow-sm lg:col-span-1">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/>Patients in {currentWardDetails.name}</CardTitle>
@@ -1067,6 +1079,24 @@ export default function WardManagementPage() {
 
                 <Card className="shadow-sm lg:col-span-1">
                     <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary"/>Longest Stays in {currentWardDetails.name}</CardTitle>
+                        <CardDescription>Top 5 patients with the longest current admission.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                         {longestStayPatients.length > 0 ? (
+                            <ol className="list-decimal list-inside text-sm space-y-1 text-muted-foreground">
+                                {longestStayPatients.map(p => (
+                                    <li key={p.admissionId}>{p.name} - {p.duration}</li>
+                                ))}
+                            </ol>
+                        ) : (
+                            <p className="text-xs text-muted-foreground text-center py-2">No patient stay data to display.</p>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card className="shadow-sm lg:col-span-1">
+                    <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Bed className="h-5 w-5 text-primary"/>Bed Status - {currentWardDetails.name}</CardTitle>
                         <CardDescription>Overview of all beds in this ward.</CardDescription>
                     </CardHeader>
@@ -1098,6 +1128,7 @@ export default function WardManagementPage() {
                     </CardContent>
                 </Card>
             </div>
+          </>
         )}
 
         {selectedPatientForDetails && (
@@ -1468,3 +1499,4 @@ export default function WardManagementPage() {
       </div>
   );
 }
+
