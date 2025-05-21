@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2, Cell } from "lucide-react";
+import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2 } from "lucide-react"; // Cell removed from here
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
-import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid } from "recharts"
+import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid, Cell } from "recharts"; // Cell added here
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -26,7 +26,7 @@ interface Patient {
   fullName: string;
   dob: string;
   gender: "Male" | "Female" | "Other";
-  chronicConditions?: string; // Added
+  chronicConditions?: string;
 }
 
 interface WaitingListItem {
@@ -82,7 +82,7 @@ export default function VisitingPatientsPage() {
   const [modalFullName, setModalFullName] = useState("");
   const [modalDob, setModalDob] = useState<Date | undefined>();
   const [modalGender, setModalGender] = useState<Patient["gender"] | "">("");
-  const [modalChronicConditions, setModalChronicConditions] = useState(""); // Added
+  const [modalChronicConditions, setModalChronicConditions] = useState("");
   const [isRegisteringInModal, setIsRegisteringInModal] = useState(false);
 
   const [waitingList, setWaitingList] = useState<WaitingListItem[]>([]);
@@ -104,11 +104,20 @@ export default function VisitingPatientsPage() {
       setIsAnalyticsLoading(true);
       try {
         // Simulate fetching waiting list
+        console.log("Fetching initial waiting list (mock)...");
+        // const wlResponse = await fetch('/api/v1/visits/waiting-list');
+        // if (!wlResponse.ok) throw new Error('Failed to fetch waiting list');
+        // const wlData = await wlResponse.json();
         await new Promise(resolve => setTimeout(resolve, 1000));
         setWaitingList(initialWaitingListData);
+        console.log("Initial waiting list loaded (mock).");
 
         // Simulate fetching analytics
-        await new Promise(resolve => setTimeout(resolve, 200)); // Shorter delay for subsequent mock
+        console.log("Fetching analytics stats (mock)...");
+        // const statsResponse = await fetch('/api/v1/visits/stats');
+        // if (!statsResponse.ok) throw new Error('Failed to fetch visit stats');
+        // const statsData = await statsResponse.json();
+        await new Promise(resolve => setTimeout(resolve, 200)); 
         const dynamicChartData = initialVisitChartData.map(d => ({...d, visits: Math.floor(Math.random()*50) + 5}));
         setVisitChartData(dynamicChartData);
         const totalProcessedFromInitialList = initialWaitingListData.length;
@@ -117,6 +126,7 @@ export default function VisitingPatientsPage() {
             totalProcessed: (totalProcessedFromInitialList + 15).toString(), 
             peakHour: "11:00 AM"
         });
+         console.log("Analytics stats loaded (mock).");
 
       } catch (error) {
         console.error("Error fetching initial data:", error);
@@ -129,7 +139,7 @@ export default function VisitingPatientsPage() {
     fetchInitialData();
   }, []);
 
-  const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
+  const getAvatarHint = (gender?: "Male" | "Female" | "Other") : string => {
     if (gender === "Male") return "male avatar";
     if (gender === "Female") return "female avatar";
     return "patient avatar";
@@ -148,10 +158,12 @@ export default function VisitingPatientsPage() {
     setAssignedDoctor("");
 
     try {
+      console.log(`Fetching patient with ID: ${searchNationalId.trim()} (mock)...`);
       // const response = await fetch(`/api/v1/patients/search?nationalId=${searchNationalId.trim()}`);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+
       if (searchNationalId.trim() === "12345") { 
-        const data: Patient = { id: "P001", nationalId: "12345", fullName: "Demo Patient Found", dob: "1990-01-01", gender: "Male", chronicConditions: "Asthma" };
+        const data: Patient = { id: "P001", nationalId: "12345", fullName: "Demo Patient Found", dob: "1990-01-01", gender: "Male", chronicConditions: "Asthma, Hypertension" };
         setSearchedPatient(data);
         setPatientNotFound(false);
         toast({ title: "Patient Found", description: `${data.fullName}'s details loaded.` });
@@ -189,6 +201,7 @@ export default function VisitingPatientsPage() {
     };
 
     try {
+      console.log("Submitting to /api/v1/visits (mock):", payload);
       // const response = await fetch('/api/v1/visits', {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
@@ -198,7 +211,7 @@ export default function VisitingPatientsPage() {
       //   const errorData = await response.json().catch(() => ({ error: "Failed to add to waiting list. API error."}));
       //   throw new Error(errorData.error || `API error: ${response.statusText}`);
       // }
-      console.log("Submitting to /api/v1/visits (mock):", payload);
+      // const newVisit = await response.json(); 
       await new Promise(resolve => setTimeout(resolve, 1000)); 
 
       const newWaitingListItem: WaitingListItem = {
@@ -240,10 +253,11 @@ export default function VisitingPatientsPage() {
       fullName: modalFullName,
       dateOfBirth: format(modalDob, "yyyy-MM-dd"),
       gender: modalGender,
-      chronicConditions: modalChronicConditions, // Added
+      chronicConditions: modalChronicConditions,
     };
 
     try {
+      console.log("Submitting to /api/v1/patients (modal quick registration - mock):", payload);
       // const response = await fetch('/api/v1/patients', {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
@@ -253,22 +267,23 @@ export default function VisitingPatientsPage() {
       //   const errorData = await response.json().catch(() => ({ error: "Registration failed. API error."}));
       //   throw new Error(errorData.error || `API error: ${response.statusText}`);
       // }
-      console.log("Submitting to /api/v1/patients (modal quick registration - mock):", payload);
+      // const registeredPatient = await response.json();
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       toast({
         title: "Patient Registered (Mock)",
         description: `${payload.fullName} has been registered. You can now search for them using ID: ${payload.nationalId}.`,
       });
-      setSearchNationalId(payload.nationalId);
+      setSearchNationalId(payload.nationalId); // Pre-fill search for convenience
       setIsModalOpen(false);
-      setPatientNotFound(false);
+      setPatientNotFound(false); // Reset not found status
 
+      // Clear modal form fields
       setModalNationalId("");
       setModalFullName("");
       setModalDob(undefined);
       setModalGender("");
-      setModalChronicConditions(""); // Added
+      setModalChronicConditions("");
     } catch (error: any) {
       console.error("Error registering patient in modal:", error);
       toast({ variant: "destructive", title: "Registration Error", description: error.message || "Could not register patient." });
@@ -374,7 +389,7 @@ export default function VisitingPatientsPage() {
                               </SelectContent>
                             </Select>
                           </div>
-                           <div className="grid grid-cols-4 items-start gap-4"> {/* Changed to items-start for textarea alignment */}
+                           <div className="grid grid-cols-4 items-start gap-4">
                             <Label htmlFor="modalChronicConditions" className="text-right pt-2">Chronic Conditions</Label>
                             <Textarea id="modalChronicConditions" value={modalChronicConditions} onChange={(e) => setModalChronicConditions(e.target.value)} className="col-span-3" placeholder="e.g., Hypertension, Diabetes (comma-separated)" rows={2}/>
                           </div>
@@ -508,10 +523,10 @@ export default function VisitingPatientsPage() {
                <Button variant="outline" className="w-full mt-4 text-sm" onClick={async () => {
                     setIsWaitingListLoading(true);
                     try {
+                        console.log("Refreshing waiting list (mock)...");
                         // const response = await fetch('/api/v1/visits/waiting-list');
                         // if (!response.ok) throw new Error('Failed to refresh waiting list');
-                        // const data = await response.json();
-                        // setWaitingList(data);
+                        // const wlData = await response.json();
                         await new Promise(resolve => setTimeout(resolve, 700)); 
                         const refreshedMockList = initialWaitingListData.map(item => ({...item, timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})).sort(() => 0.5 - Math.random());
                         setWaitingList(refreshedMockList);
@@ -589,11 +604,10 @@ export default function VisitingPatientsPage() {
                         content={<ChartTooltipContent indicator="dot" hideLabel />}
                     />
                     <Bar dataKey="visits" radius={4}>
-                      {visitChartData.map((_entry, index) => {
-                        const departmentName = _entry.department || "Unknown Department";
-                        const departmentKey = departmentName.toLowerCase().replace(/\s+/g, '') as keyof typeof chartConfig;
+                       {visitChartData.map((_entry, index) => {
+                        const departmentKey = (_entry.department || "Unknown").toLowerCase().replace(/\s+/g, '') as keyof typeof chartConfig;
                         const chartItem = chartConfig[departmentKey];
-                        const color = _entry.fill || chartItem?.color || '#8884d8';
+                        const color = _entry.fill || chartItem?.color || '#8884d8'; // Use fill from data, then config, then default
                         return <Cell key={`cell-${index}`} fill={color} />;
                       })}
                     </Bar>
@@ -632,3 +646,4 @@ export default function VisitingPatientsPage() {
   );
 }
 
+    
