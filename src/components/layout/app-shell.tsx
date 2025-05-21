@@ -1,5 +1,5 @@
 
-"use client"; 
+"use client";
 
 import * as React from "react";
 import Link from "next/link";
@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { Stethoscope, Menu } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS, BOTTOM_NAV_ITEMS, type NavItem } from "@/lib/constants"; 
+import { NAV_ITEMS, BOTTOM_NAV_ITEMS, type NavItem } from "@/lib/constants";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +21,6 @@ import {
   SidebarInset,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { TooltipProvider } from "@/components/ui/tooltip"; 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -37,42 +36,40 @@ import { useLocale } from '@/context/locale-context';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { toggleSidebar, state: sidebarState, collapsible: sidebarCollapsible } = useSidebar(); 
-  const { currentLocale } = useLocale(); 
+  const { toggleSidebar, state: sidebarState, collapsible: sidebarCollapsible } = useSidebar();
+  const { currentLocale } = useLocale();
   const currentYear = new Date().getFullYear();
 
   const isIconOnlyCollapsed = sidebarState === "collapsed" && sidebarCollapsible === "icon";
 
   return (
-    <TooltipProvider delayDuration={0}>
-      <Sidebar> 
+      <Sidebar>
         <SidebarHeader>
           <div className={cn(
             "flex items-center justify-between w-full",
-            isIconOnlyCollapsed ? "p-2 flex-col h-[64px] items-center" : "p-4" 
+            isIconOnlyCollapsed ? "p-2 flex-col h-[64px] items-center" : "p-4"
           )}>
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className={cn(
                 "flex items-center gap-2 overflow-hidden",
-                isIconOnlyCollapsed && "justify-center w-full" 
+                isIconOnlyCollapsed && "justify-center w-full"
               )}
             >
               <Stethoscope className="h-7 w-7 text-primary shrink-0" />
               <h1 className={cn(
-                "text-xl font-semibold transition-opacity duration-200 ease-in-out whitespace-nowrap", // Added whitespace-nowrap
-                isIconOnlyCollapsed ? "opacity-0 w-0 h-0 sr-only pointer-events-none" : "opacity-100 w-auto h-auto" // pointer-events-none when hidden
+                "text-xl font-semibold transition-opacity duration-200 ease-in-out whitespace-nowrap",
+                isIconOnlyCollapsed ? "opacity-0 w-0 h-0 sr-only pointer-events-none" : "opacity-100 w-auto h-auto"
               )}>H365</h1>
             </Link>
-            {/* Desktop toggle button, always visible */}
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleSidebar}
-              className={cn(
-                "h-7 w-7 shrink-0", // Added shrink-0
-                isIconOnlyCollapsed && "mt-auto mb-1" 
-              )} 
+              className={cn( // This button should always be visible and clickable
+                "h-7 w-7 shrink-0",
+                isIconOnlyCollapsed && "mt-auto mb-1" // Adjust margin if needed when collapsed
+              )}
               aria-label="Toggle sidebar"
             >
               <Menu className="h-5 w-5" />
@@ -81,7 +78,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarHeader>
         <SidebarContent className={cn(isIconOnlyCollapsed ? "p-2" : "p-2")}>
           <SidebarMenu>
-            {NAV_ITEMS.map((item: NavItem) => ( 
+            {NAV_ITEMS.map((item: NavItem) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
@@ -101,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarContent>
         <SidebarFooter className={cn(isIconOnlyCollapsed ? "p-2 items-center" : "p-2")}>
            <SidebarMenu>
-            {BOTTOM_NAV_ITEMS.map((item: NavItem) => ( 
+            {BOTTOM_NAV_ITEMS.map((item: NavItem) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
@@ -164,6 +161,5 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p>Version 0.1.0 (Prototype)</p>
         </footer>
       </SidebarInset>
-    </TooltipProvider>
   );
 }
