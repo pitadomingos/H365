@@ -19,7 +19,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
-  SidebarTrigger,
+  SidebarTrigger, // This will be removed/become non-functional due to removal of mobile sidebar
   useSidebar,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip"; 
@@ -38,32 +38,29 @@ import { useLocale } from '@/context/locale-context';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { toggleSidebar, isMobile } = useSidebar();
+  const { toggleSidebar, isMobile } = useSidebar(); // isMobile will always be false
   const { currentLocale } = useLocale(); 
   const currentYear = new Date().getFullYear();
 
-  // CSS variables are now set in RootLayout's div wrapper
-
   return (
     <TooltipProvider delayDuration={0}>
-      <Sidebar> {/* Inherits collapsible mode from SidebarProvider in RootLayout */}
+      <Sidebar> {/* collapsible="icon" is now the default behavior for desktop */}
         <SidebarHeader className="p-4">
           <div className="flex items-center justify-between w-full">
             <Link href="/" className="flex items-center gap-2">
               <Stethoscope className="h-7 w-7 text-primary" />
               <h1 className="text-xl font-semibold group-data-[collapsible=icon]:hidden">H365</h1>
             </Link>
-            {!isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleSidebar}
-                className="h-7 w-7 group-data-[collapsible=icon]:hidden"
-                aria-label="Toggle sidebar"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-            )}
+            {/* Desktop toggle button, hidden when sidebar is icon-only */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              className="h-7 w-7 group-data-[collapsible=icon]:hidden"
+              aria-label="Toggle sidebar"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
           </div>
         </SidebarHeader>
         <SidebarContent className="flex-1 p-2">
@@ -109,7 +106,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
-          <SidebarTrigger className="md:hidden" />
+          {/* SidebarTrigger for mobile sheet is removed as mobile behavior is disabled */}
+          {/* <SidebarTrigger className="md:hidden" /> */}
           <div className="flex-1">
             {/* Breadcrumbs or page title can go here */}
           </div>
@@ -145,7 +143,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="flex-1 overflow-auto p-4 sm:p-6 bg-muted/40 dark:bg-transparent">
-          {/* Re-keying children with currentLocale to force re-render on locale change */}
           {React.cloneElement(children as React.ReactElement, { key: currentLocale })}
         </main>
         <footer className="border-t bg-background p-4 text-center text-xs text-muted-foreground">
