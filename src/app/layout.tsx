@@ -24,9 +24,9 @@ export const metadata: Metadata = {
   description: 'Comprehensive Hospital Management System',
 };
 
-const SIDEBAR_WIDTH = "16rem";
-const SIDEBAR_WIDTH_MOBILE = "18rem"; 
-const SIDEBAR_WIDTH_ICON = "3rem";
+const SIDEBAR_WIDTH = "16rem"; 
+// SIDEBAR_WIDTH_ICON is no longer needed if sidebar is always expanded
+// const SIDEBAR_WIDTH_ICON = "3rem"; 
 
 export default function RootLayout({
   children,
@@ -43,13 +43,13 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <SidebarProvider collapsible="icon" defaultOpen={true}> {/* Ensure defaultOpen is true */}
+            {/* SidebarProvider might only be needed for TooltipProvider if toggle logic is removed */}
+            <SidebarProvider> 
               <div
                 style={
                   {
                     "--sidebar-width": SIDEBAR_WIDTH,
-                    "--sidebar-width-mobile": SIDEBAR_WIDTH_MOBILE,
-                    "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
+                    // "--sidebar-width-icon": SIDEBAR_WIDTH_ICON, // No longer needed
                   } as React.CSSProperties
                 }
                 className={cn(

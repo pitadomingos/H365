@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -19,7 +18,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
-  useSidebar,
+  // useSidebar hook might not be needed here if sidebar is always expanded
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -35,82 +34,60 @@ import { useLocale } from '@/context/locale-context';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { 
-    state: sidebarState, 
-    collapsible: sidebarCollapsible, 
-    toggleSidebar 
-  } = useSidebar();
-  const { currentLocale } = useLocale();
+  const { currentLocale } = useLocale(); // For passing key to children for re-render on locale change
   const currentYear = new Date().getFullYear();
 
-  const isIconOnlyCollapsed = sidebarState === "collapsed" && sidebarCollapsible === "icon";
+  // No need for sidebar state management here if always expanded
 
   return (
     <>
-      <Sidebar>
+      <Sidebar> {/* Sidebar will now be always expanded based on its internal styling */}
         <SidebarHeader>
-          <div className={cn(
-            "flex items-center justify-between w-full",
-            isIconOnlyCollapsed ? "p-2 flex-col h-[64px] items-center" : "p-4"
-          )}>
+          <div className="flex items-center justify-between w-full p-4"> {/* Fixed padding */}
             <Link
               href="/"
-              className={cn(
-                "flex items-center gap-2 overflow-hidden",
-                isIconOnlyCollapsed && "justify-center w-full"
-              )}
+              className="flex items-center gap-2 overflow-hidden"
             >
               <Stethoscope className="h-7 w-7 text-primary shrink-0" />
-              <h1 className={cn(
-                "text-xl font-semibold transition-opacity duration-200 ease-in-out whitespace-nowrap",
-                isIconOnlyCollapsed ? "opacity-0 w-0 h-0 sr-only pointer-events-none" : "opacity-100 w-auto h-auto"
-              )}>H365</h1>
+              <h1 className="text-xl font-semibold whitespace-nowrap">H365</h1> {/* Always visible */}
             </Link>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              className="h-7 w-7 shrink-0" // Always visible for desktop toggle
-              aria-label="Toggle sidebar"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
+            {/* Removed Menu toggle button as sidebar is always expanded */}
           </div>
         </SidebarHeader>
-        <SidebarContent className={cn(isIconOnlyCollapsed ? "p-2" : "p-2")}>
+        <SidebarContent> {/* Fixed padding */}
           <SidebarMenu>
             {NAV_ITEMS.map((item: NavItem) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
                   isActive={pathname === item.href}
-                  tooltip={item.label}
+                  // tooltip={item.label} // Tooltip less critical if always expanded
                   disabled={item.disabled}
                   className={cn(item.disabled && "cursor-not-allowed opacity-50")}
                 >
                   <Link href={item.href} aria-disabled={item.disabled} tabIndex={item.disabled ? -1 : undefined}>
                     <item.icon />
-                    <span>{item.label}</span>
+                    <span>{item.label}</span> {/* Label always visible */}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter className={cn(isIconOnlyCollapsed ? "p-2 items-center" : "p-2")}>
+        <SidebarFooter> {/* Fixed padding */}
            <SidebarMenu>
             {BOTTOM_NAV_ITEMS.map((item: NavItem) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
                   isActive={pathname === item.href}
-                  tooltip={item.label}
+                  // tooltip={item.label}
                   disabled={item.disabled}
                   className={cn(item.disabled && "cursor-not-allowed opacity-50")}
                 >
                   <Link href={item.href} aria-disabled={item.disabled} tabIndex={item.disabled ? -1 : undefined}>
                     <item.icon />
-                    <span>{item.label}</span>
+                    <span>{item.label}</span> {/* Label always visible */}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -118,7 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset> {/* SidebarInset will always have fixed margin based on expanded sidebar width */}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
           <div className="flex-1">
             {/* Breadcrumbs or page title can go here */}
