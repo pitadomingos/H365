@@ -33,16 +33,20 @@ import {
 import { LocaleToggle } from "@/components/locale-toggle";
 import { useLocale } from '@/context/locale-context';
 
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { toggleSidebar, state: sidebarState, collapsible: sidebarCollapsible } = useSidebar();
+  const { 
+    state: sidebarState, 
+    collapsible: sidebarCollapsible, 
+    toggleSidebar 
+  } = useSidebar();
   const { currentLocale } = useLocale();
   const currentYear = new Date().getFullYear();
 
   const isIconOnlyCollapsed = sidebarState === "collapsed" && sidebarCollapsible === "icon";
 
   return (
+    <>
       <Sidebar>
         <SidebarHeader>
           <div className={cn(
@@ -66,10 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               variant="ghost"
               size="icon"
               onClick={toggleSidebar}
-              className={cn( // This button should always be visible and clickable
-                "h-7 w-7 shrink-0",
-                isIconOnlyCollapsed && "mt-auto mb-1" // Adjust margin if needed when collapsed
-              )}
+              className="h-7 w-7 shrink-0" // Always visible for desktop toggle
               aria-label="Toggle sidebar"
             >
               <Menu className="h-5 w-5" />
@@ -161,5 +162,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p>Version 0.1.0 (Prototype)</p>
         </footer>
       </SidebarInset>
+    </>
   );
 }
