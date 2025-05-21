@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 const SIDEBAR_WIDTH = "16rem";
-const SIDEBAR_WIDTH_MOBILE = "18rem";
+const SIDEBAR_WIDTH_MOBILE = "18rem"; 
 const SIDEBAR_WIDTH_ICON = "3rem";
 
 export default function RootLayout({
@@ -43,7 +43,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <SidebarProvider collapsible="icon" defaultOpen={true}>
+            <SidebarProvider collapsible="icon" defaultOpen={true}> {/* Ensure defaultOpen is true */}
               <div
                 style={
                   {

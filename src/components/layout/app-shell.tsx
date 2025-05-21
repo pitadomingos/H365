@@ -19,7 +19,6 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
-  SidebarTrigger, // This will be removed/become non-functional due to removal of mobile sidebar
   useSidebar,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip"; 
@@ -38,32 +37,49 @@ import { useLocale } from '@/context/locale-context';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { toggleSidebar, isMobile } = useSidebar(); // isMobile will always be false
+  const { toggleSidebar, state: sidebarState, collapsible: sidebarCollapsible } = useSidebar(); 
   const { currentLocale } = useLocale(); 
   const currentYear = new Date().getFullYear();
 
+  const isIconOnlyCollapsed = sidebarState === "collapsed" && sidebarCollapsible === "icon";
+
   return (
     <TooltipProvider delayDuration={0}>
-      <Sidebar> {/* collapsible="icon" is now the default behavior for desktop */}
-        <SidebarHeader className="p-4">
-          <div className="flex items-center justify-between w-full">
-            <Link href="/" className="flex items-center gap-2">
-              <Stethoscope className="h-7 w-7 text-primary" />
-              <h1 className="text-xl font-semibold group-data-[collapsible=icon]:hidden">H365</h1>
+      <Sidebar> 
+        <SidebarHeader>
+          <div className={cn(
+            "flex items-center justify-between w-full",
+            isIconOnlyCollapsed ? "p-2 flex-col h-[64px] items-center" : "p-4" 
+          )}>
+            <Link 
+              href="/" 
+              className={cn(
+                "flex items-center gap-2 overflow-hidden",
+                isIconOnlyCollapsed && "justify-center w-full" 
+              )}
+            >
+              <Stethoscope className="h-7 w-7 text-primary shrink-0" />
+              <h1 className={cn(
+                "text-xl font-semibold transition-opacity duration-200 ease-in-out whitespace-nowrap", // Added whitespace-nowrap
+                isIconOnlyCollapsed ? "opacity-0 w-0 h-0 sr-only pointer-events-none" : "opacity-100 w-auto h-auto" // pointer-events-none when hidden
+              )}>H365</h1>
             </Link>
-            {/* Desktop toggle button, hidden when sidebar is icon-only */}
+            {/* Desktop toggle button, always visible */}
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleSidebar}
-              className="h-7 w-7 group-data-[collapsible=icon]:hidden"
+              className={cn(
+                "h-7 w-7 shrink-0", // Added shrink-0
+                isIconOnlyCollapsed && "mt-auto mb-1" 
+              )} 
               aria-label="Toggle sidebar"
             >
               <Menu className="h-5 w-5" />
             </Button>
           </div>
         </SidebarHeader>
-        <SidebarContent className="flex-1 p-2">
+        <SidebarContent className={cn(isIconOnlyCollapsed ? "p-2" : "p-2")}>
           <SidebarMenu>
             {NAV_ITEMS.map((item: NavItem) => ( 
               <SidebarMenuItem key={item.href}>
@@ -83,7 +99,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter className="p-2">
+        <SidebarFooter className={cn(isIconOnlyCollapsed ? "p-2 items-center" : "p-2")}>
            <SidebarMenu>
             {BOTTOM_NAV_ITEMS.map((item: NavItem) => ( 
               <SidebarMenuItem key={item.href}>
@@ -106,8 +122,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
-          {/* SidebarTrigger for mobile sheet is removed as mobile behavior is disabled */}
-          {/* <SidebarTrigger className="md:hidden" /> */}
           <div className="flex-1">
             {/* Breadcrumbs or page title can go here */}
           </div>
