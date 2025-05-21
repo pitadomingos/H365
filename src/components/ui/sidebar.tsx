@@ -46,18 +46,18 @@ export function useSidebar() {
   return context
 }
 
-interface SidebarProviderProps {
+export interface SidebarProviderProps {
   children: React.ReactNode;
   defaultOpen?: boolean;
   collapsible?: "offcanvas" | "icon" | "none";
-  open?: boolean; // Controlled open state
-  onOpenChange?: (open: boolean) => void; // Callback for controlled state
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 
 export const SidebarProvider: React.FC<SidebarProviderProps> = ({
   children,
-  defaultOpen: propDefaultOpen = true, // Default to true if not provided
+  defaultOpen: propDefaultOpen = true,
   collapsible: propCollapsible = "icon",
   open: controlledOpen,
   onOpenChange: setControlledOpen,
@@ -65,13 +65,9 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
 
-  // Determine if the component is controlled
   const isControlled = controlledOpen !== undefined && setControlledOpen !== undefined;
-
-  // Internal state for uncontrolled component, initialized with propDefaultOpen
   const [_internalOpen, _setInternalOpen] = React.useState(propDefaultOpen);
 
-  // Effect to read cookie only on client and if uncontrolled
   React.useEffect(() => {
     if (!isMobile && !isControlled) {
       const cookieValue = document.cookie
@@ -80,9 +76,11 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({
         ?.split("=")[1];
       if (cookieValue !== undefined) {
         _setInternalOpen(cookieValue === "true");
+      } else {
+         _setInternalOpen(propDefaultOpen); // Fallback to propDefaultOpen if no cookie
       }
     }
-  }, [isMobile, isControlled]); // Run only when isMobile or isControlled changes
+  }, [isMobile, isControlled, propDefaultOpen]);
 
 
   const open = isControlled ? controlledOpen : _internalOpen;
@@ -99,7 +97,7 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({
         }
       }
     },
-    [isControlled, open, setControlledOpen, _setInternalOpen, isMobile]
+    [isControlled, open, setControlledOpen, _setInternalOpen, isMobile] // Removed _internalOpen from deps
   );
 
   const toggleSidebar = React.useCallback(() => {
@@ -161,7 +159,7 @@ const Sidebar = React.forwardRef<
   (
     {
       side = "left",
-      variant = "sidebar",
+      variant: variantProp,
       collapsible: collapsibleProp,
       className,
       children,
@@ -170,7 +168,8 @@ const Sidebar = React.forwardRef<
     ref
   ) => {
     const { isMobile, state, openMobile, setOpenMobile, collapsible: contextCollapsible } = useSidebar();
-    const effectiveCollapsible = collapsibleProp || contextCollapsible || "icon";
+    const effectiveCollapsible = collapsibleProp || contextCollapsible || "icon"; // Default to icon if nothing else specified
+    const variant = variantProp || "sidebar"; // Default variant
 
 
     if (effectiveCollapsible === "none") {
@@ -178,6 +177,7 @@ const Sidebar = React.forwardRef<
         <div
           className={cn(
             "flex h-full w-[var(--sidebar-width)] flex-col bg-sidebar text-sidebar-foreground",
+            side === "left" ? "border-r border-sidebar-border" : "border-l border-sidebar-border",
             className
           )}
           ref={ref}
@@ -207,6 +207,30 @@ const Sidebar = React.forwardRef<
     }
 
     // Desktop sidebar
+    const sizerWidthClass =
+      state === "collapsed" && effectiveCollapsible === "icon"
+        ? variant === "inset" || variant === "floating"
+          ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]" // For inset/floating collapsed icon
+          : "w-[var(--sidebar-width-icon)]" // For default collapsed icon
+        : state === "collapsed" && effectiveCollapsible === "offcanvas"
+          ? "w-0" // For offcanvas collapsed
+          : "w-[var(--sidebar-width)]"; // For expanded
+
+    const fixedContentWidthClass =
+      state === "collapsed" && effectiveCollapsible === "icon"
+        ? variant === "inset" || variant === "floating"
+          ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]" // For inset/floating collapsed icon
+          : "w-[var(--sidebar-width-icon)]" // For default collapsed icon
+        : state === "collapsed" && effectiveCollapsible === "offcanvas"
+          ? side === "left" ? "-left-[var(--sidebar-width)]" : "-right-[var(--sidebar-width)]" // For offcanvas collapsed
+          : "w-[var(--sidebar-width)]"; // For expanded
+    
+    const fixedContentPositionClass = 
+      state === "collapsed" && effectiveCollapsible === "offcanvas"
+      ? side === "left" ? "-left-[var(--sidebar-width)]" : "-right-[var(--sidebar-width)]"
+      : side === "left" ? "left-0" : "right-0";
+
+
     return (
       <div
         ref={ref}
@@ -224,35 +248,21 @@ const Sidebar = React.forwardRef<
         <div
           className={cn(
             "duration-200 relative h-svh bg-transparent transition-[width] ease-linear",
-            // Width for expanded state
-            "group-data-[state=expanded]:w-[var(--sidebar-width)]",
-            // Width for collapsed icon state
-            "group-data-[state=collapsed]:group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)]",
-            // Width for collapsed offcanvas state (becomes 0)
-            "group-data-[state=collapsed]:group-data-[collapsible=offcanvas]:w-0",
-             // Adjustments for floating/inset variants when collapsed icon
-            (variant === "floating" || variant === "inset") && "group-data-[state=collapsed]:group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
+            sizerWidthClass
           )}
         />
         {/* Actual sidebar content container */}
         <div
           className={cn(
             "duration-200 fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width] ease-linear md:flex",
-            side === "left" ? "left-0" : "right-0",
-            "group-data-[state=expanded]:w-[var(--sidebar-width)]",
-            "group-data-[state=collapsed]:group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)]",
-            // Offcanvas collapsed behavior
-            side === "left" && "group-data-[state=collapsed]:group-data-[collapsible=offcanvas]:-left-[var(--sidebar-width)]",
-            side === "right" && "group-data-[state=collapsed]:group-data-[collapsible=offcanvas]:-right-[var(--sidebar-width)]",
-            // Floating/inset adjustments
+            fixedContentPositionClass,
+            fixedContentWidthClass,
             (variant === "floating" || variant === "inset") && "p-2",
-            (variant === "floating" || variant === "inset") && "group-data-[state=collapsed]:group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]",
-            // Border for default sidebar variant
             (variant !== "floating" && variant !== "inset") && (side === "left" ? "border-r border-sidebar-border" : "border-l border-sidebar-border")
           )}
         >
           <div
-            data-sidebar="sidebar-inner-content" // Added data attribute for clarity
+            data-sidebar="sidebar-inner-content"
             className={cn(
                 "flex h-full w-full flex-col bg-sidebar",
                 (variant === "floating" || variant === "inset") && "rounded-lg border border-sidebar-border shadow"
@@ -300,7 +310,7 @@ const SidebarRail = React.forwardRef<
   const { toggleSidebar, collapsible } = useSidebar();
 
   if (collapsible !== "icon") {
-    return null; // Only render rail if collapsible mode is "icon"
+    return null; 
   }
 
   return (
@@ -325,18 +335,17 @@ SidebarRail.displayName = "SidebarRail"
 
 const SidebarInset = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"main">
+  React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
   return (
     <main
       ref={ref}
       className={cn(
         "relative flex min-h-svh flex-1 flex-col bg-background",
-        "md:peer-data-[state=expanded]:peer-data-[side=left]:pl-[var(--sidebar-width)]",
-        "md:peer-data-[state=expanded]:peer-data-[side=right]:pr-[var(--sidebar-width)]",
-        "md:peer-data-[state=collapsed]:peer-data-[collapsible=icon]:peer-data-[side=left]:pl-[var(--sidebar-width-icon)]",
-        "md:peer-data-[state=collapsed]:peer-data-[collapsible=icon]:peer-data-[side=right]:pr-[var(--sidebar-width-icon)]",
-
+        // For default variant, SidebarInset is pushed by the sizer div in <Sidebar />
+        // No need for explicit padding/margin here related to sidebar width for default variant.
+        
+        // Inset variant specific margins (these should make the inset area shift correctly)
         "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))]",
         "md:peer-data-[variant=inset]:m-2",
         "md:peer-data-[state=expanded]:peer-data-[variant=inset]:peer-data-[side=left]:ml-[var(--sidebar-width)]",
@@ -573,7 +582,7 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
-      children, // Explicitly include children here
+      children, 
       ...props
     },
     ref
@@ -781,3 +790,5 @@ export {
   SidebarSeparator,
   SidebarTrigger,
 }
+
+    
