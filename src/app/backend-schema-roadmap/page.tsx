@@ -28,8 +28,8 @@ export default function BackendSchemaRoadmapPage() {
         </CardHeader>
         <CardContent className="prose dark:prose-invert max-w-none">
           <p>
-            This document outlines a phased roadmap for developing the backend for the H365 Hospital Management System, 
-            along with initial database schema definitions and dummy data. The backend will be built using Node.js 
+            This document outlines a phased roadmap for developing the backend for the H365 Hospital Management System,
+            along with initial database schema definitions and dummy data. The backend will be built using Node.js
             with the Express framework and MySQL as the database, hosted on Aiven.
           </p>
         </CardContent>
@@ -58,7 +58,7 @@ export default function BackendSchemaRoadmapPage() {
           <CardDescription>Initial schema definitions and dummy data examples for MySQL.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          
+
           {/* --- Phase 1 --- */}
           <section>
             <h3 className="text-lg font-semibold mb-2">Phase 1: Core Infrastructure, User Management & Patient Registration</h3>
@@ -69,6 +69,7 @@ export default function BackendSchemaRoadmapPage() {
             <ul className="list-disc list-inside text-sm pl-4">
               <li><code>Users</code> (for system users like doctors, nurses, admins)</li>
               <li><code>Patients</code></li>
+              <li><code>Facilities</code> (basic table for hospitals/clinics)</li>
             </ul>
             <h4 className="font-medium mt-3 mb-1">API Endpoints to Implement:</h4>
             <ul className="list-disc list-inside text-sm pl-4">
@@ -79,6 +80,27 @@ export default function BackendSchemaRoadmapPage() {
               <li><code>GET /api/v1/patients/{'{patientId}'}</code> (basic version)</li>
             </ul>
 
+            <h4 className="font-medium mt-4 mb-1">Table: <code>Facilities</code></h4>
+            <SqlCode>{
+`CREATE TABLE Facilities (
+    id VARCHAR(100) PRIMARY KEY, -- e.g., HOSP001, CLINIC002
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL, -- e.g., 'Hospital', 'Clinic', 'District Warehouse', 'National Warehouse'
+    district VARCHAR(255),
+    province VARCHAR(255),
+    level VARCHAR(50), -- e.g., 'Primary', 'Secondary', 'Tertiary', 'District', 'Provincial', 'National'
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);`
+            }</SqlCode>
+            <h5 className="text-xs font-semibold">Dummy Data for Facilities:</h5>
+            <SqlCode>{
+`INSERT INTO Facilities (id, name, type, district, province, level) VALUES
+('HOSP001', 'HealthFlow Central Hospital', 'Hospital', 'Wellness District', 'Health Province', 'Tertiary'),
+('WH_DIST_WELL', 'Wellness District Warehouse', 'District Warehouse', 'Wellness District', 'Health Province', 'District');`
+            }</SqlCode>
+
+
             <h4 className="font-medium mt-4 mb-1">Table: <code>Users</code></h4>
             <SqlCode>{
 `CREATE TABLE Users (
@@ -86,11 +108,12 @@ export default function BackendSchemaRoadmapPage() {
     username VARCHAR(100) NOT NULL UNIQUE,
     passwordHash VARCHAR(255) NOT NULL,
     fullName VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL, -- e.g., 'Doctor', 'Nurse', 'Admin', 'LabTech', 'Pharmacist'
-    facilityId VARCHAR(100), -- Link to hospital/clinic if applicable
+    role VARCHAR(50) NOT NULL, -- e.g., 'Doctor', 'Nurse', 'Admin', 'LabTech', 'Pharmacist', 'DistrictOfficer'
+    facilityId VARCHAR(100), -- Link to a facility in the Facilities table
     isActive BOOLEAN DEFAULT TRUE,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (facilityId) REFERENCES Facilities(id)
 );`
             }</SqlCode>
             <h5 className="text-xs font-semibold">Dummy Data for Users:</h5>
@@ -143,13 +166,12 @@ export default function BackendSchemaRoadmapPage() {
             </p>
              <h4 className="font-medium mt-3 mb-1">Key Entities & Tables:</h4>
             <ul className="list-disc list-inside text-sm pl-4">
-              <li><code>Doctors</code> (if distinct from Users, or use Users table with role 'Doctor')</li>
               <li><code>Appointments</code></li>
               <li><code>Visits</code></li>
             </ul>
              <h4 className="font-medium mt-3 mb-1">API Endpoints to Implement:</h4>
             <ul className="list-disc list-inside text-sm pl-4">
-              <li><code>GET /api/v1/doctors</code></li>
+              <li><code>GET /api/v1/doctors</code> (filter Users by role 'Doctor')</li>
               <li><code>POST /api/v1/appointments</code></li>
               <li><code>GET /api/v1/appointments</code></li>
               <li><code>POST /api/v1/visits</code></li>
@@ -160,7 +182,7 @@ export default function BackendSchemaRoadmapPage() {
 `CREATE TABLE Appointments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     patientId INT NOT NULL,
-    doctorId INT NOT NULL, 
+    doctorId INT NOT NULL,
     appointmentDate DATE NOT NULL,
     appointmentTime TIME NOT NULL,
     type VARCHAR(255) NOT NULL,
@@ -169,7 +191,7 @@ export default function BackendSchemaRoadmapPage() {
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (patientId) REFERENCES Patients(id),
-    FOREIGN KEY (doctorId) REFERENCES Users(id) -- Assuming doctorId refers to Users.id
+    FOREIGN KEY (doctorId) REFERENCES Users(id)
 );`
             }</SqlCode>
             <h5 className="text-xs font-semibold">Dummy Data for Appointments:</h5>
@@ -186,6 +208,7 @@ INSERT INTO Appointments (patientId, doctorId, appointmentDate, appointmentTime,
 `CREATE TABLE Visits (
     id INT AUTO_INCREMENT PRIMARY KEY,
     patientId INT NOT NULL,
+    facilityId VARCHAR(100) NOT NULL, -- Where the visit is happening
     visitDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     department VARCHAR(255) NOT NULL,
     reasonForVisit TEXT,
@@ -195,14 +218,15 @@ INSERT INTO Appointments (patientId, doctorId, appointmentDate, appointmentTime,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (patientId) REFERENCES Patients(id),
+    FOREIGN KEY (facilityId) REFERENCES Facilities(id),
     FOREIGN KEY (assignedDoctorId) REFERENCES Users(id)
 );`
             }</SqlCode>
             <h5 className="text-xs font-semibold">Dummy Data for Visits:</h5>
             <SqlCode>{
-`INSERT INTO Visits (patientId, department, reasonForVisit, status, timeAdded) VALUES
-(1, 'Outpatient General Consultation', 'Fever and cough', 'Waiting for Doctor', CURTIME()),
-(2, 'Laboratory (Scheduled Tests)', 'Routine blood work', 'Awaiting Sample Collection', CURTIME());`
+`INSERT INTO Visits (patientId, facilityId, visitDate, department, reasonForVisit, status, timeAdded) VALUES
+(1, 'HOSP001', NOW(), 'Outpatient General Consultation', 'Fever and cough', 'Waiting for Doctor', CURTIME()),
+(2, 'HOSP001', NOW(), 'Laboratory (Scheduled Tests)', 'Routine blood work', 'Awaiting Sample Collection', CURTIME());`
             }</SqlCode>
           </section>
           <Separator />
@@ -215,9 +239,10 @@ INSERT INTO Appointments (patientId, doctorId, appointmentDate, appointmentTime,
               <li><code>Consultations</code></li>
               <li><code>LabOrders</code></li>
               <li><code>LabOrderItems</code> (linking order to specific tests)</li>
-              <li><code>LabResults</code></li>
+              <li><code>LabResults</code> (detailed, per test item)</li>
               <li><code>ImagingOrders</code></li>
               <li><code>ImagingReports</code></li>
+              <li><code>Notifications</code> (For lab/imaging results, referrals etc.)</li>
             </ul>
              <h4 className="font-medium mt-3 mb-1">API Endpoints to Implement:</h4>
             <ul className="list-disc list-inside text-sm pl-4">
@@ -236,6 +261,7 @@ INSERT INTO Appointments (patientId, doctorId, appointmentDate, appointmentTime,
     visitId INT UNIQUE, -- Optional: Link to an initial Visit record
     consultationDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     consultingDoctorId INT NOT NULL,
+    facilityId VARCHAR(100) NOT NULL,
     department VARCHAR(255) NOT NULL, -- e.g., "Outpatient", "Cardiology"
     referringDoctorId INT,
     reasonForReferral TEXT,
@@ -245,29 +271,30 @@ INSERT INTO Appointments (patientId, doctorId, appointmentDate, appointmentTime,
     vitalsBmi DECIMAL(4,1),
     vitalsBloodPressure VARCHAR(50),
     symptoms TEXT,
-    labResultsSummaryInput TEXT,
-    imagingDataSummaryInput TEXT,
+    labResultsSummaryInput TEXT, -- Summary entered by doctor for AI
+    imagingDataSummaryInput TEXT, -- Summary entered by doctor for AI
     aiDiagnosis TEXT,
     aiPrescription TEXT,
     aiRecommendations TEXT,
     doctorNotes TEXT, -- Or specialistComments
-    -- finalDiagnosis TEXT, -- Consider separate table for structured diagnoses
-    -- prescription TEXT, -- Consider separate table for structured prescriptions
-    outcome VARCHAR(255),
+    finalDiagnosis TEXT, -- Doctor's final diagnosis
+    prescription TEXT, -- Doctor's final prescription
+    outcome VARCHAR(255), -- e.g., "Sent Home", "Admitted", "Referred"
     status VARCHAR(50) DEFAULT 'Completed', -- 'Draft', 'Completed'
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (patientId) REFERENCES Patients(id),
     FOREIGN KEY (visitId) REFERENCES Visits(id),
     FOREIGN KEY (consultingDoctorId) REFERENCES Users(id),
+    FOREIGN KEY (facilityId) REFERENCES Facilities(id),
     FOREIGN KEY (referringDoctorId) REFERENCES Users(id)
 );`
             }</SqlCode>
             <h5 className="text-xs font-semibold">Dummy Data for Consultations:</h5>
             <SqlCode>{
-`INSERT INTO Consultations (patientId, consultingDoctorId, department, symptoms, doctorNotes, outcome, status) VALUES
-(1, 1, 'Outpatient General Consultation', 'Patient presented with fever, cough for 3 days. Vitals: Temp 38.5C, BP 120/80.', 'Advised rest, fluids. Prescribed Paracetamol. Ordered CBC.', 'Sent Home', 'Completed'),
-(2, 1, 'Cardiology', 'Follow-up for hypertension. BP 140/90 today.', 'Adjusted Lisinopril dosage. Schedule follow-up in 1 month.', 'Schedule Specialist Follow-up', 'Draft');`
+`INSERT INTO Consultations (patientId, consultingDoctorId, facilityId, department, symptoms, doctorNotes, outcome, status) VALUES
+(1, 1, 'HOSP001', 'Outpatient General Consultation', 'Patient presented with fever, cough for 3 days. Vitals: Temp 38.5C, BP 120/80.', 'Advised rest, fluids. Prescribed Paracetamol. Ordered CBC.', 'Sent Home', 'Completed'),
+(2, 1, 'HOSP001', 'Cardiology', 'Follow-up for hypertension. BP 140/90 today.', 'Adjusted Lisinopril dosage. Schedule follow-up in 1 month.', 'Schedule Specialist Follow-up', 'Draft');`
             }</SqlCode>
 
             <h4 className="font-medium mt-4 mb-1">Table: <code>LabOrders</code></h4>
@@ -277,17 +304,56 @@ INSERT INTO Appointments (patientId, doctorId, appointmentDate, appointmentTime,
     consultationId INT NOT NULL,
     patientId INT NOT NULL,
     orderingDoctorId INT NOT NULL,
+    facilityId VARCHAR(100) NOT NULL,
     orderDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     clinicalNotes TEXT,
-    status VARCHAR(50) DEFAULT 'Pending', -- 'Pending', 'Sample Collected', 'Processing', 'Results Ready'
+    status VARCHAR(50) DEFAULT 'Pending', -- 'Pending', 'Sample Collected', 'Processing', 'Results Ready', 'Cancelled'
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (consultationId) REFERENCES Consultations(id),
     FOREIGN KEY (patientId) REFERENCES Patients(id),
-    FOREIGN KEY (orderingDoctorId) REFERENCES Users(id)
+    FOREIGN KEY (orderingDoctorId) REFERENCES Users(id),
+    FOREIGN KEY (facilityId) REFERENCES Facilities(id)
 );`
             }</SqlCode>
-            {/* Further tables like LabOrderItems, LabResults, ImagingOrders, ImagingReports would follow */}
+
+             <h4 className="font-medium mt-4 mb-1">Table: <code>LabOrderItems</code></h4>
+             <SqlCode>{
+`CREATE TABLE LabOrderItems (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    labOrderId INT NOT NULL,
+    testId VARCHAR(255) NOT NULL, -- Corresponds to COMMON_ORDERABLE_LAB_TESTS IDs
+    testName VARCHAR(255) NOT NULL, -- Human-readable test name at time of order
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (labOrderId) REFERENCES LabOrders(id)
+);`
+            }</SqlCode>
+
+            <h4 className="font-medium mt-4 mb-1">Table: <code>Notifications</code></h4>
+            <SqlCode>{
+`CREATE TABLE Notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    userId INT NOT NULL, -- Recipient User ID
+    type VARCHAR(100) NOT NULL, -- e.g., 'LAB_RESULT_READY', 'IMAGING_REPORT_READY', 'NEW_REFERRAL'
+    message TEXT NOT NULL,
+    relatedEntityId VARCHAR(255), -- e.g., patientId, consultationId, labOrderId
+    relatedEntityType VARCHAR(100), -- e.g., 'PATIENT', 'CONSULTATION', 'LAB_ORDER'
+    isRead BOOLEAN DEFAULT FALSE,
+    link VARCHAR(1024), -- Optional deep link into the application
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES Users(id)
+);`
+            }</SqlCode>
+            <h5 className="text-xs font-semibold">Dummy Data for Notifications:</h5>
+             <SqlCode>{
+`-- Assuming Dr. Smith (Users.id = 1) ordered tests for Patient One (Patients.id = 1) via LabOrder LO001
+INSERT INTO Notifications (userId, type, message, relatedEntityId, relatedEntityType, link) VALUES
+(1, 'LAB_RESULT_READY', 'Lab results for Demo Patient One (Order LO001) are now available.', 'LO001', 'LAB_ORDER', '/laboratory-management?requestId=LO001'),
+(1, 'NEW_REFERRAL', 'New referral: Jane Sample Doe to Cardiology by Dr. Primary Care.', '2', 'PATIENT', '/specializations?patientId=2');`
+            }</SqlCode>
+            {/* Further tables like LabResults, ImagingOrders, ImagingReports would follow */}
           </section>
           <Separator />
 
@@ -300,38 +366,39 @@ INSERT INTO Appointments (patientId, doctorId, appointmentDate, appointmentTime,
               <li><code>Beds</code></li>
               <li><code>Admissions</code></li>
               <li><code>MedicationSchedules</code></li>
-              <li><code>DoctorNotes</code> (for admissions)</li>
+              <li><code>AdmissionDoctorNotes</code></li>
             </ul>
              <h4 className="font-medium mt-4 mb-1">Table: <code>Wards</code></h4>
              <SqlCode>{
 `CREATE TABLE Wards (
     id VARCHAR(50) PRIMARY KEY, -- e.g., W001
     name VARCHAR(255) NOT NULL,
+    facilityId VARCHAR(100) NOT NULL,
     totalBeds INT NOT NULL,
-    facilityId VARCHAR(100), -- Link to hospital
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (facilityId) REFERENCES Facilities(id)
 );`
             }</SqlCode>
              <h5 className="text-xs font-semibold">Dummy Data for Wards:</h5>
             <SqlCode>{
-`INSERT INTO Wards (id, name, totalBeds, facilityId) VALUES
-('W001', 'General Medicine Ward A', 20, 'HOSP001'),
-('W002', 'Surgical Ward B', 15, 'HOSP001');`
+`INSERT INTO Wards (id, name, facilityId, totalBeds) VALUES
+('W001', 'General Medicine Ward A', 'HOSP001', 20),
+('W002', 'Surgical Ward B', 'HOSP001', 15);`
             }</SqlCode>
 
              <h4 className="font-medium mt-4 mb-1">Table: <code>Beds</code></h4>
              <SqlCode>{
 `CREATE TABLE Beds (
-    id VARCHAR(50) PRIMARY KEY, -- e.g., B001-A
+    id VARCHAR(50) PRIMARY KEY, -- e.g., B001-W001
     wardId VARCHAR(50) NOT NULL,
     bedNumber VARCHAR(50) NOT NULL,
     status VARCHAR(50) DEFAULT 'Available', -- 'Available', 'Occupied', 'Cleaning'
-    currentPatientId INT,
+    currentAdmissionId INT, -- Changed from currentPatientId to currentAdmissionId
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (wardId) REFERENCES Wards(id),
-    FOREIGN KEY (currentPatientId) REFERENCES Patients(id)
+    FOREIGN KEY (currentAdmissionId) REFERENCES Admissions(id)
 );`
             }</SqlCode>
              <h5 className="text-xs font-semibold">Dummy Data for Beds:</h5>
@@ -347,7 +414,8 @@ INSERT INTO Appointments (patientId, doctorId, appointmentDate, appointmentTime,
     id INT AUTO_INCREMENT PRIMARY KEY,
     patientId INT NOT NULL,
     wardId VARCHAR(50) NOT NULL,
-    bedId VARCHAR(50) NOT NULL,
+    bedId VARCHAR(50), -- Can be initially null if assigned later
+    facilityId VARCHAR(100) NOT NULL,
     admissionDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     dischargeDate DATETIME,
     admittingDoctorId INT NOT NULL,
@@ -355,21 +423,77 @@ INSERT INTO Appointments (patientId, doctorId, appointmentDate, appointmentTime,
     treatmentPlan TEXT,
     codeStatus VARCHAR(50), -- 'Full Code', 'DNR'
     status VARCHAR(50) DEFAULT 'Admitted', -- 'Admitted', 'Discharged', 'Transferred'
+    referringDepartment VARCHAR(255),
+    reasonForAdmission TEXT,
+    transferType VARCHAR(50), -- 'internal_ward', 'external_hospital'
+    destinationWardId VARCHAR(50),
+    destinationFacility VARCHAR(255),
+    transferReason TEXT,
+    transferredByUserId INT,
+    dischargeSummary TEXT,
+    dischargedByUserId INT,
+    vitalsTemperatureCelsius DECIMAL(4,1),
+    vitalsWeightKg DECIMAL(5,1),
+    vitalsHeightCm DECIMAL(5,1),
+    vitalsBloodPressure VARCHAR(50),
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (patientId) REFERENCES Patients(id),
     FOREIGN KEY (wardId) REFERENCES Wards(id),
     FOREIGN KEY (bedId) REFERENCES Beds(id),
-    FOREIGN KEY (admittingDoctorId) REFERENCES Users(id)
+    FOREIGN KEY (facilityId) REFERENCES Facilities(id),
+    FOREIGN KEY (admittingDoctorId) REFERENCES Users(id),
+    FOREIGN KEY (transferredByUserId) REFERENCES Users(id),
+    FOREIGN KEY (dischargedByUserId) REFERENCES Users(id),
+    FOREIGN KEY (destinationWardId) REFERENCES Wards(id)
 );`
             }</SqlCode>
              <h5 className="text-xs font-semibold">Dummy Data for Admissions:</h5>
             <SqlCode>{
-`-- Assuming Demo Patient One (Patients.id=1) is admitted by Dr. Smith (Users.id=1) to Bed 1 of Ward A
-INSERT INTO Admissions (patientId, wardId, bedId, admittingDoctorId, primaryDiagnosis, treatmentPlan) VALUES
-(1, 'W001', 'B001-W001', 1, 'Severe Pneumonia', 'IV Antibiotics, Oxygen PRN, Monitor Vitals Q4H');`
+`-- Assuming Demo Patient One (Patients.id=1) is admitted by Dr. Smith (Users.id=1)
+INSERT INTO Admissions (patientId, wardId, bedId, facilityId, admittingDoctorId, primaryDiagnosis, treatmentPlan) VALUES
+(1, 'W001', 'B001-W001', 'HOSP001', 1, 'Severe Pneumonia', 'IV Antibiotics, Oxygen PRN, Monitor Vitals Q4H');
+-- Update Bed B001-W001 to be occupied by this admission (assuming admission ID is 1)
+-- UPDATE Beds SET status = 'Occupied', currentAdmissionId = 1 WHERE id = 'B001-W001';`
             }</SqlCode>
-            {/* Further tables like MedicationSchedules, DoctorNotes (for admissions) would follow */}
+
+             <h4 className="font-medium mt-4 mb-1">Table: <code>MedicationSchedules</code></h4>
+             <SqlCode>{
+`CREATE TABLE MedicationSchedules (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    admissionId INT NOT NULL,
+    medicationItemId VARCHAR(100) NOT NULL, -- Could be a temporary ID if added ad-hoc, or from a drug master
+    medication VARCHAR(255) NOT NULL,
+    dosage VARCHAR(255) NOT NULL,
+    route VARCHAR(100), -- e.g., PO, IV, IM
+    frequency VARCHAR(100), -- e.g., TID, BID, PRN
+    time VARCHAR(50) NOT NULL, -- Scheduled time or 'PRN'
+    status VARCHAR(50) DEFAULT 'Pending', -- 'Pending', 'Administered', 'Skipped'
+    notes TEXT,
+    administeredByUserId INT,
+    administeredAt DATETIME,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (admissionId) REFERENCES Admissions(id),
+    FOREIGN KEY (administeredByUserId) REFERENCES Users(id)
+);`
+            }</SqlCode>
+
+             <h4 className="font-medium mt-4 mb-1">Table: <code>AdmissionDoctorNotes</code></h4>
+             <SqlCode>{
+`CREATE TABLE AdmissionDoctorNotes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    admissionId INT NOT NULL,
+    doctorId INT NOT NULL,
+    note TEXT NOT NULL,
+    noteDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (admissionId) REFERENCES Admissions(id),
+    FOREIGN KEY (doctorId) REFERENCES Users(id)
+);`
+            }</SqlCode>
+
           </section>
           <Separator />
            {/* --- Phase 5: Laboratory & Imaging Management --- */}
@@ -379,8 +503,8 @@ INSERT INTO Admissions (patientId, wardId, bedId, admittingDoctorId, primaryDiag
             <ul className="list-disc list-inside text-sm pl-4">
                 <li><code>LabReagents</code> (Inventory)</li>
                 <li><code>LabRequisitions</code> (Requisition Log)</li>
-                <li><code>ImagingInstruments</code> (Conceptual, part of future Biomedical module)</li>
-                <li><code>ImagingConsumables</code> (Inventory, if applicable)</li>
+                <li><code>LabRequisitionItems</code></li>
+                <li><code>EquipmentMalfunctions</code> (Shared for Lab/Imaging)</li>
             </ul>
              <h4 className="font-medium mt-4 mb-1">Table: <code>LabReagents</code> (Inventory)</h4>
              <SqlCode>{
@@ -390,35 +514,72 @@ INSERT INTO Admissions (patientId, wardId, bedId, admittingDoctorId, primaryDiag
     currentStock INT NOT NULL DEFAULT 0,
     threshold INT NOT NULL DEFAULT 10,
     unit VARCHAR(100) NOT NULL, -- e.g., 'packs', 'strips (box of 50)'
-    facilityId VARCHAR(100), -- Which lab/hospital this stock belongs to
+    facilityId VARCHAR(100) NOT NULL,
     lastOrderedDate DATE,
     supplier VARCHAR(255),
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (facilityId) REFERENCES Facilities(id)
 );`
             }</SqlCode>
              <h5 className="text-xs font-semibold">Dummy Data for LabReagents:</h5>
             <SqlCode>{
 `INSERT INTO LabReagents (id, name, currentStock, threshold, unit, facilityId) VALUES
-('RG001', 'Hematology Reagent Pack', 50, 20, 'packs', 'HOSP001_LAB'),
-('RG002', 'Glucose Test Strips', 150, 100, 'strips (box of 50)', 'HOSP001_LAB');`
+('RG001', 'Hematology Reagent Pack', 50, 20, 'packs', 'HOSP001'),
+('RG002', 'Glucose Test Strips', 150, 100, 'strips (box of 50)', 'HOSP001');`
             }</SqlCode>
 
              <h4 className="font-medium mt-4 mb-1">Table: <code>LabRequisitions</code></h4>
              <SqlCode>{
 `CREATE TABLE LabRequisitions (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    requestingLabId VARCHAR(100) NOT NULL, -- e.g., HOSP001_LAB
+    requestingFacilityId VARCHAR(100) NOT NULL,
     submittedByUserId INT NOT NULL,
     dateSubmitted DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(50) DEFAULT 'Pending', -- 'Pending', 'Partially Fulfilled', 'Fulfilled', 'Cancelled'
     notes TEXT,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (requestingFacilityId) REFERENCES Facilities(id),
     FOREIGN KEY (submittedByUserId) REFERENCES Users(id)
 );`
             }</SqlCode>
-            {/* A linking table LabRequisitionItems (requisitionId, reagentId, requestedQuantity, fulfilledQuantity) would be needed */}
+
+            <h4 className="font-medium mt-4 mb-1">Table: <code>LabRequisitionItems</code></h4>
+             <SqlCode>{
+`CREATE TABLE LabRequisitionItems (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    labRequisitionId INT NOT NULL,
+    reagentId VARCHAR(50) NOT NULL,
+    reagentName VARCHAR(255) NOT NULL,
+    requestedQuantity INT NOT NULL,
+    fulfilledQuantity INT DEFAULT 0,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (labRequisitionId) REFERENCES LabRequisitions(id),
+    FOREIGN KEY (reagentId) REFERENCES LabReagents(id)
+);`
+            }</SqlCode>
+
+             <h4 className="font-medium mt-4 mb-1">Table: <code>EquipmentMalfunctions</code></h4>
+             <SqlCode>{
+`CREATE TABLE EquipmentMalfunctions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    assetNumber VARCHAR(255) NOT NULL,
+    instrumentName VARCHAR(255),
+    department VARCHAR(100) NOT NULL, -- 'Laboratory', 'Imaging/Radiology', 'Ward'
+    problemDescription TEXT NOT NULL,
+    reportedByUserId INT NOT NULL,
+    reportDateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(50) DEFAULT 'Reported', -- 'Reported', 'In Progress', 'Resolved'
+    resolvedAt DATETIME,
+    resolutionNotes TEXT,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (reportedByUserId) REFERENCES Users(id)
+);`
+            }</SqlCode>
+
           </section>
           <Separator />
 
@@ -430,6 +591,7 @@ INSERT INTO Admissions (patientId, wardId, bedId, admittingDoctorId, primaryDiag
                 <li><code>PharmacyItems</code> (Inventory)</li>
                 <li><code>PharmacyPrescriptions</code> (could link to Consultations or be standalone)</li>
                 <li><code>PharmacyRequisitions</code></li>
+                <li><code>PharmacyRequisitionItems</code></li>
             </ul>
              <h4 className="font-medium mt-4 mb-1">Table: <code>PharmacyItems</code> (Inventory)</h4>
              <SqlCode>{
@@ -439,20 +601,21 @@ INSERT INTO Admissions (patientId, wardId, bedId, admittingDoctorId, primaryDiag
     currentStock INT NOT NULL DEFAULT 0,
     threshold INT NOT NULL DEFAULT 20,
     unit VARCHAR(100) NOT NULL, -- e.g., 'capsules', 'tablets'
-    facilityId VARCHAR(100), -- Which pharmacy this stock belongs to
+    facilityId VARCHAR(100) NOT NULL,
     lastOrderedDate DATE,
     supplier VARCHAR(255),
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (facilityId) REFERENCES Facilities(id)
 );`
             }</SqlCode>
              <h5 className="text-xs font-semibold">Dummy Data for PharmacyItems:</h5>
             <SqlCode>{
 `INSERT INTO PharmacyItems (id, name, currentStock, threshold, unit, facilityId) VALUES
-('MED001', 'Amoxicillin 250mg', 50, 100, 'capsules', 'HOSP001_PHARM'),
-('MED002', 'Paracetamol 500mg', 200, 150, 'tablets', 'HOSP001_PHARM');`
+('MED001', 'Amoxicillin 250mg', 50, 100, 'capsules', 'HOSP001'),
+('MED002', 'Paracetamol 500mg', 200, 150, 'tablets', 'HOSP001');`
             }</SqlCode>
-            {/* Tables for PharmacyPrescriptions and PharmacyRequisitions would follow a similar pattern to their Lab counterparts. */}
+             {/* Tables for PharmacyPrescriptions, PharmacyRequisitions, PharmacyRequisitionItems would follow a similar pattern. */}
           </section>
           <Separator />
 
@@ -463,23 +626,50 @@ INSERT INTO Admissions (patientId, wardId, bedId, admittingDoctorId, primaryDiag
               Implement Maternity Care details, Emergency Room workflows, Epidemic Control, Campaigns, Comprehensive Reporting, Billing, Telemedicine, etc.
               Database schemas for these will be defined as each module is tackled. This will involve new tables and potentially modifications to existing ones.
             </p>
+            <h4 className="font-medium mt-4 mb-1">Example Table: <code>AntenatalVisits</code> (for Maternity Care)</h4>
+            <SqlCode>{
+`CREATE TABLE AntenatalVisits (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    patientId INT NOT NULL,
+    maternityProfileId INT, -- If you have a separate MaternityPatientProfiles table
+    visitDate DATE NOT NULL,
+    gestationalAge VARCHAR(50),
+    weightKg DECIMAL(5,1),
+    bp VARCHAR(50),
+    fhrBpm VARCHAR(50),
+    fundalHeightCm VARCHAR(50),
+    notes TEXT,
+    nextAppointmentDate DATE,
+    bodyTemperatureCelsius DECIMAL(4,1),
+    heightCm DECIMAL(5,1),
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (patientId) REFERENCES Patients(id)
+    -- FOREIGN KEY (maternityProfileId) REFERENCES MaternityPatientProfiles(id)
+);`
+            }</SqlCode>
           </section>
           <Separator />
 
-          <h3 className="text-lg font-semibold mt-4 mb-2">4. Data Relationships (High-Level Overview)</h3>
-          <ul className="list-disc list-inside text-sm pl-4 space-y-1">
-            <li><strong>Patients to Appointments/Visits/Consultations/Admissions:</strong> One-to-Many.</li>
-            <li><strong>Users (Doctors/Nurses) to Appointments/Consultations/Admissions:</strong> One-to-Many.</li>
-            <li><strong>Wards to Beds:</strong> One-to-Many.</li>
-            <li><strong>Beds to Admissions:</strong> One-to-One (a bed has one current admission, an admission is in one bed).</li>
-            <li><strong>Wards to Admissions:</strong> One-to-Many.</li>
-            <li><strong>Patients to Admissions:</strong> One-to-Many (a patient can have multiple admissions over time).</li>
-            <li><strong>Consultations to LabOrders/ImagingOrders:</strong> One-to-Many.</li>
-            <li><strong>LabOrders to LabOrderItems/LabResults:</strong> One-to-Many.</li>
-            <li><strong>Prescriptions to Patients/Consultations.</strong></li>
-            <li><strong>(Pharmacy/Lab)Requisitions to RequisitionItems:</strong> One-to-Many.</li>
-          </ul>
-          <p className="text-xs text-muted-foreground mt-1">(A more detailed Entity Relationship Diagram (ERD) would be beneficial in a full backend design document).</p>
+          <h3 className="text-lg font-semibold mt-4 mb-2">4. Data Considerations for Dynamic Lists & History</h3>
+            <h4 className="font-medium mt-3 mb-1">Patient Visit History:</h4>
+            <p className="text-sm text-muted-foreground">
+              Patient visit history is not stored in a single table. It's a derived view or a result of querying and combining data from <code>Visits</code>, <code>Appointments</code>, <code>Consultations</code>, and <code>Admissions</code> tables, all linked by <code>patientId</code> and ordered by date. The backend API serving this history (e.g., <code>GET /api/v1/patients/{'{patientId}'}/history</code>) would handle this complex query logic.
+            </p>
+             <h4 className="font-medium mt-3 mb-1">Waiting Lists:</h4>
+            <p className="text-sm text-muted-foreground">
+              The <code>Visits</code> table (with its <code>status</code>, <code>department</code>, <code>facilityId</code>, and <code>visitDate</code> fields) serves as the basis for various waiting lists. Different modules (e.g., Consultation Room, Lab, Imaging) would query this table with appropriate filters (e.g., by department, status='Waiting', facilityId).
+            </p>
+             <h4 className="font-medium mt-3 mb-1">Lab/Imaging Notifications:</h4>
+            <p className="text-sm text-muted-foreground">
+              A dedicated <code>Notifications</code> table (schema provided in Phase 3) is crucial. This table links users to events like "Lab result ready" or "New referral". The backend would create entries in this table when relevant events occur (e.g., lab results are finalized).
+            </p>
+            <h4 className="font-medium mt-3 mb-1">Incomplete/Drafted Consultations:</h4>
+            <p className="text-sm text-muted-foreground">
+              The <code>Consultations</code> table, with its <code>status</code> field (e.g., 'Draft', 'Completed') and <code>consultingDoctorId</code>, is queried to populate lists of drafted consultations for a specific doctor (e.g., via <code>GET /api/v1/consultations/drafts?doctorId={'{id}'}</code>).
+            </p>
+
+
           <Separator />
 
           <h3 className="text-lg font-semibold mt-4 mb-2">5. Key Backend Considerations</h3>
@@ -500,4 +690,4 @@ INSERT INTO Admissions (patientId, wardId, bedId, admittingDoctorId, primaryDiag
     </div>
   );
 }
-
+      
