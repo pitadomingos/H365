@@ -5,10 +5,9 @@ import *
 as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
-import { PanelLeft } from "lucide-react"
+import { Menu, PanelLeft } from "lucide-react"
 
 // useIsMobile will now always return false
-import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -54,15 +53,16 @@ export interface SidebarProviderProps {
 
 export const SidebarProvider: React.FC<SidebarProviderProps> = ({
   children,
-  defaultOpen: propDefaultOpen = true, // Default to open
+  defaultOpen: propDefaultOpen = true,
   collapsible: propCollapsible = "icon",
   open: controlledOpen,
   onOpenChange: setControlledOpen,
 }) => {
-  const isMobile = false; // Hardcoded as per previous request
+  const isMobile = false; // Hardcoded
 
   const isControlled = controlledOpen !== undefined && setControlledOpen !== undefined;
   
+  // Initialize with defaultOpen, cookie override happens in useEffect
   const [_internalOpen, _setInternalOpen] = React.useState(propDefaultOpen);
 
   React.useEffect(() => {
@@ -74,7 +74,7 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({
       if (cookieValue !== undefined) {
         _setInternalOpen(cookieValue === "true");
       } else {
-         _setInternalOpen(propDefaultOpen); // Fallback to prop if cookie not set
+         _setInternalOpen(propDefaultOpen); // Fallback if cookie not set
       }
     }
   }, [isControlled, propDefaultOpen]);
@@ -116,7 +116,7 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({
   }, [toggleSidebar]);
 
   const state = open ? "expanded" : "collapsed";
-  const effectiveCollapsible = propCollapsible === "none" ? "none" : "icon";
+  const effectiveCollapsible = propCollapsible; // Simplified as mobile sheet is removed
 
   const contextValue = React.useMemo<SidebarContextValue>(
     () => ({
@@ -132,7 +132,7 @@ export const SidebarProvider: React.FC<SidebarProviderProps> = ({
 
   return (
     <SidebarContext.Provider value={contextValue}>
-        {children}
+      <TooltipProvider>{children}</TooltipProvider>
     </SidebarContext.Provider>
   );
 };
@@ -155,31 +155,23 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { state, collapsible } = useSidebar();
+    const { state, collapsible: contextCollapsible } = useSidebar();
     const variant = variantProp || "sidebar";
+    const effectiveCollapsible = contextCollapsible; // Use context directly
 
     const sizerWidthClass = cn(
       "duration-200 relative h-svh bg-transparent transition-[width] ease-linear",
-      state === "expanded" && "w-[var(--sidebar-width)]",
-      state === "collapsed" && collapsible === "icon" &&
-        (variant === "inset" || variant === "floating"
-          ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]" // Adjusted for inset/floating padding
-          : "w-[var(--sidebar-width-icon)]"),
-      state === "collapsed" && collapsible === "none" && "w-[var(--sidebar-width)]" 
+      state === "expanded" ? "w-[var(--sidebar-width)]" : "w-[var(--sidebar-width-icon)]"
     );
 
     const fixedContentWidthClass = cn(
       "duration-200 fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width] ease-linear md:flex",
-      state === "expanded" && "w-[var(--sidebar-width)]",
-      state === "collapsed" && collapsible === "icon" &&
-        (variant === "inset" || variant === "floating"
-          ? "w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]" // +2px for border
-          : "w-[var(--sidebar-width-icon)]"),
-      state === "collapsed" && collapsible === "none" && "w-[var(--sidebar-width)]"
+      state === "expanded" ? "w-[var(--sidebar-width)]" : "w-[var(--sidebar-width-icon)]"
     );
     
     const fixedContentPositionClass = side === "left" ? "left-0" : "right-0";
 
+    // No mobile sheet logic needed
     return (
       <div
         ref={ref}
@@ -188,7 +180,7 @@ const Sidebar = React.forwardRef<
           className
         )}
         data-state={state}
-        data-collapsible={collapsible === "icon" ? "icon" : ""} // More direct data attribute
+        data-collapsible={effectiveCollapsible === "icon" ? "icon" : ""}
         data-variant={variant}
         data-side={side}
         {...props}
@@ -210,7 +202,7 @@ const Sidebar = React.forwardRef<
             )}
           >
             {children}
-            {collapsible === "icon" && <SidebarRail />}
+            {/* SidebarRail removed for simplification, toggle is in header */}
           </div>
         </div>
       </div>
@@ -219,100 +211,20 @@ const Sidebar = React.forwardRef<
 );
 Sidebar.displayName = "Sidebar"
 
-const SidebarRail = React.forwardRef<
-  HTMLButtonElement,
-  React.ComponentProps<"button">
->(({ className, ...props }, ref) => {
-  const { toggleSidebar, state, collapsible } = useSidebar();
-
-  if (collapsible !== "icon") {
-    return null; 
-  }
-
-  return (
-    <button
-      ref={ref}
-      data-sidebar="rail"
-      aria-label="Toggle Sidebar"
-      tabIndex={-1}
-      onClick={toggleSidebar} // Ensures this calls the context's toggle function
-      title="Toggle Sidebar"
-      className={cn(
-        "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
-        // Correct cursor based on expanded/collapsed state for left sidebar
-        "[[data-side=left][data-state=expanded]_&]:cursor-w-resize [[data-side=left][data-state=collapsed]_&]:cursor-e-resize",
-        // Correct cursor based on expanded/collapsed state for right sidebar (if implemented)
-        "[[data-side=right][data-state=expanded]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
-        className
-      )}
-      {...props}
-    />
-  )
-})
-SidebarRail.displayName = "SidebarRail"
-
-
-// SidebarTrigger, SidebarInset, and other sub-components remain the same
-// as they were not directly related to the toggle/expansion issue.
-// ... (Rest of the Sidebar sub-components: SidebarTrigger, SidebarInset, etc.)
-
-
-const SidebarTrigger = React.forwardRef<
-  React.ElementRef<typeof Button>,
-  React.ComponentProps<typeof Button>
->(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar, isMobile } = useSidebar() // isMobile is always false now
-
-  if (isMobile) { 
-    return (
-      <Button
-        ref={ref}
-        data-sidebar="trigger"
-        variant="ghost"
-        size="icon"
-        className={cn("h-7 w-7", className)}
-        onClick={(event) => {
-          onClick?.(event)
-          toggleSidebar() // This would have toggled the mobile sheet
-        }}
-        {...props}
-      >
-        <PanelLeft />
-        <span className="sr-only">Toggle Sidebar</span>
-      </Button>
-    );
-  }
-  return null; // Not rendered on desktop as per new logic
-})
-SidebarTrigger.displayName = "SidebarTrigger"
-
-
 const SidebarInset = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
-  const { state, collapsible } = useSidebar();
-  
+  // No direct dependency on sidebar state for padding/margin here
+  // flex-1 and its position relative to the Sidebar component (which has a sizer) should handle it.
   return (
-    <main
+    <div 
       ref={ref}
       className={cn(
         "relative flex min-h-svh flex-1 flex-col bg-background",
+        // Classes for "inset" variant styling if needed, but not for general positioning
         "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))]",
         "md:peer-data-[variant=inset]:m-2",
-        
-        state === 'expanded' && "md:peer-data-[side=left]:pl-[var(--sidebar-width)]",
-        state === 'expanded' && "md:peer-data-[side=right]:pr-[var(--sidebar-width)]",
-
-        state === 'collapsed' && collapsible === 'icon' && "md:peer-data-[side=left]:pl-[var(--sidebar-width-icon)]",
-        state === 'collapsed' && collapsible === 'icon' && "md:peer-data-[side=right]:pr-[var(--sidebar-width-icon)]",
-        
-        state === 'collapsed' && collapsible === 'icon' && "peer-data-[variant=inset]:peer-data-[side=left]:pl-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]",
-        state === 'collapsed' && collapsible === 'icon' && "peer-data-[variant=inset]:peer-data-[side=right]:pr-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]",
-        
-        state === 'expanded' && "peer-data-[variant=inset]:peer-data-[side=left]:pl-[var(--sidebar-width)]",
-        state === 'expanded' && "peer-data-[variant=inset]:peer-data-[side=right]:pr-[var(--sidebar-width)]",
-
         "md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
         className
       )}
@@ -552,7 +464,7 @@ const SidebarMenuButton = React.forwardRef<
     ref
   ) => {
     const Comp = asChild ? Slot : "button"
-    const { isMobile, state, collapsible } = useSidebar()
+    const { state, collapsible } = useSidebar()
 
     const buttonContent = (
       <Comp
@@ -567,11 +479,10 @@ const SidebarMenuButton = React.forwardRef<
       </Comp>
     )
 
-    if (!tooltip || isMobile ) { // No tooltip on mobile
+    if (!tooltip) { 
       return buttonContent
     }
     
-    // Show tooltip only when collapsed and icon-only
     const showTooltip = state === "collapsed" && collapsible === "icon";
 
     const tooltipContentProps: React.ComponentProps<typeof TooltipContent> =
@@ -583,7 +494,7 @@ const SidebarMenuButton = React.forwardRef<
         <TooltipContent
           side="right"
           align="center"
-          hidden={!showTooltip} // Control visibility based on collapsed icon state
+          hidden={!showTooltip} 
           {...tooltipContentProps}
         />
       </Tooltip>
@@ -733,6 +644,9 @@ const SidebarMenuSubButton = React.forwardRef<
 })
 SidebarMenuSubButton.displayName = "SidebarMenuSubButton"
 
+// SidebarTrigger removed as mobile view is disabled
+// SidebarRail removed to simplify toggle to header button only
+
 export {
   Sidebar,
   SidebarContent,
@@ -753,9 +667,11 @@ export {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarRail,
+  SidebarProvider, // Ensure SidebarProvider is exported
+  // SidebarRail, // No longer exported
+  // SidebarTrigger, // No longer exported
   SidebarSeparator,
-  SidebarTrigger,
+  useSidebar, // Ensure useSidebar is exported
 }
 
     
