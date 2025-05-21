@@ -15,17 +15,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Button } from "./button"; // Assuming Button is used somewhere or for type consistency
+// Removed useIsMobile as sidebar is always desktop style
 
 // --- Context Setup ---
 type SidebarContextValue = {
-  open: boolean;
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  toggleSidebar: () => void;
-  isMobile: boolean;
-  state: "expanded" | "collapsed";
-  collapsible: "icon" | "none"; // Simplified from previous "offcanvas"
+  // open: boolean; // No longer needed for always expanded
+  // toggleSidebar: () => void; // No longer needed
+  // state: "expanded"; // Always expanded
+  // collapsible: "icon" | "none"; // Still relevant for icon display
 };
 
 const SidebarContext = React.createContext<SidebarContextValue | null>(null);
@@ -33,67 +30,31 @@ const SidebarContext = React.createContext<SidebarContextValue | null>(null);
 export function useSidebar() {
   const context = React.useContext(SidebarContext);
   if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider.");
+    // This error shouldn't be thrown if SidebarProvider is correctly used in layout
+    // For always expanded, context might be simpler or even not strictly necessary for consumers
+    // if they don't need to toggle or check state.
+    // However, keeping the provider structure for TooltipProvider.
+    return { state: "expanded", collapsible: "icon" } as const; // Provide default for safety
   }
   return context;
 }
 
 export interface SidebarProviderProps {
   children: React.ReactNode;
-  defaultOpen?: boolean;
-  collapsible?: "icon" | "none"; // Simplified
+  // defaultOpen, collapsible props are no longer needed as sidebar is always expanded
 }
 
 export const SidebarProvider: React.FC<SidebarProviderProps> = ({
   children,
-  defaultOpen: propDefaultOpen = true, // Default to true (expanded)
-  collapsible: propCollapsible = "icon",
 }) => {
-  const isMobile = useIsMobile();
-  const [open, setOpen] = React.useState(propDefaultOpen);
-  const [isMounted, setIsMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  React.useEffect(() => {
-    if (isMounted && propCollapsible === "icon") {
-      const storedState = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("sidebar-open="))
-        ?.split("=")[1];
-      if (storedState) {
-        setOpen(storedState === "true");
-      } else {
-        setOpen(propDefaultOpen); // Fallback to prop if no cookie
-      }
-    }
-  }, [isMounted, propCollapsible, propDefaultOpen]);
-
-  const toggleSidebar = React.useCallback(() => {
-    setOpen((prevOpen) => {
-      const newOpenState = !prevOpen;
-      if (propCollapsible === "icon" && isMounted) {
-        document.cookie = `sidebar-open=${newOpenState}; path=/; max-age=31536000`; // Expires in 1 year
-      }
-      return newOpenState;
-    });
-  }, [propCollapsible, isMounted]);
-
-  const state = open ? "expanded" : "collapsed";
-  const effectiveCollapsible = isMobile ? "none" : propCollapsible; // No icon collapse on mobile
-
   const contextValue = React.useMemo(
     () => ({
-      open,
-      setOpen,
-      toggleSidebar,
-      isMobile,
-      state,
-      collapsible: effectiveCollapsible,
+      // open: true, // Always true
+      // state: "expanded" as const,
+      // collapsible: "icon" as const, // Assuming icon style is desired for elements even if not collapsing
+      // toggleSidebar: () => {}, // No-op
     }),
-    [open, setOpen, toggleSidebar, isMobile, state, effectiveCollapsible]
+    []
   );
 
   return (
@@ -109,41 +70,33 @@ const Sidebar = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
     side?: "left" | "right";
-    variant?: "sidebar" | "floating" | "inset"; // Kept for potential future use, but logic simplified
   }
->(({ side = "left", variant = "sidebar", className, children, ...props }, ref) => {
-  const { state, collapsible } = useSidebar();
-  const isIconOnlyCollapsed = state === "collapsed" && collapsible === "icon";
-
-  const currentWidthClass =
-    state === "expanded"
-      ? "w-[var(--sidebar-width)]"
-      : isIconOnlyCollapsed
-      ? "w-[var(--sidebar-width-icon)]"
-      : "w-0"; // Should not happen with current logic (mobile removed)
+>(({ side = "left", className, children, ...props }, ref) => {
+  // Since it's always expanded
+  const currentWidthClass = "w-[var(--sidebar-width)]";
 
   return (
     <div
       ref={ref}
       className={cn(
-        "group peer hidden md:block text-sidebar-foreground",
+        "group peer hidden md:block text-sidebar-foreground", // Always block on md+
         className
       )}
-      data-state={state}
-      data-collapsible={collapsible === "icon" ? "icon" : ""}
+      data-state="expanded" // Always expanded
+      data-collapsible="icon" // For styling child text elements
       {...props}
     >
       {/* Sizer div - for layout pushing */}
       <div
         className={cn(
-          "duration-200 relative h-svh bg-transparent transition-[width] ease-linear",
+          "relative h-svh bg-transparent", // No transition needed
           currentWidthClass
         )}
       />
       {/* Actual sidebar content container */}
       <div
         className={cn(
-          "duration-200 fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width] ease-linear md:flex",
+          "fixed inset-y-0 z-10 hidden h-svh md:flex", // No transition needed
           side === "left" ? "left-0 border-r border-sidebar-border" : "right-0 border-l border-sidebar-border",
           currentWidthClass
         )}
@@ -165,22 +118,11 @@ const SidebarInset = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
-  const { state, collapsible } = useSidebar();
-  const isIconOnlyCollapsed = state === "collapsed" && collapsible === "icon";
-
-  const marginLeftClass = 
-    state === "expanded"
-      ? "md:ml-[var(--sidebar-width)]"
-      : isIconOnlyCollapsed
-      ? "md:ml-[var(--sidebar-width-icon)]"
-      : "md:ml-0"; // Should not happen
-
   return (
     <div
       ref={ref}
       className={cn(
-        "relative flex min-h-svh flex-1 flex-col bg-background transition-[margin-left] duration-200 ease-linear",
-        marginLeftClass,
+        "relative flex min-h-svh flex-1 flex-col bg-background", // Removed margin transition classes
         className
       )}
       {...props}
@@ -189,21 +131,19 @@ const SidebarInset = React.forwardRef<
 });
 SidebarInset.displayName = "SidebarInset";
 
+
 // --- SidebarHeader Component ---
 const SidebarHeader = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, children, ...props }, ref) => {
-  const { state, collapsible } = useSidebar();
-  const isIconOnlyCollapsed = state === "collapsed" && collapsible === "icon";
-
   return (
     <div
       ref={ref}
       data-sidebar="header"
       className={cn(
         "flex flex-col transition-all duration-200",
-        isIconOnlyCollapsed ? "p-2 h-[64px] items-center" : "p-4", // Adjusted padding for collapsed
+        "p-4", // Always use expanded padding
         className
       )}
       {...props}
@@ -219,16 +159,13 @@ const SidebarFooter = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, children, ...props }, ref) => {
-  const { state, collapsible } = useSidebar();
-  const isIconOnlyCollapsed = state === "collapsed" && collapsible === "icon";
-
   return (
     <div
       ref={ref}
       data-sidebar="footer"
       className={cn(
         "flex flex-col gap-2 transition-all duration-200",
-        isIconOnlyCollapsed ? "p-2 items-center" : "p-2",
+        "p-2", // Always use expanded padding
         className
       )}
       {...props}
@@ -244,16 +181,13 @@ const SidebarContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div">
 >(({ className, children, ...props }, ref) => {
-  const { state, collapsible } = useSidebar();
-  const isIconOnlyCollapsed = state === "collapsed" && collapsible === "icon";
-
   return (
     <div
       ref={ref}
       data-sidebar="content"
       className={cn(
         "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden transition-all duration-200",
-        isIconOnlyCollapsed ? "p-2 items-center" : "p-2",
+        "p-2", // Always use expanded padding
         className
       )}
       {...props}
@@ -318,20 +252,18 @@ const SidebarMenuButton = React.forwardRef<
   React.ComponentProps<"button"> & {
     asChild?: boolean;
     isActive?: boolean;
-    tooltip?: string | React.ReactNode;
+    tooltip?: string | React.ReactNode; // Tooltip less relevant if always expanded but kept for consistency
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(({
   asChild = false,
   isActive = false,
   variant = "default",
   size = "default",
-  tooltip,
+  tooltip, // Not used if always expanded
   className,
   children,
   ...props
 }, ref) => {
-  const { state, collapsible } = useSidebar();
-  const isIconOnlyCollapsed = state === "collapsed" && collapsible === "icon";
 
   const Comp = asChild ? Slot : "button";
 
@@ -341,7 +273,7 @@ const SidebarMenuButton = React.forwardRef<
       data-active={isActive}
       className={cn(
         sidebarMenuButtonVariants({ variant, size }),
-        isIconOnlyCollapsed && "!size-8 !p-2 justify-center", // Icon only styling
+        // No icon-only classes needed
         className
       )}
       {...props}
@@ -350,23 +282,11 @@ const SidebarMenuButton = React.forwardRef<
     </Comp>
   );
 
-  if (isIconOnlyCollapsed && tooltip) {
-    return (
-      <Tooltip>
-        <TooltipTrigger> {/* REMOVED asChild here */}
-          {buttonContent}
-        </TooltipTrigger>
-        <TooltipContent side="right" sideOffset={8}>
-          {tooltip}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
   return buttonContent;
 });
 SidebarMenuButton.displayName = "SidebarMenuButton";
 
+// Exporting only necessary components for a fixed, always expanded sidebar
 export {
   Sidebar,
   SidebarContent,
@@ -376,6 +296,6 @@ export {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarProvider,
-  useSidebar,
+  SidebarProvider, // Still needed for TooltipProvider
+  useSidebar, // Might be vestigial, returning static "expanded" state
 };
