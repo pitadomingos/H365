@@ -4,7 +4,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Network, Server, Share2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { MicroservicesDiagram } from "@/components/diagrams/microservices-diagram"; // Import the diagram
+import { MicroservicesDiagram } from "@/components/diagrams/microservices-diagram";
+import { MonolithicDiagram } from "@/components/diagrams/monolithic-diagram"; // Import the new diagram
 
 export default function ArchitectureOptionsPage() {
 
@@ -52,6 +53,9 @@ export default function ArchitectureOptionsPage() {
           <p>
             All business logic, data access, and API endpoints for all modules would reside within this single codebase. The Node.js/Express application would handle routing to different module functionalities.
           </p>
+
+          {/* Monolithic Diagram */}
+          <MonolithicDiagram />
 
           <h4>Pros:</h4>
           <ul>
@@ -103,7 +107,7 @@ export default function ArchitectureOptionsPage() {
             Each service could potentially have its own database (though a shared database with clear boundaries is also an option to start) and would communicate with others through well-defined APIs (e.g., REST or gRPC) or asynchronous messaging (e.g., Kafka, RabbitMQ). An API Gateway would serve as the single entry point for the frontend.
           </p>
           
-          {/* Insert Diagram Here */}
+          {/* Microservices Diagram */}
           <MicroservicesDiagram />
 
           <h4>Pros:</h4>
