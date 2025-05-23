@@ -39,6 +39,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     'dashboard.quickActions.manageWards': "Manage Wards",
     'dashboard.quickActions.labDashboard': "Lab Dashboard",
     'dashboard.quickActions.maternityRecords': "Maternity Records",
+
     'dashboard.charts.entryPoints.title': "Patient Entry Points (Today)",
     'dashboard.charts.entryPoints.description': "How patients are accessing services.",
     'dashboard.charts.entryPoints.outpatient': "Outpatient",
@@ -133,12 +134,13 @@ export const translations: Record<Locale, Record<string, any>> = {
     'patientRegistration.toast.templateDownloaded.description': "patient_registration_template.csv",
     'patientRegistration.toast.cameraNotSupported.title': "Camera Not Supported",
     'patientRegistration.toast.cameraNotSupported.description': "Your browser does not support camera access.",
+    'patientRegistration.toast.cameraDenied.title': "Camera Access Denied",
+    'patientRegistration.toast.cameraDenied.description': "Please enable camera permissions in your browser settings to use this app.",
+
 
     'techOverview.pageTitle': "H365 Technical Overview",
     'techOverview.langToggle.en': "EN",
     'techOverview.langToggle.pt': "PT",
-    // ... (rest of techOverview and architectureOptions translations) ...
-    // ... (Ensure all keys used in technical-overview.tsx and architecture-options.tsx are here) ...
     'techOverview.section1.title': "1. Introduction",
     'techOverview.section1.content': "H365 is a modern, web-based hospital management system designed to streamline clinical workflows, improve patient care coordination, and provide robust data management capabilities for healthcare facilities. Built with a focus on user experience and scalability, H365 aims to support healthcare professionals in delivering efficient and effective patient care.",
     'techOverview.section2.title': "2. Technology Stack",
@@ -170,7 +172,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section3.subsectionPatientReg.itemIndividualBulk.title': "Individual & Bulk Registration",
     'techOverview.section3.subsectionPatientReg.itemIndividualBulk.desc': "Supports comprehensive data entry for individual patients (including National ID, demographics, contact info, next of kin, allergies, chronic conditions) and allows for efficient registration of multiple patients through CSV file uploads, catering to various intake scenarios.",
     'techOverview.section3.subsectionPatientReg.itemPhotoCapture.title': "Photo Capture",
-    'techOverview.section3.subsectionPatientReg.itemPhotoCapture.desc': "Features integrated webcam functionality for capturing patient photos directly in the registration form, enhancing patient identification.",
+    'techOverview.section3.subsectionPatientReg.itemPhotoCapture.desc': "Features integrated webcam functionality for capturing patient photos directly in the registration form (formatted to a passport-like aspect ratio), enhancing patient identification.",
     'techOverview.section3.subsectionVisitingPatients.title': "3.3. Visiting Patients (Consultation Intake)",
     'techOverview.section3.subsectionVisitingPatients.itemSearchModal.title': "Patient Search & Quick Registration",
     'techOverview.section3.subsectionVisitingPatients.itemSearchModal.desc': "Allows staff to quickly search for existing patients by National ID. If a patient is not found, a modal enables rapid registration of essential details (National ID, Name, DOB, Gender, Chronic Conditions) to streamline the intake process.",
@@ -271,6 +273,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section5.itemBloodBank.title': "Blood Bank Management",
     'techOverview.section5.itemBloodBank.desc': "Manages donor information, blood collection, inventory, and transfusions.",
 
+
     'architectureOptions.pageTitle': "H365: Backend Architecture Options",
     'architectureOptions.intro.title': "Introduction",
     'architectureOptions.intro.content': "This document outlines two primary architectural approaches for the H365 backend: Monolithic and Microservices. Understanding these options is crucial for making informed decisions about the system's development, scalability, and maintenance.",
@@ -306,7 +309,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     'architectureOptions.microservices.descriptionH365Service8': "Imaging Service: Imaging orders, reports.",
     'architectureOptions.microservices.descriptionH365Service9': "Pharmacy Service: Prescriptions, dispensing, drug inventory.",
     'architectureOptions.microservices.descriptionH365Service10': "Notification Service: Handles alerts and notifications.",
-    'architectureOptions.microservices.descriptionH365Service11': "(And potentially separate services for ER, Epidemic Control, Reporting, Billing, etc., as they mature)",
+    'architectureOptions.microservices.descriptionH365Service11': "<em>(And potentially separate services for ER, Epidemic Control, Reporting, Billing, etc., as they mature)</em>",
     'architectureOptions.microservices.descriptionH365Content2': "Each service could potentially have its own database (though a shared database with clear boundaries is also an option to start) and would communicate with others through well-defined APIs (e.g., REST or gRPC) or asynchronous messaging (e.g., Kafka, RabbitMQ). An API Gateway would serve as the single entry point for the frontend.",
     'architectureOptions.microservices.pros.title': "Pros:",
     'architectureOptions.microservices.pros.item1': "Improved Scalability: Each service can be scaled independently based on its specific load. For example, if the Pharmacy service is heavily used, it can be scaled up without affecting the Patient Registration service.",
@@ -331,7 +334,6 @@ export const translations: Record<Locale, Record<string, any>> = {
     'architectureOptions.recommendation.step2': "<strong>Identify Candidates for Microservices:</strong> As the system grows and specific modules experience high load, become complex to maintain, or require independent scaling, identify them as candidates to be extracted into separate microservices.",
     'architectureOptions.recommendation.step3': "<strong>Gradual Transition:</strong> Incrementally break out services. For example, the \"User & Auth Service\" or the \"Notification Service\" might be good early candidates.",
     'architectureOptions.recommendation.content2': "This approach allows leveraging the initial speed of monolithic development while planning for the scalability and resilience benefits of microservices in the long run, without incurring the full operational complexity from day one.",
-
   },
   pt: {
     'dashboard.welcomeMessage': 'Bem-vindo à H365',
@@ -355,6 +357,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     'dashboard.card.draftedConsultations.description': "Retome consultas de pacientes incompletas.",
     'dashboard.card.viewAllDrafts': "Ver Todos os Rascunhos",
 
+
     'dashboard.recentActivity.title': "Atividade Recente",
     'dashboard.recentActivity.description': "Visão geral de eventos recentes do sistema e interações com pacientes.",
     'dashboard.recentActivity.viewAll': "Ver Toda a Atividade",
@@ -366,6 +369,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     'dashboard.quickActions.manageWards': "Gerir Enfermarias",
     'dashboard.quickActions.labDashboard': "Painel do Laboratório",
     'dashboard.quickActions.maternityRecords': "Registos de Maternidade",
+
     'dashboard.charts.entryPoints.title': "Pontos de Entrada de Pacientes (Hoje)",
     'dashboard.charts.entryPoints.description': "Como os pacientes estão acessando os serviços.",
     'dashboard.charts.entryPoints.outpatient': "Ambulatório",
@@ -460,6 +464,8 @@ export const translations: Record<Locale, Record<string, any>> = {
     'patientRegistration.toast.templateDownloaded.description': "patient_registration_template.csv",
     'patientRegistration.toast.cameraNotSupported.title': "Câmera Não Suportada",
     'patientRegistration.toast.cameraNotSupported.description': "Seu navegador não suporta acesso à câmera.",
+     'patientRegistration.toast.cameraDenied.title': "Acesso à Câmera Negado",
+    'patientRegistration.toast.cameraDenied.description': "Por favor, permita o acesso à câmera nas configurações do seu navegador para usar esta aplicação.",
 
 
     'techOverview.pageTitle': "H365 Visão Técnica",
@@ -496,7 +502,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section3.subsectionPatientReg.itemIndividualBulk.title': "Registro Individual e em Lote",
     'techOverview.section3.subsectionPatientReg.itemIndividualBulk.desc': "Suporta entrada de dados abrangente para pacientes individuais (incluindo ID Nacional, demografia, informações de contato, familiar próximo, alergias, condições crônicas) e permite o registro eficiente de múltiplos pacientes através de uploads de arquivos CSV, atendendo a vários cenários de admissão.",
     'techOverview.section3.subsectionPatientReg.itemPhotoCapture.title': "Captura de Foto",
-    'techOverview.section3.subsectionPatientReg.itemPhotoCapture.desc': "Possui funcionalidade de webcam integrada para capturar fotos dos pacientes diretamente no formulário de registro, melhorando a identificação dos pacientes.",
+    'techOverview.section3.subsectionPatientReg.itemPhotoCapture.desc': "Possui funcionalidade de webcam integrada para capturar fotos dos pacientes diretamente no formulário de registro (formatadas em uma proporção semelhante a passaporte), melhorando a identificação dos pacientes.",
     'techOverview.section3.subsectionVisitingPatients.title': "3.3. Atendimento a Pacientes (Registro de Consulta)",
     'techOverview.section3.subsectionVisitingPatients.itemSearchModal.title': "Busca de Pacientes & Registro Rápido",
     'techOverview.section3.subsectionVisitingPatients.itemSearchModal.desc': "Permite que a equipe busque rapidamente pacientes existentes pelo ID Nacional. Se um paciente não for encontrado, um modal permite o registro rápido de detalhes essenciais (ID Nacional, Nome, DdN, Género, Condições Crônicas) para agilizar o processo de admissão.",
@@ -509,29 +515,29 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section3.subsectionAppointments.itemNotifications.desc': "Inclui uma seção para notificações e lembretes do sistema (atualmente simulados) relacionados a consultas, resultados de laboratório, melhorando a comunicação e o acompanhamento.",
     'techOverview.section3.subsectionConsultation.title': "3.5. Sala de Consulta (Geral & Assistida por IA)",
     'techOverview.section3.subsectionConsultation.itemLayout.title': "Layout Eficiente & Fluxo de Trabalho",
-    'techOverview.section3.subsectionConsultation.itemLayout.desc': "Apresenta um layout amigável de múltiplos painéis (Lista de Espera/Notificações/Rascunhos, Formulário Principal, Resumo/Histórico do Paciente) para fluxos de trabalho de consulta simplificados. Suporta busca de pacientes por ID Nacional para carregar dados demográficos e histórico.",
+    'techOverview.section3.subsectionConsultation.itemLayout.desc': "Apresenta um layout amigável de múltiplos painéis (Lista de Espera/Notificações/Rascunhos, Formulário Principal, Resumo/Histórico do Paciente) para fluxos de trabalho de consulta simplificados em telas maiores.",
     'techOverview.section3.subsectionConsultation.itemVitalsSymptomsAI.title': "Sinais Vitais, Sintomas, Comentários & Suporte de IA",
     'techOverview.section3.subsectionConsultation.itemVitalsSymptomsAI.desc': "Permite a entrada de sinais vitais do paciente (Temperatura, Peso, Altura, Pressão Arterial com cálculo automático de IMC e exibição de status de PA) e sintomas detalhados. Integra suporte à decisão assistido por IA (Genkit) para diagnósticos potenciais, rascunhos de prescrições e recomendações de tratamento com base em dados abrangentes do paciente. Inclui uma seção para comentários e anotações do médico.",
     'techOverview.section3.subsectionConsultation.itemOrders.title': "Ordens Diagnósticas & Gestão de Consulta",
-    'techOverview.section3.subsectionConsultation.itemOrders.desc': "Permite que os médicos solicitem testes laboratoriais (de uma lista granular) e estudos de imagem diretamente via modais. Suporta salvar o progresso da consulta como rascunho e finalizar a consulta com várias opções de resultado (Enviar para Casa, Internar, Encaminhar, etc.).",
+    'techOverview.section3.subsectionConsultation.itemOrders.desc': "Permite que os médicos (atualmente simulados) solicitem testes laboratoriais (de uma lista granular) e estudos de imagem diretamente da interface de consulta, melhorando a eficiência na entrega de cuidados. Suporta salvar o progresso da consulta como rascunho e finalizar a consulta com várias opções de resultado (Enviar para Casa, Internar, Encaminhar, etc.).",
     'techOverview.section3.subsectionSpecializations.title': "3.6. Especializações",
     'techOverview.section3.subsectionSpecializations.itemTailoredConsult.title': "Módulo de Consulta para Especialistas",
-    'techOverview.section3.subsectionSpecializations.itemTailoredConsult.desc': "Fornece uma interface de consulta semelhante à sala geral, mas adaptada para especialistas. Inclui contexto de referências (médico referenciador, departamento, motivo), permite a seleção da especialidade de consulta e suporta planejamento de resultados específicos para especialistas. Integra suporte à decisão assistida por IA, ordens diagnósticas, salvamento de rascunhos e captura de sinais vitais (incluindo PA e IMC).",
-    'techOverview.section3.subsectionMaternity.title': "3.7. Cuidados de Maternidade",
+    'techOverview.section3.subsectionSpecializations.itemTailoredConsult.desc': "Fornece uma interface de consulta semelhante à sala geral, mas adaptada para especialistas. Inclui contexto de referências (médico referenciador, departamento, motivo), permite a seleção da especialidade de consulta e suporta planejamento de resultados específicos para especialistas. Também integra suporte à decisão assistida por IA, ordens diagnósticas, salvamento de rascunhos e captura de sinais vitais (incluindo PA e IMC).",
+    'techOverview.section3.subsectionMaternity.title': "3.7. Cuidados Maternidade",
     'techOverview.section3.subsectionMaternity.itemFeatures.title': "Gestão Abrangente de Registros de Maternidade",
-    'techOverview.section3.subsectionMaternity.itemFeatures.desc': "Módulo dedicado para gerenciar pacientes grávidas. Apresenta busca/admissão de pacientes (ID Nacional, Demografia, DUM, DPP, Gesta/Para, Histórico Médico), uma visão geral detalhada da paciente (incluindo últimos sinais vitais das visitas pré-natais), um registro de visitas pré-natais com um modal para novas entradas (incluindo sinais vitais com status de IMC/PA) e modais para ordering laboratórios e estudos de imagem relevantes. Também inclui seções para notas do plano de parto.",
+    'techOverview.section3.subsectionMaternity.itemFeatures.desc': "Módulo dedicado para gerenciar pacientes grávidas, incluindo busca de pacientes/admissão (ID Nacional, Demografia, DUM, DPP, Gesta/Para, Histórico Médico), uma visão geral detalhada da paciente (incluindo últimos sinais vitais das visitas pré-natais), um registro de visitas antenatais com um modal para novas entradas (incluindo sinais vitais com status de IMC/PA) e modais para (simulados) pedidos de laboratório e estudos de imagem relevantes. Também inclui seções para notas do plano de parto.",
     'techOverview.section3.subsectionWard.title': "3.8. Gestão de Enfermarias",
     'techOverview.section3.subsectionWard.itemFeatures.title': "Coordenação de Cuidados para Pacientes Internados & Visão Geral",
-    'techOverview.section3.subsectionWard.itemFeatures.desc': "Permite a seleção de uma enfermaria específica para visualizar seu painel (total/ocupados/disponíveis leitos, taxa de ocupação, contagem de pacientes na enfermaria, estadias mais longas). Fornece uma lista de pacientes na enfermaria selecionada (com duração da estadia e diagnóstico) e uma visão geral do status dos leitos. Para um paciente selecionado, exibe informações detalhadas de cuidados: histórico de visitas, alergias, condições crônicas, status de código, sinais vitais (editáveis, com status de IMC/PA), resumos de laboratório/imagem, plano de tratamento, cronograma de medicação (editável via modal com capacidades de adicionar/editar), anotações do médico (adicionar/visualizar) e ações para alta ou transferência (com detalhes de destino). Inclui funcionalidade para admitir pacientes de uma lista de pendências hospitalares para leitos disponíveis na enfermaria selecionada.",
+    'techOverview.section3.subsectionWard.itemFeatures.desc': "Permite a seleção de uma enfermaria específica para visualizar seu painel (total/ocupados/disponíveis leitos, taxa de ocupação, contagem de pacientes na enfermaria, estadias mais longas). Fornece uma lista de pacientes na enfermaria selecionada (com duração da estadia e diagnóstico) e uma visão geral do status dos leitos. Para um paciente selecionado, exibe informações detalhadas de cuidados: histórico de visitas, alergias, condições crônicas, status de código, sinais vitais (editáveis, com status de IMC/PA), resumos de laboratório/imagem, plano de tratamento, cronograma de medicação (editável via modal com capacidades de adicionar/editar), anotações do médico (adicionar/visualizar) e ações para (simulação) alta ou transferência (com detalhes de destino). Inclui funcionalidade para admitir pacientes de uma lista de pendências hospitalares para leitos disponíveis na enfermaria selecionada.",
     'techOverview.section3.subsectionLab.title': "3.9. Gestão de Laboratório",
     'techOverview.section3.subsectionLab.itemFeatures.title': "Fluxo de Trabalho, Resultados & Inventário de Laboratório",
     'techOverview.section3.subsectionLab.itemFeatures.desc': "Gerencia pedidos de laboratório recebidos, permitindo atualizações de status. Apresenta um modal detalhado para entrada de resultados, onde os técnicos inserem resultados para testes solicitados; para testes numéricos predefinidos, exibe unidades, intervalos normais e calcula automaticamente interpretações (Muito Alto, Normal, Baixo, etc.). Inclui um resumo diário de relatórios de laboratório, gerenciamento de inventário de reagentes (com alertas de baixo estoque, opções de requisição única/em lote com prevenção de duplicatas, registro de histórico de requisições) e consumo simulado de reagentes com base nos testes processados. Permite relatar avarias de equipamentos.",
     'techOverview.section3.subsectionImaging.title': "3.10. Gestão de Imagem e Radiologia",
-    'techOverview.section3.subsectionImaging.itemFeatures.title': "Fluxo de Trabalho & Relatórios de Radiologia",
-    'techOverview.section3.subsectionImaging.itemFeatures.desc': "Gerencia pedidos de imagem, permite atualizações de status e apresenta um modal para radiologistas inserirem relatórios detalhados (incluindo conteúdo principal do relatório e achados chave/impressão). Inclui um resumo diário de imagens. Observa que o status completo dos equipamentos, manutenção e relatórios de falhas serão gerenciados pelo futuro módulo de Engenharia Biomédica, mas permite o relato interino de avarias.",
+    'techOverview.section3.subsectionImaging.itemFeatures.title': "Gestão de Fluxo de Trabalho de Radiologia & Relatórios",
+    'techOverview.section3.subsectionImaging.itemFeatures.desc': "Gerencia pedidos de imagem (Raio-X, MRI, etc.), permite atualizações de status e apresenta um modal para radiologistas inserirem relatórios detalhados (incluindo conteúdo principal do relatório e achados chave/impressão). Inclui um resumo diário de imagens. Observa que o status completo dos equipamentos, manutenção e relatórios de falhas serão gerenciados pelo futuro módulo de Engenharia Biomédica, mas permite o relato interino de avarias.",
     'techOverview.section3.subsectionPharmacy.title': "3.11. Farmácia de Dispensação de Medicamentos",
     'techOverview.section3.subsectionPharmacy.itemFeatures.title': "Operações, Dispensação & Controle de Estoque da Farmácia",
-    'techOverview.section3.subsectionPharmacy.itemFeatures.desc': "Facilita o processamento de prescrições pendentes e a dispensação (simulada) de medicamentos. Gerencia os níveis de estoque da farmácia com alertas de baixo estoque e suporta a requisição de itens individuais ou de todos os itens elegíveis com baixo estoque (com prevenção de pedidos pendentes duplicados). Exibe um registro de histórico de requisições. Inclui um cartão de relatório diário de dispensação. Observa a futura integração de backend para ligação em tempo real com o armazém.",
+    'techOverview.section3.subsectionPharmacy.itemFeatures.desc': "Facilita o processamento de prescrições pendentes, (simulados) dispensação de medicamentos e gerenciamento dos níveis de estoque da farmácia com alertas de baixo estoque, e suporta a requisição de itens individuais ou de todos os itens elegíveis com baixo estoque (com prevenção de pedidos pendentes duplicados). Exibe um registro de histórico de requisições. Inclui um cartão de relatório diário de dispensação. Observa a futura integração de backend para ligação em tempo real com o armazém.",
     'techOverview.section3.subsectionER.title': "3.12. Sala de Emergência (Placeholder)",
     'techOverview.section3.subsectionER.itemFeatures.title': "Gestão de Cuidados Críticos (Planejado)",
     'techOverview.section3.subsectionER.itemFeatures.desc': "Este módulo está planejado para fornecer um painel de emergência para triagem de pacientes em tempo real, rastreamento do status e localização dos pacientes dentro da emergência, gerenciamento de recursos da emergência e alertas de eventos críticos.",
@@ -556,7 +562,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section4.itemLayout.title': "Layout",
     'techOverview.section4.itemLayout.desc': "Limpo, organizado, responsivo: Emprega layouts limpos e organizados com cabeçalhos de seção claros para fácil navegação. O design é responsivo, adaptando-se a diferentes tamanhos de tela para visualização otimizada em desktops e tablets (alvos primários). Recursos como painéis fixos são usados para informações contextuais.",
     'techOverview.section4.itemTheme.title': "Tema",
-    'techOverview.section4.itemTheme.desc': "Suporta modos Escuro, Claro e do Sistema: Oferece temas selecionáveis pelo usuário para atender ao conforto visual individual e reduzir a fadiga ocular, melhorando a acessibilidade.",
+    'techOverview.section4.itemTheme.desc': "Suporta modos Escuro, Claro e do Sistema: Oferece temas selecionáveis pelo usuário (Escuro, Claro e preferência do Sistema) para atender ao conforto visual individual e reduzir a fadiga ocular, melhorando a acessibilidade.",
     'techOverview.section4.itemIcons.title': "Ícones",
     'techOverview.section4.itemIcons.desc': "`lucide-react`: Usada para uma iconografia simples, reconhecível e consistente em toda a aplicação, auxiliando na rápida compreensão de ações e informações.",
     'techOverview.section5.title': "5. Considerações Futuras (Além do Protótipo)",
@@ -632,7 +638,7 @@ export const translations: Record<Locale, Record<string, any>> = {
     'architectureOptions.microservices.descriptionH365Service8': "Serviço de Imagem: Pedidos de imagem, relatórios.",
     'architectureOptions.microservices.descriptionH365Service9': "Serviço de Farmácia: Prescrições, dispensação, inventário de medicamentos.",
     'architectureOptions.microservices.descriptionH365Service10': "Serviço de Notificação: Lida com alertas e notificações.",
-    'architectureOptions.microservices.descriptionH365Service11': "(E potencialmente serviços separados para Emergência, Controle Epidêmico, Relatórios, Faturamento, etc., à medida que amadurecem)",
+    'architectureOptions.microservices.descriptionH365Service11': "<em>(E potencialmente serviços separados para Emergência, Controle Epidêmico, Relatórios, Faturamento, etc., à medida que amadurecem)</em>",
     'architectureOptions.microservices.descriptionH365Content2': "Cada serviço poderia potencialmente ter sua própria base de dados (embora uma base de dados partilhada com limites claros também seja uma opção para começar) e comunicar-se-ia com outros através de APIs bem definidas (ex: REST ou gRPC) ou mensagens assíncronas (ex: Kafka, RabbitMQ). Um Gateway de API serviria como o único ponto de entrada para o frontend.",
     'architectureOptions.microservices.pros.title': "Prós:",
     'architectureOptions.microservices.pros.item1': "Escalabilidade Melhorada: Cada serviço pode ser escalado independentemente com base na sua carga específica. Por exemplo, se o serviço de Farmácia for muito usado, pode ser escalado sem afetar o serviço de Registro de Pacientes.",
@@ -658,13 +664,13 @@ export const translations: Record<Locale, Record<string, any>> = {
     'architectureOptions.recommendation.step3': "<strong>Transição Gradual:</strong> Extraia serviços incrementalmente. Por exemplo, o \"Serviço de Usuário & Autenticação\" ou o \"Serviço de Notificação\" podem ser bons candidatos iniciais.",
     'architectureOptions.recommendation.content2': "Esta abordagem permite alavancar a velocidade inicial do desenvolvimento monolítico enquanto se planeja para os benefícios de escalabilidade e resiliência dos microsserviços a longo prazo, sem incorrer na complexidade operacional total desde o primeiro dia.",
   },
-  it: { // Only top-level keys for IT and ES for now
+  it: {
     'dashboard.welcomeMessage': '[IT] Benvenuto in H365',
     'dashboard.tagline': '[IT] Il tuo hub centralizzato per la gestione sanitaria.',
     'techOverview.pageTitle': '[IT] H365 Panoramica Tecnica',
     'techOverview.langToggle.en': "EN",
     'techOverview.langToggle.pt': "PT",
-    // ... other top-level keys can be added with [IT] prefix for now
+    'architectureOptions.pageTitle': '[IT] H365: Opzioni Architettura Backend',
   },
   es: {
     'dashboard.welcomeMessage': '[ES] Bienvenido a H365',
@@ -672,44 +678,32 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.pageTitle': '[ES] H365 Resumen Técnico',
     'techOverview.langToggle.en': "EN",
     'techOverview.langToggle.pt': "PT",
-    // ... other top-level keys can be added with [ES] prefix for now
+    'architectureOptions.pageTitle': '[ES] H365: Opciones Arquitectura Backend',
   },
 };
 
-export const getTranslator = (locale: Locale = defaultLocale) => {
+export const getTranslator = (locale: Locale = defaultLocale): ((key: string, params?: Record<string, string | number>) => string) => {
   const selectedTranslations = translations[locale] || translations[defaultLocale];
   const fallbackTranslations = translations[defaultLocale];
 
-  return (key: string): string => {
-    let keys = key.split('.');
-    let result: any = selectedTranslations;
-    for (let k of keys) {
-      if (result && typeof result === 'object' && k in result) {
-        result = result[k];
-      } else {
-        result = undefined;
-        break;
-      }
-    }
+  return (key: string, params?: Record<string, string | number>): string => {
+    let translation = selectedTranslations[key];
 
-    if (result === undefined && locale !== defaultLocale) {
-      result = fallbackTranslations;
-      for (let k of keys) {
-        if (result && typeof result === 'object' && k in result) {
-          result = result[k];
-        } else {
-          result = undefined;
-          break;
-        }
-      }
+    if (translation === undefined && locale !== defaultLocale) {
+      translation = fallbackTranslations[key];
     }
     
-    if (result === undefined) {
-        console.warn(`Translation key "${key}" not found for locale "${locale}".`);
-        return key; 
+    if (translation === undefined) {
+      console.warn(`Translation key "${key}" not found for locale "${locale}".`);
+      return key; 
     }
-    return String(result); 
+
+    let result = String(translation);
+    if (params) {
+      Object.keys(params).forEach(paramKey => {
+        result = result.replace(`{${paramKey}}`, String(params[paramKey]));
+      });
+    }
+    return result;
   };
 };
-
-    
