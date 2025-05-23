@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -13,7 +14,23 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function ThemeToggle() {
-  const { setTheme } = useTheme()
+  const { setTheme, theme } = useTheme(); // Added theme to potentially use for placeholder
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    // Render a static placeholder to avoid hydration mismatch
+    // This placeholder should ideally look similar to the final button
+    return (
+      <Button variant="outline" size="icon" disabled>
+        <Laptop className="h-[1.2rem] w-[1.2rem]" /> {/* Placeholder icon */}
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu>
