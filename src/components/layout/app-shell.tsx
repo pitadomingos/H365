@@ -1,8 +1,9 @@
+
 "use client";
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation"; // Import useRouter
 import { Stethoscope, Menu } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -18,7 +19,6 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
-  // useSidebar hook might not be needed here if sidebar is always expanded
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -34,68 +34,79 @@ import { useLocale } from '@/context/locale-context';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { currentLocale } = useLocale(); // For passing key to children for re-render on locale change
+  const router = useRouter(); // Initialize useRouter
+  const { currentLocale } = useLocale();
   const currentYear = new Date().getFullYear();
 
-  // No need for sidebar state management here if always expanded
-
   return (
-    <>
-      <Sidebar> {/* Sidebar will now be always expanded based on its internal styling */}
+    <div
+      style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
+      className={cn(
+        "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar"
+      )}
+    >
+      <Sidebar>
         <SidebarHeader>
-          <div className="flex items-center justify-between w-full p-4"> {/* Fixed padding */}
+          <div className="flex items-center justify-between w-full p-4">
             <Link
               href="/"
               className="flex items-center gap-2 overflow-hidden"
             >
               <Stethoscope className="h-7 w-7 text-primary shrink-0" />
-              <h1 className="text-xl font-semibold whitespace-nowrap">H365</h1> {/* Always visible */}
+              <h1 className="text-xl font-semibold whitespace-nowrap">H365</h1>
             </Link>
-            {/* Removed Menu toggle button as sidebar is always expanded */}
+            {/* Menu toggle button removed for permanently expanded sidebar */}
           </div>
         </SidebarHeader>
-        <SidebarContent> {/* Fixed padding */}
+        <SidebarContent>
           <SidebarMenu>
             {NAV_ITEMS.map((item: NavItem) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
-                  asChild
                   isActive={pathname === item.href}
-                  // tooltip={item.label} // Tooltip less critical if always expanded
                   disabled={item.disabled}
                   className={cn(item.disabled && "cursor-not-allowed opacity-50")}
+                  onClick={() => { // Handle navigation via onClick
+                    if (!item.disabled) {
+                      router.push(item.href);
+                    }
+                  }}
+                  aria-disabled={item.disabled}
+                  tabIndex={item.disabled ? -1 : undefined}
                 >
-                  <Link href={item.href} aria-disabled={item.disabled} tabIndex={item.disabled ? -1 : undefined}>
-                    <item.icon />
-                    <span>{item.label}</span> {/* Label always visible */}
-                  </Link>
+                  {/* Direct children are icon and span */}
+                  <item.icon />
+                  <span>{item.label}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter> {/* Fixed padding */}
+        <SidebarFooter>
            <SidebarMenu>
             {BOTTOM_NAV_ITEMS.map((item: NavItem) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
-                  asChild
                   isActive={pathname === item.href}
-                  // tooltip={item.label}
                   disabled={item.disabled}
                   className={cn(item.disabled && "cursor-not-allowed opacity-50")}
+                  onClick={() => { // Handle navigation via onClick
+                    if (!item.disabled) {
+                      router.push(item.href);
+                    }
+                  }}
+                  aria-disabled={item.disabled}
+                  tabIndex={item.disabled ? -1 : undefined}
                 >
-                  <Link href={item.href} aria-disabled={item.disabled} tabIndex={item.disabled ? -1 : undefined}>
-                    <item.icon />
-                    <span>{item.label}</span> {/* Label always visible */}
-                  </Link>
+                  <item.icon />
+                  <span>{item.label}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset> {/* SidebarInset will always have fixed margin based on expanded sidebar width */}
+      <SidebarInset>
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
           <div className="flex-1">
             {/* Breadcrumbs or page title can go here */}
@@ -139,6 +150,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p>Version 0.1.0 (Prototype)</p>
         </footer>
       </SidebarInset>
-    </>
+    </div>
   );
 }
+
+    

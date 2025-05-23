@@ -15,50 +15,31 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-// Removed useIsMobile as sidebar is always desktop style
 
 // --- Context Setup ---
+// For a permanently expanded sidebar, the context becomes much simpler or even unnecessary
+// for basic rendering. It's kept here primarily for TooltipProvider.
 type SidebarContextValue = {
-  // open: boolean; // No longer needed for always expanded
-  // toggleSidebar: () => void; // No longer needed
-  // state: "expanded"; // Always expanded
-  // collapsible: "icon" | "none"; // Still relevant for icon display
+  // Minimal context if sidebar is always expanded
 };
 
 const SidebarContext = React.createContext<SidebarContextValue | null>(null);
 
 export function useSidebar() {
   const context = React.useContext(SidebarContext);
-  if (!context) {
-    // This error shouldn't be thrown if SidebarProvider is correctly used in layout
-    // For always expanded, context might be simpler or even not strictly necessary for consumers
-    // if they don't need to toggle or check state.
-    // However, keeping the provider structure for TooltipProvider.
-    return { state: "expanded", collapsible: "icon" } as const; // Provide default for safety
-  }
-  return context;
+  // Return a static "expanded" state if any component still relies on it for styling text.
+  return { state: "expanded", collapsible: "" }; // "" means not icon-collapsible
 }
 
 export interface SidebarProviderProps {
   children: React.ReactNode;
-  // defaultOpen, collapsible props are no longer needed as sidebar is always expanded
 }
 
 export const SidebarProvider: React.FC<SidebarProviderProps> = ({
   children,
 }) => {
-  const contextValue = React.useMemo(
-    () => ({
-      // open: true, // Always true
-      // state: "expanded" as const,
-      // collapsible: "icon" as const, // Assuming icon style is desired for elements even if not collapsing
-      // toggleSidebar: () => {}, // No-op
-    }),
-    []
-  );
-
   return (
-    <SidebarContext.Provider value={contextValue}>
+    <SidebarContext.Provider value={{}}>
       <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
     </SidebarContext.Provider>
   );
@@ -72,31 +53,29 @@ const Sidebar = React.forwardRef<
     side?: "left" | "right";
   }
 >(({ side = "left", className, children, ...props }, ref) => {
-  // Since it's always expanded
-  const currentWidthClass = "w-[var(--sidebar-width)]";
+  const currentWidthClass = "w-[var(--sidebar-width)]"; // Always expanded width
 
   return (
     <div
       ref={ref}
       className={cn(
-        "group peer hidden md:block text-sidebar-foreground", // Always block on md+
+        "group peer hidden md:block text-sidebar-foreground",
         className
       )}
       data-state="expanded" // Always expanded
-      data-collapsible="icon" // For styling child text elements
       {...props}
     >
       {/* Sizer div - for layout pushing */}
       <div
         className={cn(
-          "relative h-svh bg-transparent", // No transition needed
+          "relative h-svh bg-transparent",
           currentWidthClass
         )}
       />
       {/* Actual sidebar content container */}
       <div
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh md:flex", // No transition needed
+          "fixed inset-y-0 z-10 hidden h-svh md:flex",
           side === "left" ? "left-0 border-r border-sidebar-border" : "right-0 border-l border-sidebar-border",
           currentWidthClass
         )}
@@ -122,7 +101,7 @@ const SidebarInset = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "relative flex min-h-svh flex-1 flex-col bg-background", // Removed margin transition classes
+        "relative flex min-h-svh flex-1 flex-col bg-background",
         className
       )}
       {...props}
@@ -130,7 +109,6 @@ const SidebarInset = React.forwardRef<
   );
 });
 SidebarInset.displayName = "SidebarInset";
-
 
 // --- SidebarHeader Component ---
 const SidebarHeader = React.forwardRef<
@@ -141,11 +119,7 @@ const SidebarHeader = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="header"
-      className={cn(
-        "flex flex-col transition-all duration-200",
-        "p-4", // Always use expanded padding
-        className
-      )}
+      className={cn("flex flex-col p-4", className)} // Always use expanded padding
       {...props}
     >
       {children}
@@ -163,11 +137,7 @@ const SidebarFooter = React.forwardRef<
     <div
       ref={ref}
       data-sidebar="footer"
-      className={cn(
-        "flex flex-col gap-2 transition-all duration-200",
-        "p-2", // Always use expanded padding
-        className
-      )}
+      className={cn("flex flex-col gap-2 p-2", className)} // Always use expanded padding
       {...props}
     >
       {children}
@@ -186,8 +156,7 @@ const SidebarContent = React.forwardRef<
       ref={ref}
       data-sidebar="content"
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden transition-all duration-200",
-        "p-2", // Always use expanded padding
+        "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overflow-x-hidden p-2", // Always use expanded padding
         className
       )}
       {...props}
@@ -237,7 +206,7 @@ const sidebarMenuButtonVariants = cva(
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
       },
       size: {
-        default: "h-8 text-sm",
+        default: "h-8 text-sm", // Adjusted from h-10 for potentially better fit
       },
     },
     defaultVariants: {
@@ -250,43 +219,33 @@ const sidebarMenuButtonVariants = cva(
 const SidebarMenuButton = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button"> & {
-    asChild?: boolean;
     isActive?: boolean;
-    tooltip?: string | React.ReactNode; // Tooltip less relevant if always expanded but kept for consistency
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(({
-  asChild = false,
   isActive = false,
   variant = "default",
   size = "default",
-  tooltip, // Not used if always expanded
   className,
   children,
   ...props
 }, ref) => {
 
-  const Comp = asChild ? Slot : "button";
-
-  const buttonContent = (
-    <Comp
+  return (
+    <button // Always a button
       ref={ref}
       data-active={isActive}
       className={cn(
         sidebarMenuButtonVariants({ variant, size }),
-        // No icon-only classes needed
         className
       )}
       {...props}
     >
       {children}
-    </Comp>
+    </button>
   );
-
-  return buttonContent;
 });
 SidebarMenuButton.displayName = "SidebarMenuButton";
 
-// Exporting only necessary components for a fixed, always expanded sidebar
 export {
   Sidebar,
   SidebarContent,
@@ -296,6 +255,8 @@ export {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarProvider, // Still needed for TooltipProvider
-  useSidebar, // Might be vestigial, returning static "expanded" state
+  SidebarProvider,
+  useSidebar,
 };
+
+    
