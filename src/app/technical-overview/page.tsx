@@ -2,17 +2,15 @@
 "use client"; 
 
 import React from 'react';
-// AppShell is no longer imported or rendered here
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Info, Languages } from "lucide-react"; // Added Languages icon for toggle context
+import { Info, Languages } from "lucide-react";
 import { useLocale } from '@/context/locale-context';
-import { getTranslator, type Locale } from '@/lib/i18n';
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { getTranslator } from '@/lib/i18n';
+import { FrontendArchitectureDiagram } from "@/components/diagrams/frontend-architecture-diagram";
 
 
 export default function TechnicalOverviewPage() {
-  const { currentLocale, toggleLocale } = useLocale();
+  const { currentLocale } = useLocale(); // Removed toggleLocale as global toggle is in AppShell
   const t = getTranslator(currentLocale);
 
   const renderListItem = (titleKey: string, descKey: string) => (
@@ -28,7 +26,7 @@ export default function TechnicalOverviewPage() {
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Info className="h-8 w-8" /> {t('techOverview.pageTitle')}
           </h1>
-          {/* Language Toggle is now global in AppShell header, no need for local one */}
+          {/* Global Language Toggle is in AppShell header */}
         </div>
 
         <Card className="shadow-sm">
@@ -55,6 +53,9 @@ export default function TechnicalOverviewPage() {
               {renderListItem('techOverview.section2.itemState.title', 'techOverview.section2.itemState.desc')}
               {renderListItem('techOverview.section2.itemDeployment.title', 'techOverview.section2.itemDeployment.desc')}
             </ul>
+             <h4 className="font-semibold text-lg mt-6 mb-2">{t('techOverview.section2.subsectionFrontendArch.title')}</h4>
+             <p className="text-base text-muted-foreground">{t('techOverview.section2.subsectionFrontendArch.desc')}</p>
+            <FrontendArchitectureDiagram />
           </CardContent>
         </Card>
 
