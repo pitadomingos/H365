@@ -28,7 +28,6 @@ export const translations: Record<Locale, Record<string, any>> = {
     'dashboard.card.draftedConsultations.description': "Resume incomplete patient consultations.",
     'dashboard.card.viewAllDrafts': "View All Drafts",
 
-
     'dashboard.recentActivity.title': "Recent Activity",
     'dashboard.recentActivity.description': "Overview of recent system events and patient interactions.",
     'dashboard.recentActivity.viewAll': "View All Activity",
@@ -49,12 +48,99 @@ export const translations: Record<Locale, Record<string, any>> = {
     'dashboard.charts.dailyAttendance.description': "Trend of patients attended at this facility.",
     'dashboard.charts.dailyAttendance.patients': "Patients",
 
+    // Patient Registration Page
+    'patientRegistration.pageTitle': "Patient Registration",
+    'patientRegistration.goToVisitingPatients': "Go to Visiting Patients",
+    'patientRegistration.newPatientDetails.title': "New Patient Details",
+    'patientRegistration.newPatientDetails.description': "Please fill in the patient's information accurately. This form is for hospital reception use.",
+    'patientRegistration.personalInfo.title': "Personal Information",
+    'patientRegistration.nationalId.label': "National ID Number",
+    'patientRegistration.nationalId.placeholder': "e.g., 1234567890",
+    'patientRegistration.nationalId.description': "Patient's National ID must be unique.",
+    'patientRegistration.fullName.label': "Full Name",
+    'patientRegistration.fullName.placeholder': "e.g., John Michael Doe",
+    'patientRegistration.dob.label': "Date of Birth",
+    'patientRegistration.dob.placeholder': "Pick a date",
+    'patientRegistration.gender.label': "Gender",
+    'patientRegistration.gender.placeholder': "Select gender",
+    'patientRegistration.gender.male': "Male",
+    'patientRegistration.gender.female': "Female",
+    'patientRegistration.gender.other': "Other",
+    'patientRegistration.allergies.label': "Allergies (comma-separated if multiple)",
+    'patientRegistration.allergies.placeholder': "e.g., Penicillin, Dust mites, Peanuts",
+    'patientRegistration.chronicConditions.label': "Chronic Conditions (comma-separated)",
+    'patientRegistration.chronicConditions.placeholder': "e.g., Hypertension, Diabetes, Asthma",
+    'patientRegistration.photoCapture.title': "Patient Photo Capture",
+    'patientRegistration.photoCapture.description': "Capture a clear photo. Aim for a passport-style image. Photo is mandatory for this form.",
+    'patientRegistration.photoCapture.enableCamera': "Enable Camera",
+    'patientRegistration.photoCapture.capturePhoto': "Capture Photo",
+    'patientRegistration.photoCapture.discardPhoto': "Discard Photo",
+    'patientRegistration.photoCapture.cameraDenied.title': "Camera Access Denied",
+    'patientRegistration.photoCapture.cameraDenied.description': "Please allow camera access in your browser settings.",
+    'patientRegistration.photoCapture.cameraDenied.retry': "Retry",
+    'patientRegistration.photoCapture.enablePrompt': "Click \"Enable Camera\" to start.",
+    'patientRegistration.contactInfo.title': "Contact Information",
+    'patientRegistration.phone.label': "Phone/Cell Number",
+    'patientRegistration.phone.placeholder': "e.g., (555) 123-4567",
+    'patientRegistration.email.label': "Email Address",
+    'patientRegistration.email.placeholder': "e.g., john.doe@example.com",
+    'patientRegistration.address.label': "Full Address",
+    'patientRegistration.address.placeholder': "e.g., 123 Main St, Anytown, Province, Postal Code",
+    'patientRegistration.locationOrigin.title': "Location & Origin",
+    'patientRegistration.district.label': "District",
+    'patientRegistration.district.placeholder': "e.g., Central District",
+    'patientRegistration.province.label': "Province",
+    'patientRegistration.province.placeholder': "e.g., Capital Province",
+    'patientRegistration.homeHospital.label': "Home Hospital / Clinic",
+    'patientRegistration.homeHospital.placeholder': "e.g., City General Hospital",
+    'patientRegistration.nextOfKin.title': "Next of Kin (Optional)",
+    'patientRegistration.nextOfKin.fullName.label': "Full Name",
+    'patientRegistration.nextOfKin.fullName.placeholder': "e.g., Jane Doe (Spouse)",
+    'patientRegistration.nextOfKin.contact.label': "Contact Number",
+    'patientRegistration.nextOfKin.contact.placeholder': "e.g., (555) 987-6543",
+    'patientRegistration.nextOfKin.address.label': "Address",
+    'patientRegistration.nextOfKin.address.placeholder': "e.g., 456 Oak Ln, Anytown",
+    'patientRegistration.bulkReg.title': "Bulk Patient Registration",
+    'patientRegistration.bulkReg.description': "Upload an Excel or CSV file to register multiple patients at once. Download the template for the correct format. Photos must be added individually post-registration.",
+    'patientRegistration.bulkReg.downloadTemplate': "Download CSV Template",
+    'patientRegistration.bulkReg.uploadFile.label': "Upload File",
+    'patientRegistration.bulkReg.uploadFile.selected': "Selected",
+    'patientRegistration.bulkReg.uploadProcess': "Upload and Process File",
+    'patientRegistration.bulkReg.uploading': "Uploading...",
+    'patientRegistration.registerButton': "Register Patient",
+    'patientRegistration.registeringButton': "Registering...",
+    'patientRegistration.waitingList.title': "Today's Waiting List - {date} at {hospitalName}",
+    'patientRegistration.waitingList.description': "Patients currently waiting for service.",
+    'patientRegistration.waitingList.location': "Location",
+    'patientRegistration.waitingList.status': "Status",
+    'patientRegistration.waitingList.empty': "No patients currently in the waiting list.",
+    'patientRegistration.waitingList.refresh': "Refresh List",
+    'patientRegistration.quickTips.title': "Reception Quick Tips",
+    'patientRegistration.quickTips.item1': "Ensure patient details are entered accurately.",
+    'patientRegistration.quickTips.item2': "Verify National ID for all new and returning patients.",
+    'patientRegistration.quickTips.item3': "For emergencies, follow standard hospital protocol.",
+    'patientRegistration.quickTips.item4': "Keep patient discussions confidential.",
+    'patientRegistration.toast.photoRequired.title': "Photo Required",
+    'patientRegistration.toast.photoRequired.description': "Please capture a patient photo for registration via this form.",
+    'patientRegistration.toast.regSuccess.title': "Patient Registered (Mock)",
+    'patientRegistration.toast.regSuccess.description': "{fullName} (ID: {nationalId}) registered. Age: {age}, Gender: {gender}. Allergies: {allergies}. Chronic Conditions: {chronicConditions}.",
+    'patientRegistration.toast.regFailed.title': "Registration Failed",
+    'patientRegistration.toast.noFileSelected.title': "No File Selected",
+    'patientRegistration.toast.noFileSelected.description': "Please select a file to upload.",
+    'patientRegistration.toast.fileUploadMock.title': "File Upload (Mock)",
+    'patientRegistration.toast.fileUploadMock.description': "{fileName} would be processed. Backend integration needed.",
+    'patientRegistration.toast.templateDownloaded.title': "Template Downloaded",
+    'patientRegistration.toast.templateDownloaded.description': "patient_registration_template.csv",
+    'patientRegistration.toast.cameraNotSupported.title': "Camera Not Supported",
+    'patientRegistration.toast.cameraNotSupported.description': "Your browser does not support camera access.",
+
     'techOverview.pageTitle': "H365 Technical Overview",
     'techOverview.langToggle.en': "EN",
     'techOverview.langToggle.pt': "PT",
+    // ... (rest of techOverview and architectureOptions translations) ...
+    // ... (Ensure all keys used in technical-overview.tsx and architecture-options.tsx are here) ...
     'techOverview.section1.title': "1. Introduction",
     'techOverview.section1.content': "H365 is a modern, web-based hospital management system designed to streamline clinical workflows, improve patient care coordination, and provide robust data management capabilities for healthcare facilities. Built with a focus on user experience and scalability, H365 aims to support healthcare professionals in delivering efficient and effective patient care.",
-    
     'techOverview.section2.title': "2. Technology Stack",
     'techOverview.section2.itemFrontend.title': "Frontend",
     'techOverview.section2.itemFrontend.desc': "Next.js (App Router), React, TypeScript: Utilizes the latest Next.js features for optimal performance and developer experience, combined with React's component-based architecture and TypeScript for strong typing and code maintainability.",
@@ -70,8 +156,6 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section2.itemDeployment.desc': "(Deployed on Vercel for prototype): The application is structured for easy deployment on modern cloud platforms specializing in Next.js applications, ensuring scalability and reliability.",
     'techOverview.section2.subsectionFrontendArch.title': "2.1. Frontend Architecture Overview",
     'techOverview.section2.subsectionFrontendArch.desc': "The frontend is built using Next.js with the App Router, promoting a modular structure with Server and Client Components. React provides the component-based UI, styled with Tailwind CSS and ShadCN UI components. Global state (like theme and locale) is managed via React Context, while local component state handles UI interactions. AI features are integrated using Genkit, typically invoked through Server Actions.",
-
-
     'techOverview.section3.title': "3. Core Modules and Key Features",
     'techOverview.section3.subsectionDashboard.title': "3.1. Dashboard",
     'techOverview.section3.subsectionDashboard.itemOverview.title': "Centralized Overview",
@@ -82,25 +166,21 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section3.subsectionDashboard.itemQuickActions.desc': "Offers direct links to frequently used modules and tasks (Register Patient, Schedule Appointment, AI Consultation, Manage Wards, Lab Dashboard, Maternity Records), streamlining navigation and improving user efficiency.",
     'techOverview.section3.subsectionDashboard.itemVisualAnalytics.title': "Visual Analytics",
     'techOverview.section3.subsectionDashboard.itemVisualAnalytics.desc': "Includes interactive charts like a Pie Chart for Patient Entry Points (Outpatient, Emergency, Epidemic Alert) and a Bar Chart for Daily Patient Attendance, facilitating data-driven understanding of hospital operations.",
-    
     'techOverview.section3.subsectionPatientReg.title': "3.2. Patient Registration",
     'techOverview.section3.subsectionPatientReg.itemIndividualBulk.title': "Individual & Bulk Registration",
     'techOverview.section3.subsectionPatientReg.itemIndividualBulk.desc': "Supports comprehensive data entry for individual patients (including National ID, demographics, contact info, next of kin, allergies, chronic conditions) and allows for efficient registration of multiple patients through CSV file uploads, catering to various intake scenarios.",
     'techOverview.section3.subsectionPatientReg.itemPhotoCapture.title': "Photo Capture",
     'techOverview.section3.subsectionPatientReg.itemPhotoCapture.desc': "Features integrated webcam functionality for capturing patient photos directly in the registration form, enhancing patient identification.",
-    
     'techOverview.section3.subsectionVisitingPatients.title': "3.3. Visiting Patients (Consultation Intake)",
     'techOverview.section3.subsectionVisitingPatients.itemSearchModal.title': "Patient Search & Quick Registration",
     'techOverview.section3.subsectionVisitingPatients.itemSearchModal.desc': "Allows staff to quickly search for existing patients by National ID. If a patient is not found, a modal enables rapid registration of essential details (National ID, Name, DOB, Gender, Chronic Conditions) to streamline the intake process.",
     'techOverview.section3.subsectionVisitingPatients.itemVisitEntry.title': "Visit Entry & Waiting List",
     'techOverview.section3.subsectionVisitingPatients.itemVisitEntry.desc': "Facilitates recording the department, reason for visit, and assigned doctor, automatically adding the patient to the relevant waiting list for consultation or service. Displays mock analytics for daily visits.",
-    
     'techOverview.section3.subsectionAppointments.title': "3.4. Appointments",
     'techOverview.section3.subsectionAppointments.itemSchedulingListCalendar.title': "Comprehensive Scheduling",
     'techOverview.section3.subsectionAppointments.itemSchedulingListCalendar.desc': "Provides tools for scheduling new appointments (selecting doctor, date, time, type), viewing upcoming appointments in a filterable list format, and managing schedules through an interactive calendar view.",
     'techOverview.section3.subsectionAppointments.itemNotifications.title': "Notifications & Reminders",
     'techOverview.section3.subsectionAppointments.itemNotifications.desc': "Includes a section for (currently mocked) system notifications and reminders related to appointments, lab results, enhancing communication and follow-up.",
-    
     'techOverview.section3.subsectionConsultation.title': "3.5. Consultation Room (General & AI-Assisted)",
     'techOverview.section3.subsectionConsultation.itemLayout.title': "Efficient Layout & Workflow",
     'techOverview.section3.subsectionConsultation.itemLayout.desc': "Features a user-friendly multi-panel layout (Waiting List/Notifications/Drafts, Main Form, Patient Summary/History) for streamlined consultation workflows. Supports patient search by National ID to load demographics and history.",
@@ -108,47 +188,36 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section3.subsectionConsultation.itemVitalsSymptomsAI.desc': "Allows input of patient vitals (Temperature, Weight, Height, Blood Pressure with auto-calculated BMI and BP status display) and detailed symptoms. Integrates AI-powered decision support (Genkit) for potential diagnoses, draft prescriptions, and treatment recommendations based on comprehensive patient data. Includes a section for doctor's comments and notes.",
     'techOverview.section3.subsectionConsultation.itemOrders.title': "Diagnostic Orders & Consultation Management",
     'techOverview.section3.subsectionConsultation.itemOrders.desc': "Enables doctors to order lab tests (from a granular list) and imaging studies directly via modals. Supports saving consultation progress as a draft and finalizing the consultation with various outcome options (Send Home, Admit, Refer, etc.).",
-    
     'techOverview.section3.subsectionSpecializations.title': "3.6. Specializations",
     'techOverview.section3.subsectionSpecializations.itemTailoredConsult.title': "Specialist Consultation Module",
     'techOverview.section3.subsectionSpecializations.itemTailoredConsult.desc': "Provides a consultation interface similar to the general room but tailored for specialists. Includes context from referrals (referring doctor, department, reason), allows selection of consulting specialty, and supports specialist-specific outcome planning. Integrates AI decision support, diagnostic ordering, draft saving, and vitals capture (including BP and BMI).",
-    
     'techOverview.section3.subsectionMaternity.title': "3.7. Maternity Care",
     'techOverview.section3.subsectionMaternity.itemFeatures.title': "Comprehensive Maternity Record Management",
     'techOverview.section3.subsectionMaternity.itemFeatures.desc': "Dedicated module for managing pregnant patients. Features patient search/intake (National ID, Demographics, LMP, EDD, Gravida/Para, Medical History), a detailed patient overview (including latest vitals from ANC visits), an antenatal visit log with a modal for new entries (including vitals with BMI/BP status), and modals for ordering relevant labs and imaging studies. Also includes sections for birth plan notes.",
-    
     'techOverview.section3.subsectionWard.title': "3.8. Ward Management",
     'techOverview.section3.subsectionWard.itemFeatures.title': "In-Patient Care Coordination & Overview",
     'techOverview.section3.subsectionWard.itemFeatures.desc': "Allows selection of a specific ward to view its dashboard (total/occupied/available beds, occupancy rate, patients in ward count, longest stays). Provides a list of patients in the selected ward (with stay duration and diagnosis) and a visual bed status overview. For a selected patient, it displays detailed care information: visit history, allergies, chronic conditions, code status, vitals (editable, with BMI/BP status), lab/imaging summaries, treatment plan, medication schedule (editable via modal with add/edit capabilities), doctor's notes (add/view), and actions for discharge or transfer (with destination details). Includes functionality to admit patients from a hospital-wide pending list to available beds in the selected ward.",
-    
     'techOverview.section3.subsectionLab.title': "3.9. Laboratory Management",
     'techOverview.section3.subsectionLab.itemFeatures.title': "Lab Workflow, Results & Inventory",
     'techOverview.section3.subsectionLab.itemFeatures.desc': "Manages incoming lab requests, allowing status updates. Features a detailed result entry modal where technicians input results for ordered tests; for predefined numeric tests, it displays units, normal ranges, and auto-calculates interpretations (Very High, Normal, Low, etc.). Includes a daily lab report summary, reagent inventory management (with low-stock alerts, single/bulk requisition options with duplicate prevention, history log), and simulated reagent consumption based on tests processed. Allows reporting of equipment malfunctions.",
-    
     'techOverview.section3.subsectionImaging.title': "3.10. Imaging & Radiology Management",
     'techOverview.section3.subsectionImaging.itemFeatures.title': "Radiology Workflow & Reporting",
     'techOverview.section3.subsectionImaging.itemFeatures.desc': "Manages imaging requests, allows status updates, and features a modal for radiologists to enter detailed reports (including main report content and key findings/impression). Includes a daily imaging summary. Notes that full equipment status, maintenance, and fault reporting will be managed by the future Biomedical Engineering module, but allows interim malfunction reporting.",
-    
     'techOverview.section3.subsectionPharmacy.title': "3.11. Drug Dispensing Pharmacy",
     'techOverview.section3.subsectionPharmacy.itemFeatures.title': "Pharmacy Operations, Dispensing & Stock Control",
     'techOverview.section3.subsectionPharmacy.itemFeatures.desc': "Facilitates processing of pending prescriptions and (mocked) dispensing of medications. Manages pharmacy stock levels with low-stock alerts, and supports requisition of single or all eligible low-stock items (with duplicate pending request prevention). Displays a requisition history log. Includes a daily dispensing report card. Notes future backend integration for real-time warehouse linking.",
-    
     'techOverview.section3.subsectionER.title': "3.12. Emergency Room (Placeholder)",
     'techOverview.section3.subsectionER.itemFeatures.title': "Critical Care Management (Planned)",
     'techOverview.section3.subsectionER.itemFeatures.desc': "This module is planned to provide an ER dashboard for real-time patient triage, tracking of patient status and location within the ER, management of ER resources, and critical event alerts.",
-    
     'techOverview.section3.subsectionEpidemic.title': "3.13. Epidemic Control & Management (Placeholder)",
     'techOverview.section3.subsectionEpidemic.itemFeatures.title': "Public Health Surveillance & Response (Planned)",
     'techOverview.section3.subsectionEpidemic.itemFeatures.desc': "Designed for proactive public health surveillance and rapid response to outbreaks. Planned features include real-time outbreak tracking, case registration, contact tracing, resource management for epidemic response, and public health reporting.",
-
     'techOverview.section3.subsectionCampaigns.title': "3.14. Campaigns (Placeholder)",
     'techOverview.section3.subsectionCampaigns.itemFeatures.title': "Public Health Campaign Coordination (Planned)",
     'techOverview.section3.subsectionCampaigns.itemFeatures.desc': "Intended to provide tools for planning and executing public health campaigns (e.g., vaccination drives, health awareness programs), managing resources, tracking progress, and reporting on outcomes.",
-    
     'techOverview.section3.subsectionReporting.title': "3.15. Reporting (Placeholder)",
     'techOverview.section3.subsectionReporting.itemFeatures.title': "Comprehensive Analytics & Reporting (Planned)",
     'techOverview.section3.subsectionReporting.itemFeatures.desc': "This module will serve as a centralized hub for generating detailed reports across all hospital functions. It will support various timeframes (daily, weekly, monthly, quarterly, yearly) and levels (local, district, provincial, national), with customization and export options.",
-
     'techOverview.section4.title': "4. UI/UX Style Guidelines",
     'techOverview.section4.itemPrimaryColor.title': "Primary Color",
     'techOverview.section4.itemPrimaryColor.desc': "Vibrant Blue (HSL: 210 90% 50%): Used for default buttons and key interactive elements, chosen for its professional and trustworthy association in healthcare.",
@@ -164,7 +233,6 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section4.itemTheme.desc': "Supports Dark, Light, and System modes: Offers user-selectable themes to cater to individual visual comfort and reduce eye strain, enhancing accessibility.",
     'techOverview.section4.itemIcons.title': "Icons",
     'techOverview.section4.itemIcons.desc': "`lucide-react`: Used for simple, recognizable, and consistent iconography throughout the application, aiding in quick comprehension of actions and information.",
-    
     'techOverview.section5.title': "5. Future Considerations (Beyond Prototype)",
     'techOverview.section5.itemBackend.title': "Backend Development",
     'techOverview.section5.itemBackend.desc': "Comprehensive backend development (Node.js/Express, MySQL on Aiven) including database schema implementation, robust APIs for all frontend functionalities, and secure authentication/authorization mechanisms.",
@@ -203,7 +271,6 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section5.itemBloodBank.title': "Blood Bank Management",
     'techOverview.section5.itemBloodBank.desc': "Manages donor information, blood collection, inventory, and transfusions.",
 
-    // Architecture Options Page Translations
     'architectureOptions.pageTitle': "H365: Backend Architecture Options",
     'architectureOptions.intro.title': "Introduction",
     'architectureOptions.intro.content': "This document outlines two primary architectural approaches for the H365 backend: Monolithic and Microservices. Understanding these options is crucial for making informed decisions about the system's development, scalability, and maintenance.",
@@ -307,13 +374,99 @@ export const translations: Record<Locale, Record<string, any>> = {
     'dashboard.charts.dailyAttendance.title': "Atendimento Diário de Pacientes (Últimos 7 Dias)",
     'dashboard.charts.dailyAttendance.description': "Tendência de pacientes atendidos nesta unidade.",
     'dashboard.charts.dailyAttendance.patients': "Pacientes",
-    
+
+    // Patient Registration Page (Português)
+    'patientRegistration.pageTitle': "Registro de Pacientes",
+    'patientRegistration.goToVisitingPatients': "Ir para Atendimento a Pacientes",
+    'patientRegistration.newPatientDetails.title': "Detalhes do Novo Paciente",
+    'patientRegistration.newPatientDetails.description': "Por favor, preencha as informações do paciente com precisão. Este formulário é para uso da recepção do hospital.",
+    'patientRegistration.personalInfo.title': "Informação Pessoal",
+    'patientRegistration.nationalId.label': "Número do BI",
+    'patientRegistration.nationalId.placeholder': "ex: 1234567890",
+    'patientRegistration.nationalId.description': "O Número do BI do paciente deve ser único.",
+    'patientRegistration.fullName.label': "Nome Completo",
+    'patientRegistration.fullName.placeholder': "ex: João Miguel da Silva",
+    'patientRegistration.dob.label': "Data de Nascimento",
+    'patientRegistration.dob.placeholder': "Escolha uma data",
+    'patientRegistration.gender.label': "Sexo",
+    'patientRegistration.gender.placeholder': "Selecione o sexo",
+    'patientRegistration.gender.male': "Masculino",
+    'patientRegistration.gender.female': "Feminino",
+    'patientRegistration.gender.other': "Outro",
+    'patientRegistration.allergies.label': "Alergias (separadas por vírgula se múltiplas)",
+    'patientRegistration.allergies.placeholder': "ex: Penicilina, Ácaros, Amendoim",
+    'patientRegistration.chronicConditions.label': "Condições Crônicas (separadas por vírgula)",
+    'patientRegistration.chronicConditions.placeholder': "ex: Hipertensão, Diabetes, Asma",
+    'patientRegistration.photoCapture.title': "Captura de Foto do Paciente",
+    'patientRegistration.photoCapture.description': "Capture uma foto nítida. Tente obter uma imagem tipo passe. A foto é obrigatória para este formulário.",
+    'patientRegistration.photoCapture.enableCamera': "Ativar Câmera",
+    'patientRegistration.photoCapture.capturePhoto': "Capturar Foto",
+    'patientRegistration.photoCapture.discardPhoto': "Descartar Foto",
+    'patientRegistration.photoCapture.cameraDenied.title': "Acesso à Câmera Negado",
+    'patientRegistration.photoCapture.cameraDenied.description': "Por favor, permita o acesso à câmera nas configurações do seu navegador.",
+    'patientRegistration.photoCapture.cameraDenied.retry': "Tentar Novamente",
+    'patientRegistration.photoCapture.enablePrompt': "Clique em \"Ativar Câmera\" para começar.",
+    'patientRegistration.contactInfo.title': "Informação de Contato",
+    'patientRegistration.phone.label': "Telefone/Celular",
+    'patientRegistration.phone.placeholder': "ex: (555) 123-4567",
+    'patientRegistration.email.label': "Endereço de Email",
+    'patientRegistration.email.placeholder': "ex: joao.silva@example.com",
+    'patientRegistration.address.label': "Endereço Completo",
+    'patientRegistration.address.placeholder': "ex: Rua Principal, 123, Bairro, Cidade, Província, Código Postal",
+    'patientRegistration.locationOrigin.title': "Localização e Origem",
+    'patientRegistration.district.label': "Distrito",
+    'patientRegistration.district.placeholder': "ex: Distrito Central",
+    'patientRegistration.province.label': "Província",
+    'patientRegistration.province.placeholder': "ex: Província Capital",
+    'patientRegistration.homeHospital.label': "Hospital/Clínica de Origem",
+    'patientRegistration.homeHospital.placeholder': "ex: Hospital Geral da Cidade",
+    'patientRegistration.nextOfKin.title': "Familiar Mais Próximo (Opcional)",
+    'patientRegistration.nextOfKin.fullName.label': "Nome Completo",
+    'patientRegistration.nextOfKin.fullName.placeholder': "ex: Maria Silva (Esposa)",
+    'patientRegistration.nextOfKin.contact.label': "Número de Contato",
+    'patientRegistration.nextOfKin.contact.placeholder': "ex: (555) 987-6543",
+    'patientRegistration.nextOfKin.address.label': "Endereço",
+    'patientRegistration.nextOfKin.address.placeholder': "ex: Av. Secundária, 456, Bairro",
+    'patientRegistration.bulkReg.title': "Registro de Pacientes em Lote",
+    'patientRegistration.bulkReg.description': "Carregue um arquivo Excel ou CSV para registrar múltiplos pacientes de uma vez. Baixe o modelo para o formato correto. As fotos devem ser adicionadas individualmente após o registro.",
+    'patientRegistration.bulkReg.downloadTemplate': "Baixar Modelo CSV",
+    'patientRegistration.bulkReg.uploadFile.label': "Carregar Arquivo",
+    'patientRegistration.bulkReg.uploadFile.selected': "Selecionado",
+    'patientRegistration.bulkReg.uploadProcess': "Carregar e Processar Arquivo",
+    'patientRegistration.bulkReg.uploading': "Carregando...",
+    'patientRegistration.registerButton': "Registrar Paciente",
+    'patientRegistration.registeringButton': "Registrando...",
+    'patientRegistration.waitingList.title': "Lista de Espera de Hoje - {date} no {hospitalName}",
+    'patientRegistration.waitingList.description': "Pacientes atualmente aguardando atendimento.",
+    'patientRegistration.waitingList.location': "Localização",
+    'patientRegistration.waitingList.status': "Status",
+    'patientRegistration.waitingList.empty': "Nenhum paciente na lista de espera atualmente.",
+    'patientRegistration.waitingList.refresh': "Atualizar Lista",
+    'patientRegistration.quickTips.title': "Dicas Rápidas para Recepção",
+    'patientRegistration.quickTips.item1': "Certifique-se de que os detalhes do paciente são inseridos corretamente.",
+    'patientRegistration.quickTips.item2': "Verifique o BI para todos os pacientes novos e retornados.",
+    'patientRegistration.quickTips.item3': "Para emergências, siga o protocolo padrão do hospital.",
+    'patientRegistration.quickTips.item4': "Mantenha as discussões sobre pacientes confidenciais.",
+    'patientRegistration.toast.photoRequired.title': "Foto Obrigatória",
+    'patientRegistration.toast.photoRequired.description': "Por favor, capture uma foto do paciente para registro através deste formulário.",
+    'patientRegistration.toast.regSuccess.title': "Paciente Registrado (Simulado)",
+    'patientRegistration.toast.regSuccess.description': "{fullName} (BI: {nationalId}) registrado. Idade: {age}, Sexo: {gender}. Alergias: {allergies}. Condições Crônicas: {chronicConditions}.",
+    'patientRegistration.toast.regFailed.title': "Falha no Registro",
+    'patientRegistration.toast.noFileSelected.title': "Nenhum Arquivo Selecionado",
+    'patientRegistration.toast.noFileSelected.description': "Por favor, selecione um arquivo para carregar.",
+    'patientRegistration.toast.fileUploadMock.title': "Upload de Arquivo (Simulado)",
+    'patientRegistration.toast.fileUploadMock.description': "{fileName} seria processado. Integração com backend necessária.",
+    'patientRegistration.toast.templateDownloaded.title': "Modelo Baixado",
+    'patientRegistration.toast.templateDownloaded.description': "patient_registration_template.csv",
+    'patientRegistration.toast.cameraNotSupported.title': "Câmera Não Suportada",
+    'patientRegistration.toast.cameraNotSupported.description': "Seu navegador não suporta acesso à câmera.",
+
+
     'techOverview.pageTitle': "H365 Visão Técnica",
     'techOverview.langToggle.en': "EN",
     'techOverview.langToggle.pt': "PT",
     'techOverview.section1.title': "1. Introdução",
     'techOverview.section1.content': "H365 é um sistema moderno de gestão hospitalar baseado na web, projetado para otimizar fluxos de trabalho clínicos, melhorar a coordenação do cuidado ao paciente e fornecer robustas capacidades de gerenciamento de dados para instituições de saúde. Construído com foco na experiência do usuário e escalabilidade, o H365 visa apoiar os profissionais de saúde na entrega de um atendimento eficiente e eficaz.",
-    
     'techOverview.section2.title': "2. Pilha Tecnológica",
     'techOverview.section2.itemFrontend.title': "Frontend",
     'techOverview.section2.itemFrontend.desc': "Next.js (App Router), React, TypeScript: Utiliza os recursos mais recentes do Next.js para desempenho otimizado e experiência de desenvolvimento, combinados com a arquitetura baseada em componentes do React e TypeScript para tipagem forte e manutenibilidade do código.",
@@ -329,7 +482,6 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section2.itemDeployment.desc': "(Implantado no Vercel para protótipo): A aplicação é estruturada para fácil implantação em plataformas de nuvem modernas especializadas em aplicações Next.js, garantindo escalabilidade e confiabilidade.",
     'techOverview.section2.subsectionFrontendArch.title': "2.1. Visão Geral da Arquitetura Frontend",
     'techOverview.section2.subsectionFrontendArch.desc': "O frontend é construído usando Next.js com o App Router, promovendo uma estrutura modular com Componentes de Servidor e Cliente. React fornece a UI baseada em componentes, estilizada com Tailwind CSS e componentes ShadCN UI. O estado global (como tema e localização) é gerenciado via React Context, enquanto o estado local do componente lida com as interações da UI. Recursos de IA são integrados usando Genkit, tipicamente invocados através de Server Actions.",
-
     'techOverview.section3.title': "3. Módulos Principais e Recursos Chave",
     'techOverview.section3.subsectionDashboard.title': "3.1. Painel",
     'techOverview.section3.subsectionDashboard.itemOverview.title': "Visão Geral Centralizada",
@@ -340,25 +492,21 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section3.subsectionDashboard.itemQuickActions.desc': "Oferece links diretos para módulos e tarefas frequentemente utilizados (Registar Paciente, Agendar Consulta, Consulta IA, Gerir Enfermarias, Painel Laboratório, Registos Maternidade), simplificando a navegação e melhorando a eficiência do usuário.",
     'techOverview.section3.subsectionDashboard.itemVisualAnalytics.title': "Análises Visuais",
     'techOverview.section3.subsectionDashboard.itemVisualAnalytics.desc': "Inclui gráficos interativos, como um Gráfico de Pizza para Pontos de Entrada de Pacientes (Ambulatório, Emergência, Alerta Epidêmico) e um Gráfico de Barras para Presença Diária de Pacientes, facilitando a compreensão baseada em dados das operações hospitalares.",
-    
     'techOverview.section3.subsectionPatientReg.title': "3.2. Registro de Pacientes",
     'techOverview.section3.subsectionPatientReg.itemIndividualBulk.title': "Registro Individual e em Lote",
     'techOverview.section3.subsectionPatientReg.itemIndividualBulk.desc': "Suporta entrada de dados abrangente para pacientes individuais (incluindo ID Nacional, demografia, informações de contato, familiar próximo, alergias, condições crônicas) e permite o registro eficiente de múltiplos pacientes através de uploads de arquivos CSV, atendendo a vários cenários de admissão.",
     'techOverview.section3.subsectionPatientReg.itemPhotoCapture.title': "Captura de Foto",
     'techOverview.section3.subsectionPatientReg.itemPhotoCapture.desc': "Possui funcionalidade de webcam integrada para capturar fotos dos pacientes diretamente no formulário de registro, melhorando a identificação dos pacientes.",
-    
     'techOverview.section3.subsectionVisitingPatients.title': "3.3. Atendimento a Pacientes (Registro de Consulta)",
     'techOverview.section3.subsectionVisitingPatients.itemSearchModal.title': "Busca de Pacientes & Registro Rápido",
     'techOverview.section3.subsectionVisitingPatients.itemSearchModal.desc': "Permite que a equipe busque rapidamente pacientes existentes pelo ID Nacional. Se um paciente não for encontrado, um modal permite o registro rápido de detalhes essenciais (ID Nacional, Nome, DdN, Género, Condições Crônicas) para agilizar o processo de admissão.",
     'techOverview.section3.subsectionVisitingPatients.itemVisitEntry.title': "Entrada de Visita & Lista de Espera",
     'techOverview.section3.subsectionVisitingPatients.itemVisitEntry.desc': "Facilita o registro do departamento, motivo da visita e médico responsável, adicionando automaticamente o paciente à lista de espera relevante para consulta ou serviço. Exibe análises simuladas para visitas diárias.",
-    
-    'techOverview.section3.subsectionAppointments.title': "3.4. Consultas Agendadas", // Appointment translation
+    'techOverview.section3.subsectionAppointments.title': "3.4. Consultas Agendadas",
     'techOverview.section3.subsectionAppointments.itemSchedulingListCalendar.title': "Agendamento Abrangente",
     'techOverview.section3.subsectionAppointments.itemSchedulingListCalendar.desc': "Fornece ferramentas para agendar novas consultas (selecionando médico, data, hora, tipo), visualizar consultas futuras em formato de lista filtrável e gerenciar horários através de uma visualização interativa de calendário.",
     'techOverview.section3.subsectionAppointments.itemNotifications.title': "Notificações & Lembretes",
     'techOverview.section3.subsectionAppointments.itemNotifications.desc': "Inclui uma seção para notificações e lembretes do sistema (atualmente simulados) relacionados a consultas, resultados de laboratório, melhorando a comunicação e o acompanhamento.",
-    
     'techOverview.section3.subsectionConsultation.title': "3.5. Sala de Consulta (Geral & Assistida por IA)",
     'techOverview.section3.subsectionConsultation.itemLayout.title': "Layout Eficiente & Fluxo de Trabalho",
     'techOverview.section3.subsectionConsultation.itemLayout.desc': "Apresenta um layout amigável de múltiplos painéis (Lista de Espera/Notificações/Rascunhos, Formulário Principal, Resumo/Histórico do Paciente) para fluxos de trabalho de consulta simplificados. Suporta busca de pacientes por ID Nacional para carregar dados demográficos e histórico.",
@@ -366,47 +514,36 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section3.subsectionConsultation.itemVitalsSymptomsAI.desc': "Permite a entrada de sinais vitais do paciente (Temperatura, Peso, Altura, Pressão Arterial com cálculo automático de IMC e exibição de status de PA) e sintomas detalhados. Integra suporte à decisão assistido por IA (Genkit) para diagnósticos potenciais, rascunhos de prescrições e recomendações de tratamento com base em dados abrangentes do paciente. Inclui uma seção para comentários e anotações do médico.",
     'techOverview.section3.subsectionConsultation.itemOrders.title': "Ordens Diagnósticas & Gestão de Consulta",
     'techOverview.section3.subsectionConsultation.itemOrders.desc': "Permite que os médicos solicitem testes laboratoriais (de uma lista granular) e estudos de imagem diretamente via modais. Suporta salvar o progresso da consulta como rascunho e finalizar a consulta com várias opções de resultado (Enviar para Casa, Internar, Encaminhar, etc.).",
-    
     'techOverview.section3.subsectionSpecializations.title': "3.6. Especializações",
     'techOverview.section3.subsectionSpecializations.itemTailoredConsult.title': "Módulo de Consulta para Especialistas",
     'techOverview.section3.subsectionSpecializations.itemTailoredConsult.desc': "Fornece uma interface de consulta semelhante à sala geral, mas adaptada para especialistas. Inclui contexto de referências (médico referenciador, departamento, motivo), permite a seleção da especialidade de consulta e suporta planejamento de resultados específicos para especialistas. Integra suporte à decisão assistida por IA, ordens diagnósticas, salvamento de rascunhos e captura de sinais vitais (incluindo PA e IMC).",
-    
     'techOverview.section3.subsectionMaternity.title': "3.7. Cuidados de Maternidade",
     'techOverview.section3.subsectionMaternity.itemFeatures.title': "Gestão Abrangente de Registros de Maternidade",
-    'techOverview.section3.subsectionMaternity.itemFeatures.desc': "Módulo dedicado para gerenciar pacientes grávidas. Apresenta busca/admissão de pacientes (ID Nacional, Demografia, DUM, DPP, Gesta/Para, Histórico Médico), uma visão geral detalhada da paciente (incluindo últimos sinais vitais das visitas pré-natais), um registro de visitas pré-natais com um modal para novas entradas (incluindo sinais vitais com status de IMC/PA) e modais para solicitar laboratórios e estudos de imagem relevantes. Também inclui seções para notas do plano de parto.",
-    
+    'techOverview.section3.subsectionMaternity.itemFeatures.desc': "Módulo dedicado para gerenciar pacientes grávidas. Apresenta busca/admissão de pacientes (ID Nacional, Demografia, DUM, DPP, Gesta/Para, Histórico Médico), uma visão geral detalhada da paciente (incluindo últimos sinais vitais das visitas pré-natais), um registro de visitas pré-natais com um modal para novas entradas (incluindo sinais vitais com status de IMC/PA) e modais para ordering laboratórios e estudos de imagem relevantes. Também inclui seções para notas do plano de parto.",
     'techOverview.section3.subsectionWard.title': "3.8. Gestão de Enfermarias",
     'techOverview.section3.subsectionWard.itemFeatures.title': "Coordenação de Cuidados para Pacientes Internados & Visão Geral",
     'techOverview.section3.subsectionWard.itemFeatures.desc': "Permite a seleção de uma enfermaria específica para visualizar seu painel (total/ocupados/disponíveis leitos, taxa de ocupação, contagem de pacientes na enfermaria, estadias mais longas). Fornece uma lista de pacientes na enfermaria selecionada (com duração da estadia e diagnóstico) e uma visão geral do status dos leitos. Para um paciente selecionado, exibe informações detalhadas de cuidados: histórico de visitas, alergias, condições crônicas, status de código, sinais vitais (editáveis, com status de IMC/PA), resumos de laboratório/imagem, plano de tratamento, cronograma de medicação (editável via modal com capacidades de adicionar/editar), anotações do médico (adicionar/visualizar) e ações para alta ou transferência (com detalhes de destino). Inclui funcionalidade para admitir pacientes de uma lista de pendências hospitalares para leitos disponíveis na enfermaria selecionada.",
-    
     'techOverview.section3.subsectionLab.title': "3.9. Gestão de Laboratório",
     'techOverview.section3.subsectionLab.itemFeatures.title': "Fluxo de Trabalho, Resultados & Inventário de Laboratório",
-    'techOverview.section3.subsectionLab.itemFeatures.desc': "Gerencia pedidos de laboratório recebidos, permitindo atualizações de status. Apresenta um modal detalhado para entrada de resultados, onde os técnicos inserem resultados para testes solicitados; para testes numéricos predefinidos, exibe unidades, intervalos normais e calcula automaticamente interpretações (Muito Alto, Normal, Baixo, etc.). Inclui um resumo diário de relatórios de laboratório, gerenciamento de inventário de reagentes (com alertas de baixo estoque, opções de requisição única/em lote com prevenção de duplicatas), um registro de histórico de requisições e consumo simulado de reagentes com base nos testes processados. Permite relatar avarias de equipamentos.",
-    
+    'techOverview.section3.subsectionLab.itemFeatures.desc': "Gerencia pedidos de laboratório recebidos, permitindo atualizações de status. Apresenta um modal detalhado para entrada de resultados, onde os técnicos inserem resultados para testes solicitados; para testes numéricos predefinidos, exibe unidades, intervalos normais e calcula automaticamente interpretações (Muito Alto, Normal, Baixo, etc.). Inclui um resumo diário de relatórios de laboratório, gerenciamento de inventário de reagentes (com alertas de baixo estoque, opções de requisição única/em lote com prevenção de duplicatas, registro de histórico de requisições) e consumo simulado de reagentes com base nos testes processados. Permite relatar avarias de equipamentos.",
     'techOverview.section3.subsectionImaging.title': "3.10. Gestão de Imagem e Radiologia",
     'techOverview.section3.subsectionImaging.itemFeatures.title': "Fluxo de Trabalho & Relatórios de Radiologia",
     'techOverview.section3.subsectionImaging.itemFeatures.desc': "Gerencia pedidos de imagem, permite atualizações de status e apresenta um modal para radiologistas inserirem relatórios detalhados (incluindo conteúdo principal do relatório e achados chave/impressão). Inclui um resumo diário de imagens. Observa que o status completo dos equipamentos, manutenção e relatórios de falhas serão gerenciados pelo futuro módulo de Engenharia Biomédica, mas permite o relato interino de avarias.",
-    
     'techOverview.section3.subsectionPharmacy.title': "3.11. Farmácia de Dispensação de Medicamentos",
     'techOverview.section3.subsectionPharmacy.itemFeatures.title': "Operações, Dispensação & Controle de Estoque da Farmácia",
     'techOverview.section3.subsectionPharmacy.itemFeatures.desc': "Facilita o processamento de prescrições pendentes e a dispensação (simulada) de medicamentos. Gerencia os níveis de estoque da farmácia com alertas de baixo estoque e suporta a requisição de itens individuais ou de todos os itens elegíveis com baixo estoque (com prevenção de pedidos pendentes duplicados). Exibe um registro de histórico de requisições. Inclui um cartão de relatório diário de dispensação. Observa a futura integração de backend para ligação em tempo real com o armazém.",
-    
     'techOverview.section3.subsectionER.title': "3.12. Sala de Emergência (Placeholder)",
     'techOverview.section3.subsectionER.itemFeatures.title': "Gestão de Cuidados Críticos (Planejado)",
     'techOverview.section3.subsectionER.itemFeatures.desc': "Este módulo está planejado para fornecer um painel de emergência para triagem de pacientes em tempo real, rastreamento do status e localização dos pacientes dentro da emergência, gerenciamento de recursos da emergência e alertas de eventos críticos.",
-    
     'techOverview.section3.subsectionEpidemic.title': "3.13. Controle e Gestão de Epidemias (Placeholder)",
     'techOverview.section3.subsectionEpidemic.itemFeatures.title': "Vigilância e Resposta à Saúde Pública (Planejado)",
     'techOverview.section3.subsectionEpidemic.itemFeatures.desc': "Projetado para vigilância proativa da saúde pública e resposta rápida a surtos. Recursos planejados incluem rastreamento de surtos em tempo real, registro de casos, rastreamento de contatos, gerenciamento de recursos para resposta a epidemias e relatórios de saúde pública.",
-
     'techOverview.section3.subsectionCampaigns.title': "3.14. Campanhas (Placeholder)",
     'techOverview.section3.subsectionCampaigns.itemFeatures.title': "Coordenação de Campanhas de Saúde Pública (Planejado)",
     'techOverview.section3.subsectionCampaigns.itemFeatures.desc': "Intencionado para fornecer ferramentas para planejar e executar campanhas de saúde pública (ex: campanhas de vacinação, programas de conscientização de saúde), gerenciar recursos, rastrear progresso e relatar resultados.",
-    
     'techOverview.section3.subsectionReporting.title': "3.15. Relatórios (Placeholder)",
     'techOverview.section3.subsectionReporting.itemFeatures.title': "Análises Abrangentes e Relatórios (Planejado)",
     'techOverview.section3.subsectionReporting.itemFeatures.desc': "Este módulo servirá como um hub centralizado para gerar relatórios detalhados em todas as funções do hospital. Suportará vários períodos (diário, semanal, mensal, trimestral, anual) e níveis (local, distrital, provincial, nacional), com opções de personalização e exportação.",
-
     'techOverview.section4.title': "4. Diretrizes de Estilo UI/UX",
     'techOverview.section4.itemPrimaryColor.title': "Cor Primária",
     'techOverview.section4.itemPrimaryColor.desc': "Azul Vibrante (HSL: 210 90% 50%): Usada para botões padrão e elementos interativos chave, escolhida por sua associação profissional e confiável em saúde.",
@@ -422,7 +559,6 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section4.itemTheme.desc': "Suporta modos Escuro, Claro e do Sistema: Oferece temas selecionáveis pelo usuário para atender ao conforto visual individual e reduzir a fadiga ocular, melhorando a acessibilidade.",
     'techOverview.section4.itemIcons.title': "Ícones",
     'techOverview.section4.itemIcons.desc': "`lucide-react`: Usada para uma iconografia simples, reconhecível e consistente em toda a aplicação, auxiliando na rápida compreensão de ações e informações.",
-    
     'techOverview.section5.title': "5. Considerações Futuras (Além do Protótipo)",
     'techOverview.section5.itemBackend.title': "Desenvolvimento de Backend",
     'techOverview.section5.itemBackend.desc': "Desenvolvimento abrangente de backend (Node.js/Express, MySQL no Aiven), incluindo implementação de esquema de banco de dados, APIs robustas para todas as funcionalidades do frontend e mecanismos seguros de autenticação/autorização.",
@@ -461,7 +597,6 @@ export const translations: Record<Locale, Record<string, any>> = {
     'techOverview.section5.itemBloodBank.title': "Gestão de Banco de Sangue",
     'techOverview.section5.itemBloodBank.desc': "Gerencia informações de doadores, coleta de sangue, inventário e transfusões.",
 
-    // Architecture Options Page Translations
     'architectureOptions.pageTitle': "H365: Opções de Arquitetura Backend",
     'architectureOptions.intro.title': "Introdução",
     'architectureOptions.intro.content': "Este documento descreve duas abordagens arquitetónicas principais para o backend do H365: Monolítica e Microsserviços. Compreender estas opções é crucial para tomar decisões informadas sobre o desenvolvimento, escalabilidade e manutenção do sistema.",
@@ -546,15 +681,34 @@ export const getTranslator = (locale: Locale = defaultLocale) => {
   const fallbackTranslations = translations[defaultLocale];
 
   return (key: string): string => {
-    const translation = selectedTranslations[key];
-    if (translation === undefined) {
-        if (locale !== defaultLocale && fallbackTranslations[key]) {
-            return fallbackTranslations[key]; // Fallback to default locale if key exists there
-        }
-        console.warn(`Translation key "${key}" not found for locale "${locale}".`);
-        return key; // Return key itself if not found anywhere
+    let keys = key.split('.');
+    let result: any = selectedTranslations;
+    for (let k of keys) {
+      if (result && typeof result === 'object' && k in result) {
+        result = result[k];
+      } else {
+        result = undefined;
+        break;
+      }
     }
-    return String(translation); 
+
+    if (result === undefined && locale !== defaultLocale) {
+      result = fallbackTranslations;
+      for (let k of keys) {
+        if (result && typeof result === 'object' && k in result) {
+          result = result[k];
+        } else {
+          result = undefined;
+          break;
+        }
+      }
+    }
+    
+    if (result === undefined) {
+        console.warn(`Translation key "${key}" not found for locale "${locale}".`);
+        return key; 
+    }
+    return String(result); 
   };
 };
 
