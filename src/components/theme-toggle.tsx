@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function ThemeToggle() {
-  const { setTheme, theme } = useTheme(); // Added theme to potentially use for placeholder
+  const { setTheme } = useTheme();
   const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -22,14 +22,7 @@ export function ThemeToggle() {
   }, []);
 
   if (!isMounted) {
-    // Render a static placeholder to avoid hydration mismatch
-    // This placeholder should ideally look similar to the final button
-    return (
-      <Button variant="outline" size="icon" disabled>
-        <Laptop className="h-[1.2rem] w-[1.2rem]" /> {/* Placeholder icon */}
-        <span className="sr-only">Toggle theme</span>
-      </Button>
-    );
+    return null; // Render nothing on server and initial client render pass
   }
 
   return (
