@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -9,16 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2 } from "lucide-react"; // Cell removed from here
+import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2 } from "lucide-react";
+import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid, Cell } from "recharts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
-import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid, Cell } from "recharts"; // Cell added here
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useLocale } from '@/context/locale-context';
+import { getTranslator } from '@/lib/i18n';
 
 interface Patient {
   id: string;
@@ -39,7 +40,7 @@ interface WaitingListItem {
   gender?: "Male" | "Female" | "Other";
 }
 
-const initialWaitingListData: WaitingListItem[] = [
+const initialMockWaitingListData: WaitingListItem[] = [
     { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
     { id: "WL002", patientName: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
 ];
@@ -64,6 +65,9 @@ const chartConfig = {
 
 
 export default function VisitingPatientsPage() {
+  const { currentLocale } = useLocale();
+  const t = getTranslator(currentLocale);
+
   const [searchNationalId, setSearchNationalId] = useState("");
   const [searchedPatient, setSearchedPatient] = useState<Patient | null>(null);
   const [patientNotFound, setPatientNotFound] = useState(false);
@@ -75,7 +79,7 @@ export default function VisitingPatientsPage() {
   const [isAddingToWaitingList, setIsAddingToWaitingList] = useState(false);
 
   const [currentDate, setCurrentDate] = useState('');
-  const hospitalName = "HealthFlow Central Hospital";
+  const hospitalName = "HealthFlow Central Hospital"; // This can be fetched or configured
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalNationalId, setModalNationalId] = useState("");
@@ -104,40 +108,49 @@ export default function VisitingPatientsPage() {
       setIsAnalyticsLoading(true);
       try {
         // Simulate fetching waiting list
-        console.log("Fetching initial waiting list (mock)...");
-        // const wlResponse = await fetch('/api/v1/visits/waiting-list');
-        // if (!wlResponse.ok) throw new Error('Failed to fetch waiting list');
-        // const wlData = await wlResponse.json();
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setWaitingList(initialWaitingListData);
-        console.log("Initial waiting list loaded (mock).");
+        // console.log("Fetching initial waiting list (mock)...");
+        const wlResponse = await fetch('/api/v1/visits/waiting-list'); // Mock
+        if (!wlResponse.ok) {
+            // Simulate successful empty list for now if API not ready
+            if(wlResponse.status === 404) { setWaitingList([]); } 
+            else throw new Error('Failed to fetch waiting list');
+        } else {
+            const wlData = await wlResponse.json();
+            setWaitingList(wlData);
+        }
+        // console.log("Initial waiting list loaded (mock).");
 
         // Simulate fetching analytics
-        console.log("Fetching analytics stats (mock)...");
-        // const statsResponse = await fetch('/api/v1/visits/stats');
-        // if (!statsResponse.ok) throw new Error('Failed to fetch visit stats');
-        // const statsData = await statsResponse.json();
-        await new Promise(resolve => setTimeout(resolve, 200)); 
-        const dynamicChartData = initialVisitChartData.map(d => ({...d, visits: Math.floor(Math.random()*50) + 5}));
-        setVisitChartData(dynamicChartData);
-        const totalProcessedFromInitialList = initialWaitingListData.length;
-        setAnalyticsStats({
-            avgWaitTime: "25",
-            totalProcessed: (totalProcessedFromInitialList + 15).toString(), 
-            peakHour: "11:00 AM"
-        });
-         console.log("Analytics stats loaded (mock).");
+        // console.log("Fetching analytics stats (mock)...");
+        const statsResponse = await fetch('/api/v1/visits/stats'); // Mock
+        if (!statsResponse.ok) {
+            // Simulate successful default stats for now if API not ready
+            if(statsResponse.status === 404) {
+                setVisitChartData(initialVisitChartData.map(d => ({...d, visits: Math.floor(Math.random()*10) + 1 }))); // Some random data
+                setAnalyticsStats({ avgWaitTime: "15", totalProcessed: "5", peakHour: "10:00 AM"});
+            } else throw new Error('Failed to fetch visit stats');
+        } else {
+            const statsData = await statsResponse.json();
+            setVisitChartData(statsData.chartData || initialVisitChartData.map(d => ({...d, visits: Math.floor(Math.random()*10) + 1 })));
+            setAnalyticsStats(statsData.summaryStats || { avgWaitTime: "15", totalProcessed: "5", peakHour: "10:00 AM"});
+        }
+        // console.log("Analytics stats loaded (mock).");
 
       } catch (error) {
         console.error("Error fetching initial data:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not load page data." });
+        toast({ variant: "destructive", title: t('visitingPatients.toast.loadError'), description: t('visitingPatients.toast.loadError.desc') });
+        // Fallback to some default mock data on error
+        setWaitingList(initialMockWaitingListData);
+        setVisitChartData(initialVisitChartData.map(d => ({...d, visits: Math.floor(Math.random()*50) + 5})));
+        const totalProcessedFromInitialList = initialMockWaitingListData.length;
+        setAnalyticsStats({ avgWaitTime: "25", totalProcessed: (totalProcessedFromInitialList + 15).toString(), peakHour: "11:00 AM"});
       } finally {
         setIsWaitingListLoading(false);
         setIsAnalyticsLoading(false);
       }
     };
     fetchInitialData();
-  }, []);
+  }, [t]); // Add t to dependency array if stats keys use it
 
   const getAvatarHint = (gender?: "Male" | "Female" | "Other") : string => {
     if (gender === "Male") return "male avatar";
@@ -147,7 +160,7 @@ export default function VisitingPatientsPage() {
 
   const handleSearchPatient = async () => {
     if (!searchNationalId.trim()) {
-      toast({ variant: "destructive", title: "Missing ID", description: "Please enter a National ID to search." });
+      toast({ variant: "destructive", title: t('visitingPatients.toast.missingId'), description: t('visitingPatients.toast.missingId.desc') });
       return;
     }
     setIsLoadingSearch(true);
@@ -158,23 +171,24 @@ export default function VisitingPatientsPage() {
     setAssignedDoctor("");
 
     try {
-      console.log(`Fetching patient with ID: ${searchNationalId.trim()} (mock)...`);
-      // const response = await fetch(`/api/v1/patients/search?nationalId=${searchNationalId.trim()}`);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
-
-      if (searchNationalId.trim() === "12345") { 
-        const data: Patient = { id: "P001", nationalId: "12345", fullName: "Demo Patient Found", dob: "1990-01-01", gender: "Male", chronicConditions: "Asthma, Hypertension" };
+      const response = await fetch(`/api/v1/patients/search?nationalId=${searchNationalId.trim()}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          setPatientNotFound(true);
+          setSearchedPatient(null);
+          toast({ variant: "default", title: t('visitingPatients.toast.notFound'), description: t('visitingPatients.toast.notFound.desc', {searchNationalId: searchNationalId.trim()}) });
+        } else {
+          throw new Error(`API error: ${response.statusText}`);
+        }
+      } else {
+        const data: Patient = await response.json();
         setSearchedPatient(data);
         setPatientNotFound(false);
-        toast({ title: "Patient Found", description: `${data.fullName}'s details loaded.` });
-      } else { 
-         setPatientNotFound(true);
-         setSearchedPatient(null);
-         toast({ variant: "default", title: "Not Found", description: "Patient with this National ID not found. You can register them." });
+        toast({ title: t('visitingPatients.toast.patientFound'), description: t('visitingPatients.toast.patientFound.desc', {fullName: data.fullName}) });
       }
     } catch (error: any) {
       console.error("Error searching patient:", error);
-      toast({ variant: "destructive", title: "Search Error", description: error.message || "Could not search for patient." });
+      toast({ variant: "destructive", title: t('visitingPatients.toast.searchError'), description: error.message || t('visitingPatients.toast.searchError.desc') });
       setPatientNotFound(true);
     } finally {
       setIsLoadingSearch(false);
@@ -183,11 +197,11 @@ export default function VisitingPatientsPage() {
 
   const handleAddToWaitingList = async () => {
     if (!searchedPatient) {
-        toast({ variant: "destructive", title: "No Patient", description: "No patient selected to add to the waiting list." });
+        toast({ variant: "destructive", title: t('visitingPatients.toast.noPatientSelected'), description: t('visitingPatients.toast.noPatientSelected.desc') });
         return;
     }
     if (!department || !reasonForVisit) {
-        toast({ variant: "destructive", title: "Missing Details", description: "Please select department and provide reason for visit." });
+        toast({ variant: "destructive", title: t('visitingPatients.toast.missingVisitDetails'), description: t('visitingPatients.toast.missingVisitDetails.desc') });
         return;
     }
     setIsAddingToWaitingList(true);
@@ -196,36 +210,35 @@ export default function VisitingPatientsPage() {
       patientId: searchedPatient.id,
       department: department,
       reasonForVisit: reasonForVisit,
-      assignedDoctor: assignedDoctor || null,
+      assignedDoctor: assignedDoctor || undefined,
       visitDate: new Date().toISOString()
     };
 
     try {
-      console.log("Submitting to /api/v1/visits (mock):", payload);
-      // const response = await fetch('/api/v1/visits', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(payload),
-      // });
-      // if (!response.ok) {
-      //   const errorData = await response.json().catch(() => ({ error: "Failed to add to waiting list. API error."}));
-      //   throw new Error(errorData.error || `API error: ${response.statusText}`);
-      // }
-      // const newVisit = await response.json(); 
-      await new Promise(resolve => setTimeout(resolve, 1000)); 
+      const response = await fetch('/api/v1/visits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Failed to add to waiting list. API error."}));
+        throw new Error(errorData.error || `API error: ${response.statusText}`);
+      }
+      const newVisitData = await response.json(); // Assuming backend returns the created visit/waiting list item
 
+      // Optimistic update: add to local list or re-fetch
       const newWaitingListItem: WaitingListItem = {
-          id: `WL${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          id: newVisitData.id || `WL${Date.now()}`, // Use ID from backend if available
           patientName: searchedPatient.fullName,
-          photoUrl: `https://placehold.co/40x40.png`,
+          photoUrl: `https://placehold.co/40x40.png`, // Use actual photo if available from patient record
           gender: searchedPatient.gender,
           location: department,
-          status: reasonForVisit,
+          status: reasonForVisit, // This is the reasonForVisit, not a dynamically updated status
           timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setWaitingList(prev => [newWaitingListItem, ...prev]);
 
-      toast({ title: "Patient Added to Visit List", description: `${newWaitingListItem.patientName} recorded for ${department}.`});
+      toast({ title: t('visitingPatients.toast.addedToVisitList'), description: t('visitingPatients.toast.addedToVisitList.desc', {patientName: newWaitingListItem.patientName, department: department})});
 
       setSearchedPatient(null);
       setSearchNationalId("");
@@ -235,7 +248,7 @@ export default function VisitingPatientsPage() {
       setPatientNotFound(false);
     } catch (error: any) {
         console.error("Error adding to waiting list:", error);
-        toast({ variant: "destructive", title: "Submission Error", description: error.message || "Could not add patient to waiting list." });
+        toast({ variant: "destructive", title: t('visitingPatients.toast.submissionError'), description: error.message || "Could not add patient to waiting list." });
     } finally {
         setIsAddingToWaitingList(false);
     }
@@ -243,7 +256,7 @@ export default function VisitingPatientsPage() {
 
   const handleModalRegister = async () => {
     if (!modalNationalId || !modalFullName || !modalDob || !modalGender) {
-      toast({ variant: "destructive", title: "Missing Fields", description: "Please fill all required fields in the modal." });
+      toast({ variant: "destructive", title: t('visitingPatients.toast.missingFields'), description: t('visitingPatients.toast.missingFields.desc') });
       return;
     }
     setIsRegisteringInModal(true);
@@ -253,32 +266,29 @@ export default function VisitingPatientsPage() {
       fullName: modalFullName,
       dateOfBirth: format(modalDob, "yyyy-MM-dd"),
       gender: modalGender,
-      chronicConditions: modalChronicConditions,
+      chronicConditions: modalChronicConditions, // Add this field
     };
 
     try {
-      console.log("Submitting to /api/v1/patients (modal quick registration - mock):", payload);
-      // const response = await fetch('/api/v1/patients', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(payload),
-      // });
-      // if (!response.ok) {
-      //   const errorData = await response.json().catch(() => ({ error: "Registration failed. API error."}));
-      //   throw new Error(errorData.error || `API error: ${response.statusText}`);
-      // }
-      // const registeredPatient = await response.json();
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch('/api/v1/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Registration failed. API error."}));
+        throw new Error(errorData.error || `API error: ${response.statusText}`);
+      }
+      // const registeredPatient = await response.json(); // Use if backend returns patient data
 
       toast({
-        title: "Patient Registered (Mock)",
-        description: `${payload.fullName} has been registered. You can now search for them using ID: ${payload.nationalId}.`,
+        title: t('visitingPatients.toast.patientRegistered'),
+        description: t('visitingPatients.toast.patientRegistered.desc', {fullName: payload.fullName, nationalId: payload.nationalId}),
       });
-      setSearchNationalId(payload.nationalId); // Pre-fill search for convenience
+      setSearchNationalId(payload.nationalId);
       setIsModalOpen(false);
-      setPatientNotFound(false); // Reset not found status
+      setPatientNotFound(false);
 
-      // Clear modal form fields
       setModalNationalId("");
       setModalFullName("");
       setModalDob(undefined);
@@ -286,7 +296,7 @@ export default function VisitingPatientsPage() {
       setModalChronicConditions("");
     } catch (error: any) {
       console.error("Error registering patient in modal:", error);
-      toast({ variant: "destructive", title: "Registration Error", description: error.message || "Could not register patient." });
+      toast({ variant: "destructive", title: t('visitingPatients.toast.regError'), description: error.message || t('visitingPatients.toast.regError.desc') });
     } finally {
       setIsRegisteringInModal(false);
     }
@@ -296,32 +306,32 @@ export default function VisitingPatientsPage() {
       <div className="flex flex-col gap-8">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Users className="h-8 w-8" /> Visiting Patients: Consultation Intake
+            <Users className="h-8 w-8" /> {t('visitingPatients.pageTitle')}
           </h1>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 shadow-sm">
             <CardHeader>
-              <CardTitle>Patient Visit Entry</CardTitle>
+              <CardTitle>{t('visitingPatients.patientVisitEntry.title')}</CardTitle>
               <CardDescription>
-                Search for an existing patient or perform a quick registration to record their visit and add them to the waiting list.
+                {t('visitingPatients.patientVisitEntry.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 py-6">
               <div>
-                <Label htmlFor="searchNationalId">Search Patient by National ID</Label>
+                <Label htmlFor="searchNationalId">{t('visitingPatients.searchPatient.label')}</Label>
                 <div className="flex gap-2 mt-1">
                   <Input
                     id="searchNationalId"
-                    placeholder="Enter National ID (e.g., 12345 for demo)"
+                    placeholder={t('visitingPatients.searchPatient.placeholder')}
                     value={searchNationalId}
                     onChange={(e) => setSearchNationalId(e.target.value)}
                     disabled={isLoadingSearch}
                   />
                   <Button onClick={handleSearchPatient} disabled={isLoadingSearch || !searchNationalId.trim()}>
                     {isLoadingSearch ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                    {isLoadingSearch ? "Searching..." : "Search"}
+                    {isLoadingSearch ? t('visitingPatients.searchPatient.button.loading') : t('visitingPatients.searchPatient.button')}
                   </Button>
                 </div>
               </div>
@@ -329,35 +339,35 @@ export default function VisitingPatientsPage() {
               {patientNotFound && (
                 <Alert variant="default" className="border-orange-500 text-orange-700 dark:border-orange-400 dark:text-orange-300">
                    <Building className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                  <AlertTitle>Patient Not Found</AlertTitle>
+                  <AlertTitle>{t('visitingPatients.patientNotFound.title')}</AlertTitle>
                   <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <span>
-                      No patient found with National ID: {searchNationalId}.
+                      {t('visitingPatients.patientNotFound.description', {searchNationalId: searchNationalId})}
                     </span>
-                    <Dialog open={isModalOpen} onOpenChange={(open) => { if(!open) { setModalNationalId(""); setModalFullName(""); setModalDob(undefined); setModalGender(""); setModalChronicConditions("") } setIsModalOpen(open); }}>
+                    <Dialog open={isModalOpen} onOpenChange={(open) => { if(!open) { setModalNationalId(""); setModalFullName(""); setModalDob(undefined); setModalGender(""); setModalChronicConditions("");} setIsModalOpen(open); }}>
                       <DialogTrigger asChild>
                         <Button variant="outline" size="sm" className="mt-2 sm:mt-0 sm:ml-4 border-orange-500 text-orange-700 hover:bg-orange-50 dark:border-orange-400 dark:text-orange-300 dark:hover:bg-orange-900/50">
-                          <UserPlus className="mr-2 h-4 w-4" /> Register New Patient
+                          <UserPlus className="mr-2 h-4 w-4" /> {t('visitingPatients.patientNotFound.registerButton')}
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-[480px]">
                         <DialogHeader>
-                          <DialogTitle>Quick Patient Registration</DialogTitle>
+                          <DialogTitle>{t('visitingPatients.quickRegModal.title')}</DialogTitle>
                           <DialogDescription>
-                            Register a new patient. Full details can be added later via the main Patient Registration page. Fields marked <span className="text-destructive">*</span> are required.
+                            {t('visitingPatients.quickRegModal.description')}
                           </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="modalNationalId" className="text-right">National ID <span className="text-destructive">*</span></Label>
-                            <Input id="modalNationalId" value={modalNationalId} onChange={(e) => setModalNationalId(e.target.value)} className="col-span-3" placeholder="Patient's National ID" />
+                            <Label htmlFor="modalNationalId" className="text-right">{t('visitingPatients.quickRegModal.nationalId.label')} <span className="text-destructive">*</span></Label>
+                            <Input id="modalNationalId" value={modalNationalId} onChange={(e) => setModalNationalId(e.target.value)} className="col-span-3" placeholder={t('visitingPatients.quickRegModal.nationalId.placeholder')} />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="modalFullName" className="text-right">Full Name <span className="text-destructive">*</span></Label>
-                            <Input id="modalFullName" value={modalFullName} onChange={(e) => setModalFullName(e.target.value)} className="col-span-3" placeholder="e.g., John Doe" />
+                            <Label htmlFor="modalFullName" className="text-right">{t('visitingPatients.quickRegModal.fullName.label')} <span className="text-destructive">*</span></Label>
+                            <Input id="modalFullName" value={modalFullName} onChange={(e) => setModalFullName(e.target.value)} className="col-span-3" placeholder={t('visitingPatients.quickRegModal.fullName.placeholder')} />
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="modalDob" className="text-right">Date of Birth <span className="text-destructive">*</span></Label>
+                            <Label htmlFor="modalDob" className="text-right">{t('visitingPatients.quickRegModal.dob.label')} <span className="text-destructive">*</span></Label>
                             <Popover>
                               <PopoverTrigger asChild>
                                 <Button
@@ -368,7 +378,7 @@ export default function VisitingPatientsPage() {
                                   )}
                                 >
                                   <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {modalDob ? format(modalDob, "PPP") : <span>Pick a date</span>}
+                                  {modalDob ? format(modalDob, "PPP") : <span>{t('visitingPatients.quickRegModal.dob.placeholder')}</span>}
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-auto p-0">
@@ -377,30 +387,30 @@ export default function VisitingPatientsPage() {
                             </Popover>
                           </div>
                           <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="modalGender" className="text-right">Gender <span className="text-destructive">*</span></Label>
+                            <Label htmlFor="modalGender" className="text-right">{t('visitingPatients.quickRegModal.gender.label')} <span className="text-destructive">*</span></Label>
                             <Select value={modalGender} onValueChange={(value) => setModalGender(value as Patient["gender"])}>
                               <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder="Select gender" />
+                                <SelectValue placeholder={t('visitingPatients.quickRegModal.gender.placeholder')} />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="Male">Male</SelectItem>
-                                <SelectItem value="Female">Female</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
+                                <SelectItem value="Male">{t('patientRegistration.gender.male')}</SelectItem>
+                                <SelectItem value="Female">{t('patientRegistration.gender.female')}</SelectItem>
+                                <SelectItem value="Other">{t('patientRegistration.gender.other')}</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                            <div className="grid grid-cols-4 items-start gap-4">
-                            <Label htmlFor="modalChronicConditions" className="text-right pt-2">Chronic Conditions</Label>
-                            <Textarea id="modalChronicConditions" value={modalChronicConditions} onChange={(e) => setModalChronicConditions(e.target.value)} className="col-span-3" placeholder="e.g., Hypertension, Diabetes (comma-separated)" rows={2}/>
+                            <Label htmlFor="modalChronicConditions" className="text-right pt-2">{t('visitingPatients.quickRegModal.chronicConditions.label')}</Label>
+                            <Textarea id="modalChronicConditions" value={modalChronicConditions} onChange={(e) => setModalChronicConditions(e.target.value)} className="col-span-3" placeholder={t('visitingPatients.quickRegModal.chronicConditions.placeholder')} rows={2}/>
                           </div>
                         </div>
                         <DialogFooter>
                            <DialogClose asChild>
-                            <Button type="button" variant="outline" disabled={isRegisteringInModal}>Cancel</Button>
+                            <Button type="button" variant="outline" disabled={isRegisteringInModal}>{t('visitingPatients.quickRegModal.cancelButton')}</Button>
                            </DialogClose>
                           <Button onClick={handleModalRegister} disabled={isRegisteringInModal || !modalNationalId || !modalFullName || !modalDob || !modalGender}>
                             {isRegisteringInModal ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                            {isRegisteringInModal ? "Registering..." : "Register Patient"}
+                            {isRegisteringInModal ? t('visitingPatients.quickRegModal.registerButton.loading') : t('visitingPatients.quickRegModal.registerButton')}
                             </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -414,45 +424,45 @@ export default function VisitingPatientsPage() {
                   <CardHeader>
                     <CardTitle className="text-xl">{searchedPatient.fullName}</CardTitle>
                     <CardDescription>
-                      National ID: {searchedPatient.nationalId} | DOB: {new Date(searchedPatient.dob+"T00:00:00").toLocaleDateString()} | Gender: {searchedPatient.gender}
-                      <br/>Chronic Conditions: {searchedPatient.chronicConditions || "None reported"}
+                      {t('visitingPatients.patientCard.nationalId')} {searchedPatient.nationalId} | {t('visitingPatients.patientCard.dob')} {new Date(searchedPatient.dob+"T00:00:00").toLocaleDateString()} | {t('visitingPatients.patientCard.gender')} {t(`patientRegistration.gender.${searchedPatient.gender.toLowerCase()}` as any)}
+                      <br/>{t('visitingPatients.patientCard.chronicConditions')} {searchedPatient.chronicConditions || t('visitingPatients.patientCard.noneReported')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label htmlFor="department">Department / Section for Visit <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="department">{t('visitingPatients.visitDetails.department.label')} <span className="text-destructive">*</span></Label>
                       <Select value={department} onValueChange={setDepartment} required>
                         <SelectTrigger id="department">
-                          <SelectValue placeholder="Select department/section" />
+                          <SelectValue placeholder={t('visitingPatients.visitDetails.department.placeholder')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Outpatient General Consultation">Outpatient General Consultation</SelectItem>
-                          <SelectItem value="Laboratory (Scheduled Tests)">Laboratory (Scheduled Tests)</SelectItem>
-                          <SelectItem value="Imaging (Scheduled Scan)">Imaging (Scheduled Scan)</SelectItem>
-                          <SelectItem value="Pharmacy (Prescription Refill)">Pharmacy (Prescription Refill)</SelectItem>
-                          <SelectItem value="Specialist Consultation">Specialist Consultation</SelectItem>
-                          <SelectItem value="Emergency Triage">Emergency Triage</SelectItem>
-                          <SelectItem value="Maternity Check-up">Maternity Check-up</SelectItem>
-                          <SelectItem value="Dental Clinic">Dental Clinic</SelectItem>
-                           <SelectItem value="Other Appointment">Other Appointment</SelectItem>
+                          <SelectItem value="Outpatient General Consultation">{t('visitingPatients.visitDetails.department.outpatient')}</SelectItem>
+                          <SelectItem value="Laboratory (Scheduled Tests)">{t('visitingPatients.visitDetails.department.lab')}</SelectItem>
+                          <SelectItem value="Imaging (Scheduled Scan)">{t('visitingPatients.visitDetails.department.imaging')}</SelectItem>
+                          <SelectItem value="Pharmacy (Prescription Refill)">{t('visitingPatients.visitDetails.department.pharmacy')}</SelectItem>
+                          <SelectItem value="Specialist Consultation">{t('visitingPatients.visitDetails.department.specialist')}</SelectItem>
+                          <SelectItem value="Emergency Triage">{t('visitingPatients.visitDetails.department.emergency')}</SelectItem>
+                          <SelectItem value="Maternity Check-up">{t('visitingPatients.visitDetails.department.maternity')}</SelectItem>
+                          <SelectItem value="Dental Clinic">{t('visitingPatients.visitDetails.department.dental')}</SelectItem>
+                           <SelectItem value="Other Appointment">{t('visitingPatients.visitDetails.department.other')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="reasonForVisit">Reason for Visit / Chief Complaint <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="reasonForVisit">{t('visitingPatients.visitDetails.reason.label')} <span className="text-destructive">*</span></Label>
                       <Textarea
                         id="reasonForVisit"
-                        placeholder="e.g., Follow-up, New complaint: fever and cough, Scheduled lab tests, Annual check-up"
+                        placeholder={t('visitingPatients.visitDetails.reason.placeholder')}
                         value={reasonForVisit}
                         onChange={(e) => setReasonForVisit(e.target.value)}
                         required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="assignedDoctor">Assigned Doctor / Service (if pre-assigned)</Label>
+                      <Label htmlFor="assignedDoctor">{t('visitingPatients.visitDetails.assignedDoctor.label')}</Label>
                       <Input
                         id="assignedDoctor"
-                        placeholder="e.g., Dr. Smith, Antenatal Clinic"
+                        placeholder={t('visitingPatients.visitDetails.assignedDoctor.placeholder')}
                         value={assignedDoctor}
                         onChange={(e) => setAssignedDoctor(e.target.value)}
                       />
@@ -461,7 +471,7 @@ export default function VisitingPatientsPage() {
                    <CardFooter>
                     <Button onClick={handleAddToWaitingList} className="w-full" disabled={!department || !reasonForVisit || isAddingToWaitingList}>
                       {isAddingToWaitingList ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                      {isAddingToWaitingList ? "Adding..." : "Add to Waiting List & Finalize Visit"}
+                      {isAddingToWaitingList ? t('visitingPatients.addToListButton.loading') : t('visitingPatients.addToListButton')}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -473,17 +483,17 @@ export default function VisitingPatientsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Clock className="h-5 w-5 text-primary" />
-                Today's Waiting List - {currentDate} at {hospitalName}
+                {t('visitingPatients.waitingList.title', {currentDate: currentDate, hospitalName: hospitalName})}
               </CardTitle>
               <CardDescription className="text-xs">
-                 Patients processed for consultation or service today.
+                 {t('visitingPatients.waitingList.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isWaitingListLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="ml-2 text-muted-foreground">Loading waiting list...</p>
+                  <p className="ml-2 text-muted-foreground">{t('visitingPatients.loadingWaitingList')}</p>
                 </div>
                 ) : waitingList.length > 0 ? (
                 <ul className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
@@ -504,11 +514,11 @@ export default function VisitingPatientsPage() {
                           </div>
                           <p className="text-xs text-muted-foreground flex items-center">
                           <MapPin className="h-3 w-3 mr-1.5 shrink-0" />
-                          To: {patient.location}
+                          {t('visitingPatients.waitingList.to')} {patient.location}
                           </p>
                           <p className="text-xs text-muted-foreground flex items-center mt-0.5">
                           <Activity className="h-3 w-3 mr-1.5 shrink-0" />
-                          Reason: {patient.status}
+                          {t('visitingPatients.waitingList.reason')} {patient.status}
                           </p>
                       </div>
                     </li>
@@ -517,29 +527,31 @@ export default function VisitingPatientsPage() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <Users className="mx-auto h-10 w-10 mb-2" />
-                  <p className="text-sm">No patients currently in the waiting list.</p>
+                  <p className="text-sm">{t('visitingPatients.waitingList.empty')}</p>
                 </div>
               )}
                <Button variant="outline" className="w-full mt-4 text-sm" onClick={async () => {
                     setIsWaitingListLoading(true);
                     try {
-                        console.log("Refreshing waiting list (mock)...");
-                        // const response = await fetch('/api/v1/visits/waiting-list');
-                        // if (!response.ok) throw new Error('Failed to refresh waiting list');
-                        // const wlData = await response.json();
-                        await new Promise(resolve => setTimeout(resolve, 700)); 
-                        const refreshedMockList = initialWaitingListData.map(item => ({...item, timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})).sort(() => 0.5 - Math.random());
-                        setWaitingList(refreshedMockList);
-                        toast({title: "List Refreshed (Mock)"});
+                        const response = await fetch('/api/v1/visits/waiting-list');
+                        if (!response.ok) {
+                            if(response.status === 404) { setWaitingList([]); }
+                            else throw new Error('Failed to refresh waiting list');
+                        } else {
+                            const wlData = await response.json();
+                            setWaitingList(wlData);
+                        }
+                        toast({title: t('patientRegistration.waitingList.refresh') + " (Mock Success)"});
                     } catch (error) {
                         console.error("Error refreshing waiting list:", error);
-                        toast({variant: "destructive", title: "Error", description: "Could not refresh waiting list."});
+                        toast({variant: "destructive", title: t('visitingPatients.toast.loadError'), description: t('visitingPatients.toast.refreshError.desc')});
+                        setWaitingList(initialMockWaitingListData.map(item => ({...item, timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})).sort(() => 0.5 - Math.random())); // Fallback
                     } finally {
                         setIsWaitingListLoading(false);
                     }
                 }} disabled={isWaitingListLoading}>
                 {isWaitingListLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                Refresh List
+                {t('visitingPatients.waitingList.refreshButton')}
               </Button>
             </CardContent>
           </Card>
@@ -549,50 +561,50 @@ export default function VisitingPatientsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-6 w-6" />
-              Hospital Visit Analytics (Today)
+              {t('visitingPatients.analytics.title')}
             </CardTitle>
-            <CardDescription>Overview of today's patient flow and departmental visits.</CardDescription>
+            <CardDescription>{t('visitingPatients.analytics.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
           {isAnalyticsLoading ? (
             <div className="flex items-center justify-center py-10">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="ml-2 text-muted-foreground">Loading analytics...</p>
+                <p className="ml-2 text-muted-foreground">{t('visitingPatients.loadingAnalytics')}</p>
             </div>
           ) : (
             <>
             <div className="grid md:grid-cols-3 gap-4">
               <Card className="shadow-xs">
                 <CardHeader className="pb-2">
-                  <CardDescription>Average Wait Time</CardDescription>
+                  <CardDescription>{t('visitingPatients.analytics.avgWaitTime.label')}</CardDescription>
                   <CardTitle className="text-3xl">{analyticsStats.avgWaitTime} <span className="text-lg font-normal">mins</span></CardTitle>
                 </CardHeader>
                  <CardContent>
-                    <p className="text-xs text-muted-foreground">+2 mins from yesterday</p>
+                    <p className="text-xs text-muted-foreground">{t('visitingPatients.analytics.avgWaitTime.subtext')}</p>
                 </CardContent>
               </Card>
               <Card className="shadow-xs">
                 <CardHeader className="pb-2">
-                  <CardDescription>Total Patients Processed</CardDescription>
+                  <CardDescription>{t('visitingPatients.analytics.totalProcessed.label')}</CardDescription>
                   <CardTitle className="text-3xl">{analyticsStats.totalProcessed}</CardTitle>
                 </CardHeader>
                  <CardContent>
-                    <p className="text-xs text-muted-foreground">Target: 50 for today</p>
+                    <p className="text-xs text-muted-foreground">{t('visitingPatients.analytics.totalProcessed.subtext')}</p>
                 </CardContent>
               </Card>
                <Card className="shadow-xs">
                 <CardHeader className="pb-2">
-                  <CardDescription>Peak Hour</CardDescription>
+                  <CardDescription>{t('visitingPatients.analytics.peakHour.label')}</CardDescription>
                   <CardTitle className="text-3xl">{analyticsStats.peakHour}</CardTitle>
                 </CardHeader>
                  <CardContent>
-                    <p className="text-xs text-muted-foreground">Most patient check-ins</p>
+                    <p className="text-xs text-muted-foreground">{t('visitingPatients.analytics.peakHour.subtext')}</p>
                 </CardContent>
               </Card>
             </div>
 
             <div>
-              <h3 className="text-md font-semibold mb-2">Visits by Department</h3>
+              <h3 className="text-md font-semibold mb-2">{t('visitingPatients.analytics.visitsByDept.title')}</h3>
               <ChartContainer config={chartConfig} className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsBarChart data={visitChartData} accessibilityLayer margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
@@ -607,7 +619,7 @@ export default function VisitingPatientsPage() {
                        {visitChartData.map((_entry, index) => {
                         const departmentKey = (_entry.department || "Unknown").toLowerCase().replace(/\s+/g, '') as keyof typeof chartConfig;
                         const chartItem = chartConfig[departmentKey];
-                        const color = _entry.fill || chartItem?.color || '#8884d8'; // Use fill from data, then config, then default
+                        const color = _entry.fill || chartItem?.color || '#8884d8';
                         return <Cell key={`cell-${index}`} fill={color} />;
                       })}
                     </Bar>
@@ -645,5 +657,3 @@ export default function VisitingPatientsPage() {
       </div>
   );
 }
-
-    

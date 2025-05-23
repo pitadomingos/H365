@@ -29,6 +29,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { useLocale } from '@/context/locale-context';
+import { getTranslator } from '@/lib/i18n';
 
 interface Appointment {
   id: string;
@@ -59,6 +61,9 @@ const initialMockDoctors: Doctor[] = [
 ];
 
 export default function AppointmentsPage() {
+  const { currentLocale } = useLocale();
+  const t = getTranslator(currentLocale);
+
   const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
   const [appointments, setAppointments] = React.useState<Appointment[]>([]);
   const [isLoadingAppointments, setIsLoadingAppointments] = React.useState(true);
@@ -81,23 +86,23 @@ export default function AppointmentsPage() {
     const fetchAppointments = async () => {
       setIsLoadingAppointments(true);
       try {
-        // Simulate API call: GET /api/v1/appointments
-        // const response = await fetch('/api/v1/appointments');
-        // if (!response.ok) throw new Error('Failed to fetch appointments');
-        // const data = await response.json();
-        // setAppointments(data);
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        const response = await fetch('/api/v1/appointments'); // Mock
+        if (!response.ok) {
+          if(response.status === 404) { setAppointments([]); } // Example: Handle API not ready
+          else throw new Error(t('appointments.toast.loadAppointmentsError'));
+        } else {
+          const data = await response.json();
+          setAppointments(data);
+        }
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+        toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadAppointmentsError')});
+        // Fallback mock data
         const fetchedAppointments: Appointment[] = [
           { id: "APT001", patientName: "Alice Wonderland", doctorName: "Dr. Smith", date: "2024-08-15", time: "10:00 AM - 10:30 AM", type: "Consultation", status: "Confirmed" },
           { id: "APT002", patientName: "Bob The Builder", doctorName: "Dr. Jones", date: "2024-08-15", time: "11:00 AM - 11:45 AM", type: "Check-up", status: "Pending" },
-          { id: "APT003", patientName: "Charlie Brown", doctorName: "Dr. Smith", date: "2024-08-16", time: "02:00 PM - 02:30 PM", type: "Follow-up", status: "Cancelled" },
-          { id: "APT004", patientName: "Diana Prince", doctorName: "Dr. Eve", date: "2024-08-16", time: "03:00 PM - 03:15 PM", type: "Telemedicine", status: "Confirmed" },
-          { id: "APT005", patientName: "Edward Hands", doctorName: "Dr. Jones", date: new Date().toISOString().split('T')[0], time: "09:00 AM - 09:30 AM", type: "Consultation", status: "Confirmed" },
         ];
         setAppointments(fetchedAppointments);
-      } catch (error) {
-        console.error("Error fetching appointments:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not load appointments."});
       } finally {
         setIsLoadingAppointments(false);
       }
@@ -106,21 +111,21 @@ export default function AppointmentsPage() {
     const fetchNotifications = async () => {
       setIsLoadingNotifications(true);
       try {
-        // Simulate API call: GET /api/v1/notifications?context=appointments
-        // const response = await fetch('/api/v1/notifications?context=appointments');
-        // if (!response.ok) throw new Error('Failed to fetch notifications');
-        // const data = await response.json();
-        // setNotifications(data);
-        await new Promise(resolve => setTimeout(resolve, 1200));
-        const fetchedNotifications: NotificationItem[] = [
-          { id: 1, message: "Appointment with Alice Wonderland confirmed for tomorrow at 10:00 AM.", time: "2 hours ago", read: false },
-          { id: 2, message: "Lab results for Bob The Builder are ready.", time: "5 hours ago", read: true },
-          { id: 3, message: "Reminder: Follow-up with Charlie Brown in 3 days.", time: "1 day ago", read: false },
-        ];
-        setNotifications(fetchedNotifications);
+        const response = await fetch('/api/v1/notifications?context=appointments'); // Mock
+         if (!response.ok) {
+          if(response.status === 404) { setNotifications([]); }
+          else throw new Error(t('appointments.toast.loadNotificationsError'));
+        } else {
+          const data = await response.json();
+          setNotifications(data);
+        }
       } catch (error) {
         console.error("Error fetching notifications:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not load notifications."});
+        toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadNotificationsError')});
+        const fetchedNotifications: NotificationItem[] = [
+          { id: 1, message: "Appointment with Alice Wonderland confirmed for tomorrow at 10:00 AM.", time: "2 hours ago", read: false },
+        ];
+        setNotifications(fetchedNotifications);
       } finally {
         setIsLoadingNotifications(false);
       }
@@ -129,17 +134,18 @@ export default function AppointmentsPage() {
     const fetchDoctors = async () => {
         setIsLoadingDoctors(true);
         try {
-            // Simulate API call: GET /api/v1/doctors
-            // const response = await fetch('/api/v1/doctors');
-            // if (!response.ok) throw new Error('Failed to fetch doctors');
-            // const data = await response.json();
-            // setDoctors(data);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            setDoctors(initialMockDoctors);
+            const response = await fetch('/api/v1/doctors'); // Mock
+             if (!response.ok) {
+              if(response.status === 404) { setDoctors(initialMockDoctors); }
+              else throw new Error(t('appointments.toast.loadDoctorsError'));
+            } else {
+              const data = await response.json();
+              setDoctors(data);
+            }
         } catch (error) {
             console.error("Error fetching doctors:", error);
-            toast({ variant: "destructive", title: "Error", description: "Could not load doctors list." });
-            setDoctors(initialMockDoctors); // Fallback to initial mock on error
+            toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadDoctorsError') });
+            setDoctors(initialMockDoctors);
         } finally {
             setIsLoadingDoctors(false);
         }
@@ -148,15 +154,15 @@ export default function AppointmentsPage() {
     fetchAppointments();
     fetchNotifications();
     fetchDoctors();
-  }, []);
+  }, [t]); // Add t to dependency array
 
   const handleScheduleNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPatientName || !newSelectedDoctorId || !newAppointmentDate || !newAppointmentTime) {
       toast({
         variant: "destructive",
-        title: "Missing Information",
-        description: "Please fill all required fields to schedule an appointment.",
+        title: t('appointments.toast.missingInfo'),
+        description: t('appointments.toast.missingInfo.desc'),
       });
       return;
     }
@@ -166,40 +172,26 @@ export default function AppointmentsPage() {
         patientName: newPatientName,
         doctorId: newSelectedDoctorId,
         date: newAppointmentDate,
-        time: newAppointmentTime, // e.g., "10:00"
+        time: newAppointmentTime,
         type: newAppointmentType,
     };
 
     try {
-        // Simulate API call: POST /api/v1/appointments
-        // const response = await fetch('/api/v1/appointments', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(payload),
-        // });
-        // if (!response.ok) {
-        //     const errorData = await response.json().catch(() => ({ error: "Failed to schedule. API error."}));
-        //     throw new Error(errorData.error || `API error: ${response.statusText}`);
-        // }
-        // const newApt = await response.json();
-
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Mock delay
-        const selectedDoctor = doctors.find(d => d.id === newSelectedDoctorId);
-        const newApt: Appointment = {
-          id: `APT${Math.floor(Math.random() * 10000)}`,
-          patientName: newPatientName,
-          doctorName: selectedDoctor?.name || "N/A",
-          date: newAppointmentDate,
-          // Backend would format time, here we mock it
-          time: `${newAppointmentTime} - ${new Date(new Date(`1970-01-01T${newAppointmentTime}:00`).getTime() + 30*60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`,
-          type: newAppointmentType,
-          status: "Pending", 
-        };
+        const response = await fetch('/api/v1/appointments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: "Failed to schedule. API error."}));
+            throw new Error(errorData.error || `API error: ${response.statusText}`);
+        }
+        const newApt: Appointment = await response.json();
 
         setAppointments(prev => [newApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
         toast({
-          title: "Appointment Requested (Mock)",
-          description: `Request for ${newPatientName} with ${newApt.doctorName} on ${newAppointmentDate} at ${newAppointmentTime} has been submitted.`,
+          title: t('appointments.toast.scheduled'),
+          description: t('appointments.toast.scheduled.desc', {patientName: newPatientName, doctorName: newApt.doctorName, date: newAppointmentDate, time: newAppointmentTime }),
         });
 
         setNewPatientName("");
@@ -210,7 +202,7 @@ export default function AppointmentsPage() {
         setIsSchedulingDialogOpen(false);
     } catch (error: any) {
         console.error("Error scheduling appointment:", error);
-        toast({ variant: "destructive", title: "Scheduling Error", description: error.message || "Could not schedule appointment." });
+        toast({ variant: "destructive", title: t('appointments.toast.scheduleError'), description: error.message || t('appointments.toast.scheduleError.desc') });
     } finally {
         setIsScheduling(false);
     }
@@ -220,39 +212,44 @@ export default function AppointmentsPage() {
     selectedCalendarDate ? apt.date === selectedCalendarDate.toISOString().split('T')[0] : true
   );
 
+  const selectedDateDisplayString = selectedCalendarDate 
+    ? selectedCalendarDate.toLocaleDateString(currentLocale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) 
+    : t('appointments.upcoming.description', {selectedDateString: "all dates"});
+
+
   return (
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <CalendarCheck2 className="h-8 w-8" /> Appointments
+            <CalendarCheck2 className="h-8 w-8" /> {t('appointments.pageTitle')}
           </h1>
           <Dialog open={isSchedulingDialogOpen} onOpenChange={setIsSchedulingDialogOpen}>
             <DialogTrigger asChild>
               <Button disabled={isLoadingDoctors}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Schedule New
+                <PlusCircle className="mr-2 h-4 w-4" /> {t('appointments.scheduleNewButton')}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <form onSubmit={handleScheduleNewAppointment}>
                 <DialogHeader>
-                  <DialogTitle>Schedule New Appointment</DialogTitle>
+                  <DialogTitle>{t('appointments.scheduleModal.title')}</DialogTitle>
                   <DialogDescription>
-                    Fill in the details to schedule a new appointment.
+                    {t('appointments.scheduleModal.description')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="patientName">Patient Name <span className="text-destructive">*</span></Label>
-                    <Input id="patientName" placeholder="Patient Full Name" value={newPatientName} onChange={(e) => setNewPatientName(e.target.value)} required disabled={isScheduling}/>
+                    <Label htmlFor="patientName">{t('appointments.scheduleModal.patientName.label')} <span className="text-destructive">*</span></Label>
+                    <Input id="patientName" placeholder={t('appointments.scheduleModal.patientName.placeholder')} value={newPatientName} onChange={(e) => setNewPatientName(e.target.value)} required disabled={isScheduling}/>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="doctorName">Doctor <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="doctorName">{t('appointments.scheduleModal.doctor.label')} <span className="text-destructive">*</span></Label>
                     <Select value={newSelectedDoctorId} onValueChange={setNewSelectedDoctorId} required disabled={isScheduling || isLoadingDoctors}>
                       <SelectTrigger id="doctorName">
-                        <SelectValue placeholder={isLoadingDoctors ? "Loading doctors..." : "Select Doctor"} />
+                        <SelectValue placeholder={isLoadingDoctors ? t('appointments.scheduleModal.doctor.loading') : t('appointments.scheduleModal.doctor.placeholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {isLoadingDoctors ? <SelectItem value="loading" disabled>Loading...</SelectItem> : 
+                        {isLoadingDoctors ? <SelectItem value="loading" disabled>{t('appointments.scheduleModal.doctor.loading')}</SelectItem> : 
                           doctors.map(doc => (
                             <SelectItem key={doc.id} value={doc.id}>{doc.name}</SelectItem>
                           ))
@@ -262,35 +259,35 @@ export default function AppointmentsPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="appointmentDate">Date <span className="text-destructive">*</span></Label>
+                        <Label htmlFor="appointmentDate">{t('appointments.scheduleModal.date.label')} <span className="text-destructive">*</span></Label>
                         <Input id="appointmentDate" type="date" value={newAppointmentDate} onChange={(e) => setNewAppointmentDate(e.target.value)} required disabled={isScheduling}/>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="appointmentTime">Time <span className="text-destructive">*</span></Label>
+                        <Label htmlFor="appointmentTime">{t('appointments.scheduleModal.time.label')} <span className="text-destructive">*</span></Label>
                         <Input id="appointmentTime" type="time" value={newAppointmentTime} onChange={(e) => setNewAppointmentTime(e.target.value)} required disabled={isScheduling}/>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="appointmentType">Appointment Type</Label>
+                    <Label htmlFor="appointmentType">{t('appointments.scheduleModal.type.label')}</Label>
                     <Select value={newAppointmentType} onValueChange={setNewAppointmentType} disabled={isScheduling}>
                       <SelectTrigger id="appointmentType">
-                        <SelectValue placeholder="Select Type" />
+                        <SelectValue placeholder={t('appointments.scheduleModal.type.placeholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Consultation">Consultation</SelectItem>
-                        <SelectItem value="Check-up">Check-up</SelectItem>
-                        <SelectItem value="Follow-up">Follow-up</SelectItem>
-                        <SelectItem value="Telemedicine">Telemedicine</SelectItem>
-                        <SelectItem value="Procedure">Procedure</SelectItem>
+                        <SelectItem value="Consultation">{t('appointments.scheduleModal.type.consultation')}</SelectItem>
+                        <SelectItem value="Check-up">{t('appointments.scheduleModal.type.checkup')}</SelectItem>
+                        <SelectItem value="Follow-up">{t('appointments.scheduleModal.type.followup')}</SelectItem>
+                        <SelectItem value="Telemedicine">{t('appointments.scheduleModal.type.telemedicine')}</SelectItem>
+                        <SelectItem value="Procedure">{t('appointments.scheduleModal.type.procedure')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <DialogFooter>
-                  <DialogClose asChild><Button type="button" variant="outline" disabled={isScheduling}>Cancel</Button></DialogClose>
+                  <DialogClose asChild><Button type="button" variant="outline" disabled={isScheduling}>{t('appointments.scheduleModal.cancelButton')}</Button></DialogClose>
                   <Button type="submit" disabled={isScheduling || isLoadingDoctors || !newSelectedDoctorId}>
                     {isScheduling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {isScheduling ? "Scheduling..." : "Schedule Appointment"}
+                    {isScheduling ? t('appointments.scheduleModal.submitButton.loading') : t('appointments.scheduleModal.submitButton')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -301,24 +298,24 @@ export default function AppointmentsPage() {
         <div className="grid lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 shadow-sm">
             <CardHeader>
-              <CardTitle>Upcoming Appointments</CardTitle>
-              <CardDescription>Overview of scheduled appointments for {selectedCalendarDate ? selectedCalendarDate.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : "all dates"}.</CardDescription>
+              <CardTitle>{t('appointments.upcoming.title')}</CardTitle>
+              <CardDescription>{t('appointments.upcoming.description', {selectedDateString: selectedDateDisplayString})}</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingAppointments ? (
                 <div className="flex items-center justify-center py-10">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="ml-2 text-muted-foreground">Loading appointments...</p>
+                  <p className="ml-2 text-muted-foreground">{t('appointments.loadingAppointments')}</p>
                 </div>
               ) : filteredAppointments.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Patient</TableHead>
-                      <TableHead>Doctor</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Status</TableHead>
+                      <TableHead>{t('appointments.upcoming.table.patient')}</TableHead>
+                      <TableHead>{t('appointments.upcoming.table.doctor')}</TableHead>
+                      <TableHead>{t('appointments.upcoming.table.time')}</TableHead>
+                      <TableHead>{t('appointments.upcoming.table.type')}</TableHead>
+                      <TableHead className="text-right">{t('appointments.upcoming.table.status')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -329,7 +326,11 @@ export default function AppointmentsPage() {
                         <TableCell>{apt.time}</TableCell>
                         <TableCell className="flex items-center gap-1">
                           {apt.type === "Telemedicine" && <Video className="h-4 w-4 text-primary" />}
-                          {apt.type}
+                          {apt.type === "Consultation" ? t('appointments.scheduleModal.type.consultation') :
+                           apt.type === "Check-up" ? t('appointments.scheduleModal.type.checkup') :
+                           apt.type === "Follow-up" ? t('appointments.scheduleModal.type.followup') :
+                           apt.type === "Telemedicine" ? t('appointments.scheduleModal.type.telemedicine') :
+                           apt.type === "Procedure" ? t('appointments.scheduleModal.type.procedure') : apt.type}
                         </TableCell>
                         <TableCell className="text-right">
                           <Badge variant={
@@ -347,7 +348,7 @@ export default function AppointmentsPage() {
                 </Table>
               ) : (
                  <p className="text-sm text-muted-foreground text-center py-10">
-                    No appointments scheduled for {selectedCalendarDate ? selectedCalendarDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) : "this day"}.
+                    {t('appointments.upcoming.empty', {selectedDateString: selectedCalendarDate ? selectedCalendarDate.toLocaleDateString(currentLocale, { month: 'long', day: 'numeric' }) : "this day"})}
                 </p>
               )}
             </CardContent>
@@ -356,7 +357,7 @@ export default function AppointmentsPage() {
           <div className="space-y-6">
             <Card className="shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle>Calendar</CardTitle>
+                <CardTitle>{t('appointments.calendar.title')}</CardTitle>
               </CardHeader>
               <CardContent className="flex justify-center">
                 <Calendar
@@ -365,6 +366,7 @@ export default function AppointmentsPage() {
                   onSelect={setSelectedCalendarDate}
                   className="rounded-md border"
                   disabled={isLoadingAppointments}
+                  locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} 
                 />
               </CardContent>
             </Card>
@@ -372,15 +374,15 @@ export default function AppointmentsPage() {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Bell className="h-6 w-6 text-primary" /> Notifications & Reminders
+                  <Bell className="h-6 w-6 text-primary" /> {t('appointments.notifications.title')}
                 </CardTitle>
-                <CardDescription>Recent updates and upcoming appointment reminders.</CardDescription>
+                <CardDescription>{t('appointments.notifications.description')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoadingNotifications ? (
                    <div className="flex items-center justify-center py-6">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <p className="ml-2 text-muted-foreground text-sm">Loading notifications...</p>
+                    <p className="ml-2 text-muted-foreground text-sm">{t('appointments.loadingNotifications')}</p>
                   </div>
                 ) : notifications.length > 0 ? (
                   <ul className="space-y-3">
@@ -392,14 +394,15 @@ export default function AppointmentsPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">No new notifications.</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">{t('appointments.notifications.empty')}</p>
                 )}
-                <Button variant="outline" className="w-full mt-4" disabled>View All Notifications</Button>
+                <Button variant="outline" className="w-full mt-4" disabled>{t('appointments.notifications.viewAllButton')}</Button>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
-  )
+  );
+}
 
     

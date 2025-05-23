@@ -1,13 +1,15 @@
 
-"use client"; // Add this directive
+"use client"; 
 
+import React, { useState, useEffect } from 'react';
 import { ClipboardEdit, ListChecks, Bell, Users, FileClock, Loader2 } from "lucide-react";
-import { ConsultationForm } from "./consultation-form";
+import { ConsultationForm, type ConsultationInitialData } from "./consultation-form";
 import { getTreatmentRecommendationAction } from "./actions";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import React, { useState, useEffect } from 'react';
+import { useLocale } from '@/context/locale-context';
+import { getTranslator } from '@/lib/i18n';
 
 interface MockListItem {
   id: string;
@@ -37,10 +39,40 @@ const initialMockLabNotificationsData: MockListItem[] = [
   { id: "NOTIF002", patientName: "Diana Prince", gender: "Female", message: "Imaging report available.", time: "15 mins ago", read: true, photoUrl: "https://placehold.co/32x32.png" },
 ];
 
+const MOCK_FULL_DRAFT_DETAILS: Record<string, ConsultationInitialData> = {
+    "DRAFT001": {
+        patientData: { nationalId: "DRF001_NID", fullName: "Edward Scissorhands", age: 30, gender: "Male", address: "1 Gothic Lane", homeClinic: "Suburbia Clinic", photoUrl: "https://placehold.co/120x120.png", allergies: ["Sunlight"], chronicConditions: ["Arthritis"] },
+        nationalIdSearch: "DRF001_NID",
+        bodyTemperature: "36.5",
+        weight: "65",
+        height: "170",
+        bloodPressure: "110/70",
+        symptoms: "Joint pain, difficulty holding objects. Patient expresses frustration with garden shears.",
+        labResultsSummary: "Inflammatory markers slightly elevated.",
+        imagingDataSummary: "X-rays show early signs of joint degradation.",
+        doctorComments: "Advised NSAIDs and occupational therapy. Consider referral to rheumatology if no improvement.",
+        recommendation: null, // No AI recommendation in this mock draft
+    },
+    "DRAFT002": {
+        patientData: { nationalId: "DRF002_NID", fullName: "Fiona Gallagher", age: 28, gender: "Female", address: "South Side, Chicago", homeClinic: "County General", photoUrl: "https://placehold.co/120x120.png", allergies: ["Poverty"], chronicConditions: ["Resilience"] },
+        nationalIdSearch: "DRF002_NID",
+        bodyTemperature: "37.0",
+        weight: "58",
+        height: "165",
+        bloodPressure: "120/80",
+        symptoms: "Patient reports feeling overwhelmed, managing multiple family responsibilities. Expresses fatigue.",
+        labResultsSummary: "All labs within normal limits.",
+        imagingDataSummary: "Not applicable.",
+        doctorComments: "Discussed coping mechanisms and stress management. Offered referral to social services.",
+        recommendation: null,
+    },
+};
+
 const initialMockDraftedConsultationsData: DraftedConsultationItem[] = [
-    { id: "DRAFT001", patientName: "Edward Scissorhands", gender: "Male", reasonForDraft: "Awaiting Chest X-Ray results", lastSavedTime: "Yesterday 04:30 PM", photoUrl: "https://placehold.co/32x32.png" },
-    { id: "DRAFT002", patientName: "Fiona Gallagher", gender: "Female", reasonForDraft: "Pending Full Blood Count", lastSavedTime: "Today 09:15 AM", photoUrl: "https://placehold.co/32x32.png" },
+    { id: "DRAFT001", patientName: "Edward Scissorhands", gender: "Male", reasonForDraft: "Awaiting X-Ray results", lastSavedTime: "Yesterday 04:30 PM", photoUrl: "https://placehold.co/32x32.png" },
+    { id: "DRAFT002", patientName: "Fiona Gallagher", gender: "Female", reasonForDraft: "Pending social worker input", lastSavedTime: "Today 09:15 AM", photoUrl: "https://placehold.co/32x32.png" },
 ];
+
 
 const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
   if (gender === "Male") return "male avatar";
@@ -48,7 +80,7 @@ const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
   return "patient avatar";
 };
 
-function WaitingList() {
+function WaitingList({t}: {t: (key: string) => string}) {
   const [waitingList, setWaitingList] = useState<MockListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -64,15 +96,15 @@ function WaitingList() {
     <Card className="shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <ListChecks className="h-5 w-5 text-primary" /> Waiting List
+          <ListChecks className="h-5 w-5 text-primary" /> {t('consultationRoom.waitingList.title')}
         </CardTitle>
-        <CardDescription className="text-xs">Patients waiting for consultation.</CardDescription>
+        <CardDescription className="text-xs">{t('consultationRoom.waitingList.description')}</CardDescription>
       </CardHeader>
       <CardContent className="max-h-[calc(33vh-80px)] overflow-y-auto">
         {isLoading ? (
            <div className="flex items-center justify-center py-6 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-            Loading waiting list...
+            {t('consultationRoom.waitingList.loading')}
           </div>
         ) : waitingList.length > 0 ? (
           <ul className="space-y-3">
@@ -97,7 +129,7 @@ function WaitingList() {
         ) : (
           <div className="text-center py-6 text-muted-foreground">
             <Users className="mx-auto h-10 w-10 mb-1" />
-            <p className="text-sm">Waiting list is empty.</p>
+            <p className="text-sm">{t('consultationRoom.waitingList.empty')}</p>
           </div>
         )}
       </CardContent>
@@ -105,7 +137,7 @@ function WaitingList() {
   );
 }
 
-function LabNotifications() {
+function LabNotifications({t}: {t: (key: string) => string}) {
   const [labNotifications, setLabNotifications] = useState<MockListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -121,15 +153,15 @@ function LabNotifications() {
     <Card className="shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Bell className="h-5 w-5 text-primary" /> Lab/Imaging Notifications
+          <Bell className="h-5 w-5 text-primary" /> {t('consultationRoom.notifications.title')}
         </CardTitle>
-         <CardDescription className="text-xs">Updates on lab results & imaging.</CardDescription>
+         <CardDescription className="text-xs">{t('consultationRoom.notifications.description')}</CardDescription>
       </CardHeader>
       <CardContent className="max-h-[calc(33vh-80px)] overflow-y-auto">
         {isLoading ? (
             <div className="flex items-center justify-center py-6 text-muted-foreground">
                 <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-                Loading notifications...
+                {t('consultationRoom.notifications.loading')}
             </div>
         ) : labNotifications.length > 0 ? (
           <ul className="space-y-2.5">
@@ -155,7 +187,7 @@ function LabNotifications() {
         ) : (
            <div className="text-center py-6 text-muted-foreground">
             <Bell className="mx-auto h-10 w-10 mb-1" />
-            <p className="text-sm">No new notifications.</p>
+            <p className="text-sm">{t('consultationRoom.notifications.empty')}</p>
           </div>
         )}
       </CardContent>
@@ -163,7 +195,7 @@ function LabNotifications() {
   );
 }
 
-function IncompleteConsultations() {
+function IncompleteConsultations({t, onResume}: {t: (key: string) => string, onResume: (draftId: string) => void}) {
     const [draftedConsultations, setDraftedConsultations] = useState<DraftedConsultationItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -179,15 +211,15 @@ function IncompleteConsultations() {
         <Card className="shadow-sm">
             <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                    <FileClock className="h-5 w-5 text-primary" /> Incomplete Consultations
+                    <FileClock className="h-5 w-5 text-primary" /> {t('consultationRoom.drafts.title')}
                 </CardTitle>
-                <CardDescription className="text-xs">Consultations awaiting results or further action.</CardDescription>
+                <CardDescription className="text-xs">{t('consultationRoom.drafts.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="max-h-[calc(34vh-80px)] overflow-y-auto">
+            <CardContent className="max-h-[calc(34vh-80px)] overflow-y-auto"> {/* Adjusted max-h for better fit */}
                 {isLoading ? (
                      <div className="flex items-center justify-center py-6 text-muted-foreground">
                         <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-                        Loading drafts...
+                        {t('consultationRoom.drafts.loading')}
                     </div>
                 ) : draftedConsultations.length > 0 ? (
                     <ul className="space-y-3">
@@ -208,8 +240,8 @@ function IncompleteConsultations() {
                                         <p className="text-xs text-muted-foreground">Saved: {consult.lastSavedTime}</p>
                                     </div>
                                 </div>
-                                <Button variant="outline" size="sm" className="w-full mt-2 text-xs" onClick={() => alert(`Resuming consultation for ${consult.patientName} (mock action)`)}>
-                                    Resume Consultation
+                                <Button variant="outline" size="sm" className="w-full mt-2 text-xs" onClick={() => onResume(consult.id)}>
+                                    {t('consultationRoom.drafts.resumeButton')}
                                 </Button>
                             </li>
                         ))}
@@ -217,7 +249,7 @@ function IncompleteConsultations() {
                 ) : (
                     <div className="text-center py-6 text-muted-foreground">
                         <FileClock className="mx-auto h-10 w-10 mb-1" />
-                        <p className="text-sm">No incomplete consultations.</p>
+                        <p className="text-sm">{t('consultationRoom.drafts.empty')}</p>
                     </div>
                 )}
             </CardContent>
@@ -226,25 +258,44 @@ function IncompleteConsultations() {
 }
 
 
-export default function ConsultationRoomPage() { // Removed async
+export default function ConsultationRoomPage() {
+  const { currentLocale } = useLocale();
+  const t = getTranslator(currentLocale);
+  const [dataToLoadInForm, setDataToLoadInForm] = useState<ConsultationInitialData | null>(null);
+
+  const handleResumeConsultation = (draftId: string) => {
+    const draftDetails = MOCK_FULL_DRAFT_DETAILS[draftId];
+    if (draftDetails) {
+      setDataToLoadInForm(draftDetails);
+      toast({title: "Loading Draft", description: `Loading draft for ${draftDetails.patientData?.fullName || 'patient'}...`});
+    } else {
+      toast({variant: "destructive", title: "Error", description: "Could not find draft details."});
+    }
+  };
+
   return (
       <div className="grid lg:grid-cols-[300px_1fr] xl:grid-cols-[350px_1fr] gap-6 h-full items-start">
         {/* Left Panel */}
-        <div className="lg:sticky lg:top-[calc(theme(spacing.16)_+_theme(spacing.6))] flex flex-col gap-6">
-          <WaitingList />
-          <LabNotifications />
-          <IncompleteConsultations />
+        <div className="lg:sticky lg:top-[calc(theme(spacing.16)_-_theme(spacing.6))] flex flex-col gap-6 max-h-[calc(100vh_-_theme(spacing.16)_-_theme(spacing.12)_-_theme(spacing.2))] overflow-y-auto">
+          <WaitingList t={t} />
+          <LabNotifications t={t} />
+          <IncompleteConsultations t={t} onResume={handleResumeConsultation} />
         </div>
 
         {/* Center Panel */}
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              <ClipboardEdit className="h-8 w-8" /> Doctor's Consultation Room
+              <ClipboardEdit className="h-8 w-8" /> {t('consultationRoom.pageTitle')}
             </h1>
           </div>
-          <ConsultationForm getRecommendationAction={getTreatmentRecommendationAction} />
+          <ConsultationForm 
+            getRecommendationAction={getTreatmentRecommendationAction}
+            initialData={dataToLoadInForm}
+          />
         </div>
       </div>
-  )
+  );
 }
+
+    
