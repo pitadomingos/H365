@@ -4,6 +4,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Network, Server, Share2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { MicroservicesDiagram } from "@/components/diagrams/microservices-diagram"; // Import the diagram
 
 export default function ArchitectureOptionsPage() {
 
@@ -101,6 +102,9 @@ export default function ArchitectureOptionsPage() {
           <p>
             Each service could potentially have its own database (though a shared database with clear boundaries is also an option to start) and would communicate with others through well-defined APIs (e.g., REST or gRPC) or asynchronous messaging (e.g., Kafka, RabbitMQ). An API Gateway would serve as the single entry point for the frontend.
           </p>
+          
+          {/* Insert Diagram Here */}
+          <MicroservicesDiagram />
 
           <h4>Pros:</h4>
           <ul>
@@ -157,5 +161,3 @@ export default function ArchitectureOptionsPage() {
     </div>
   );
 }
-
-    
