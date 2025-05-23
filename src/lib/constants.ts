@@ -1,6 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck } from 'lucide-react';
+import { LayoutDashboard, UsersRound, CalendarDays, Pill, ClipboardEdit, Bell, Settings, LogOut, Users, BedDouble, Star, Siren, Biohazard, Baby, Microscope, MonitorPlay, Info, Megaphone, BarChartBig, CreditCard, Video, BrainCircuit, Droplets, ListChecks, Database, FileText, BookOpenCheck, Network } from 'lucide-react';
 
 export type NavItem = {
   href: string;
@@ -30,7 +30,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/analytics-bi', label: 'Analytics & BI', icon: BrainCircuit },
   { href: '/blood-bank', label: 'Blood Bank', icon: Droplets },
   { href: '/technical-overview', label: 'Technical Overview', icon: Info },
-  { href: '/backend-schema-roadmap', label: 'Backend Roadmap & Schema', icon: Database },
+  { href: '/backend-schema-roadmap', label: 'Backend Roadmap', icon: Database },
+  { href: '/architecture-options', label: 'Architecture Options', icon: Network },
   { href: '/training-materials', label: 'Training Materials', icon: BookOpenCheck },
   { href: '/system-documentation', label: 'System Documentation', icon: FileText },
   { href: '/todo-list', label: 'To-Do List', icon: ListChecks },
@@ -146,3 +147,5 @@ export const MATERNITY_SPECIFIC_LAB_TESTS: OrderableLabTest[] = [
   { id: "group_b_strep_screen_mat", label: "Group B Strep Screen (GBS)", category: "Microbiology" },
   { id: "antibody_screen_indirect_coombs_mat", label: "Antibody Screen (Indirect Coombs)", category: "Hematology" },
 ];
+
+    
