@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useLocale } from '@/context/locale-context';
-import { getTranslator, defaultLocale } from '@/lib/i18n';
+import { getTranslator, type Locale } from '@/lib/i18n';
 import { ptBR } from 'date-fns/locale'; 
 
 interface Appointment {
@@ -87,6 +87,7 @@ export default function AppointmentsPage() {
     const fetchAppointments = async () => {
       setIsLoadingAppointments(true);
       try {
+        console.log("Fetching appointments...");
         // const response = await fetch('/api/v1/appointments'); 
         // if (!response.ok) throw new Error(t('appointments.toast.loadAppointmentsError'));
         // const data = await response.json();
@@ -108,13 +109,14 @@ export default function AppointmentsPage() {
     const fetchNotifications = async () => {
       setIsLoadingNotifications(true);
       try {
+        console.log("Fetching notifications...");
         // const response = await fetch('/api/v1/notifications?context=appointments');
         // if (!response.ok) throw new Error(t('appointments.toast.loadNotificationsError'));
         // const data = await response.json();
         // setNotifications(data);
         await new Promise(resolve => setTimeout(resolve, 800));
         const fetchedNotifications: NotificationItem[] = [
-          { id: 1, message: "Appointment with Alice Wonderland confirmed for tomorrow at 10:00 AM.", time: "2 hours ago", read: false },
+          { id: 1, message: t('appointments.notifications.mock.message1'), time: "2 hours ago", read: false },
         ];
         setNotifications(fetchedNotifications);
       } catch (error) {
@@ -128,6 +130,7 @@ export default function AppointmentsPage() {
     const fetchDoctors = async () => {
         setIsLoadingDoctors(true);
         try {
+            console.log("Fetching doctors...");
             // const response = await fetch('/api/v1/doctors');
             // if (!response.ok) throw new Error(t('appointments.toast.loadDoctorsError'));
             // const data = await response.json();
@@ -145,7 +148,7 @@ export default function AppointmentsPage() {
     fetchAppointments();
     fetchNotifications();
     fetchDoctors();
-  }, [t]); 
+  }, [t, currentLocale]); // Added currentLocale to dependency array for re-fetching localized mock data
 
   const handleScheduleNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,6 +171,7 @@ export default function AppointmentsPage() {
     };
 
     try {
+        console.log("Scheduling new appointment with payload:", payload);
         // const response = await fetch('/api/v1/appointments', {
         //     method: 'POST',
         //     headers: { 'Content-Type': 'application/json' },
@@ -189,7 +193,7 @@ export default function AppointmentsPage() {
         const newApt: Appointment = {
             id: `APT${Date.now()}`,
             patientName: newPatientName,
-            doctorId: newSelectedDoctorId,
+            // doctorId: newSelectedDoctorId, // Not in Appointment interface used for display
             doctorName: doctor ? doctor.name : "Unknown Doctor",
             date: newAppointmentDate,
             time: formattedTime,
@@ -345,7 +349,7 @@ export default function AppointmentsPage() {
                             apt.status === "Cancelled" ? "destructive" :
                             "outline"
                           }>
-                            {apt.status}
+                            {t(`appointments.status.${apt.status.toLowerCase()}` as any, apt.status)}
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -410,5 +414,3 @@ export default function AppointmentsPage() {
       </div>
   );
 }
-
-    

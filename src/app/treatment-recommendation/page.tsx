@@ -1,15 +1,15 @@
 
 "use client"; 
 
-import React, { useState, useEffect } from 'react';
-import { ClipboardEdit, ListChecks, Bell, Users, FileClock, Loader2, Star } from "lucide-react";
+import React, { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ClipboardEdit, ListChecks, Bell, Users, FileClock, Loader2, Star } from "lucide-react"; 
 import { ConsultationForm, type ConsultationInitialData } from "./consultation-form";
 import { getTreatmentRecommendationAction } from "./actions";
 import Image from "next/image";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useLocale } from '@/context/locale-context';
-import { getTranslator, defaultLocale } from '@/lib/i18n';
+import { getTranslator, type Locale } from '@/lib/i18n';
+import { Button } from '@/components/ui/button';
 import { toast } from "@/hooks/use-toast";
 
 
@@ -37,8 +37,36 @@ const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
   return "patient avatar";
 };
 
+const MOCK_FULL_DRAFT_DETAILS: Record<string, ConsultationInitialData> = {
+    "DRAFT001": {
+        patientData: { nationalId: "DRF001_NID", fullName: "Edward Scissorhands", age: 30, gender: "Male", address: "1 Gothic Lane", homeClinic: "Suburbia Clinic", photoUrl: "https://placehold.co/120x120.png", allergies: ["Sunlight"], chronicConditions: ["Arthritis"] },
+        nationalIdSearch: "DRF001_NID",
+        bodyTemperature: "36.5",
+        weight: "65",
+        height: "170",
+        bloodPressure: "110/70",
+        symptoms: "Joint pain, difficulty holding objects. Patient expresses frustration with garden shears.",
+        labResultsSummary: "Inflammatory markers slightly elevated.",
+        imagingDataSummary: "X-rays show early signs of joint degradation.",
+        doctorComments: "Advised NSAIDs and occupational therapy. Consider referral to rheumatology if no improvement.",
+        recommendation: null, 
+    },
+    "DRAFT002": {
+        patientData: { nationalId: "DRF002_NID", fullName: "Fiona Gallagher", age: 28, gender: "Female", address: "South Side, Chicago", homeClinic: "County General", photoUrl: "https://placehold.co/120x120.png", allergies: ["Poverty"], chronicConditions: ["Resilience"] },
+        nationalIdSearch: "DRF002_NID",
+        bodyTemperature: "37.0",
+        weight: "58",
+        height: "165",
+        bloodPressure: "120/80",
+        symptoms: "Patient reports feeling overwhelmed, managing multiple family responsibilities. Expresses fatigue.",
+        labResultsSummary: "All labs within normal limits.",
+        imagingDataSummary: "Not applicable.",
+        doctorComments: "Discussed coping mechanisms and stress management. Offered referral to social services.",
+        recommendation: null,
+    },
+};
 
-function WaitingListInternal({t}: {t: (key: string) => string}) {
+function WaitingListInternal({ t }: { t: (key: string) => string }) {
   const [waitingList, setWaitingList] = useState<MockListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -84,7 +112,7 @@ function WaitingListInternal({t}: {t: (key: string) => string}) {
                 <div className="flex-1">
                   <p className="font-semibold text-sm">{patient.patientName}</p>
                   <p className="text-xs text-muted-foreground">{patient.location} - {patient.status}</p>
-                  <p className="text-xs text-muted-foreground">Added: {patient.timeAdded}</p>
+                  <p className="text-xs text-muted-foreground">{t('appointments.upcoming.table.time')}: {patient.timeAdded}</p>
                 </div>
               </li>
             ))}
@@ -163,34 +191,6 @@ function LabNotificationsInternal({t}: {t: (key: string) => string}) {
   );
 }
 
-const MOCK_FULL_DRAFT_DETAILS: Record<string, ConsultationInitialData> = {
-    "DRAFT001": {
-        patientData: { nationalId: "DRF001_NID", fullName: "Edward Scissorhands", age: 30, gender: "Male", address: "1 Gothic Lane", homeClinic: "Suburbia Clinic", photoUrl: "https://placehold.co/120x120.png", allergies: ["Sunlight"], chronicConditions: ["Arthritis"] },
-        nationalIdSearch: "DRF001_NID",
-        bodyTemperature: "36.5",
-        weight: "65",
-        height: "170",
-        bloodPressure: "110/70",
-        symptoms: "Joint pain, difficulty holding objects. Patient expresses frustration with garden shears.",
-        labResultsSummary: "Inflammatory markers slightly elevated.",
-        imagingDataSummary: "X-rays show early signs of joint degradation.",
-        doctorComments: "Advised NSAIDs and occupational therapy. Consider referral to rheumatology if no improvement.",
-        recommendation: null, 
-    },
-    "DRAFT002": {
-        patientData: { nationalId: "DRF002_NID", fullName: "Fiona Gallagher", age: 28, gender: "Female", address: "South Side, Chicago", homeClinic: "County General", photoUrl: "https://placehold.co/120x120.png", allergies: ["Poverty"], chronicConditions: ["Resilience"] },
-        nationalIdSearch: "DRF002_NID",
-        bodyTemperature: "37.0",
-        weight: "58",
-        height: "165",
-        bloodPressure: "120/80",
-        symptoms: "Patient reports feeling overwhelmed, managing multiple family responsibilities. Expresses fatigue.",
-        labResultsSummary: "All labs within normal limits.",
-        imagingDataSummary: "Not applicable.",
-        doctorComments: "Discussed coping mechanisms and stress management. Offered referral to social services.",
-        recommendation: null,
-    },
-};
 
 function IncompleteConsultationsInternal({t, onResume}: {t: (key: string) => string, onResume: (draftId: string) => void}) {
     const [draftedConsultations, setDraftedConsultations] = useState<DraftedConsultationItem[]>([]);
@@ -238,8 +238,8 @@ function IncompleteConsultationsInternal({t, onResume}: {t: (key: string) => str
                                     />
                                     <div className="flex-1">
                                         <p className="font-semibold text-sm">{consult.patientName}</p>
-                                        <p className="text-xs text-muted-foreground">Reason: {consult.reasonForDraft}</p>
-                                        <p className="text-xs text-muted-foreground">Saved: {consult.lastSavedTime}</p>
+                                        <p className="text-xs text-muted-foreground">{t('specializations.drafts.reason')}: {consult.reasonForDraft}</p>
+                                        <p className="text-xs text-muted-foreground">{t('consultationRoom.drafts.saved')}: {consult.lastSavedTime}</p>
                                     </div>
                                 </div>
                                 <Button variant="outline" size="sm" className="w-full mt-2 text-xs" onClick={() => onResume(consult.id)}>
@@ -263,7 +263,7 @@ function IncompleteConsultationsInternal({t, onResume}: {t: (key: string) => str
 export default function ConsultationRoomPage() {
   const { currentLocale } = useLocale();
   const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
-
+  
   const [dataToLoadInForm, setDataToLoadInForm] = useState<ConsultationInitialData | null>(null);
 
   const handleResumeConsultation = (draftId: string) => {
@@ -300,6 +300,3 @@ export default function ConsultationRoomPage() {
       </div>
   );
 }
-
-    
-
