@@ -35,6 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, addWeeks, addDays } from "date-fns";
+import { ptBR } from 'date-fns/locale'; // Import ptBR locale
 import { cn } from "@/lib/utils";
 import { COMMON_ORDERABLE_LAB_TESTS, type OrderableLabTest } from '@/lib/constants';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -153,51 +154,51 @@ interface MaternityIntakeFormState {
     chronicConditions: string; 
 }
 
-const getBmiStatusAndColor = (bmi: number | null): { status: string; colorClass: string; textColorClass: string; } => {
+const getBmiStatusAndColor = (bmi: number | null, t: (key: string) => string): { status: string; colorClass: string; textColorClass: string; } => {
   if (bmi === null || isNaN(bmi)) {
-    return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+    return { status: t('consultationForm.vitals.bmiStatus.na'), colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
   }
   if (bmi < 18.5) {
-    return { status: "Underweight", colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
+    return { status: t('consultationForm.vitals.bmiStatus.underweight'), colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
   } else if (bmi < 25) {
-    return { status: "Normal weight", colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
+    return { status: t('consultationForm.vitals.bmiStatus.normal'), colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
   } else if (bmi < 30) {
-    return { status: "Overweight", colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
+    return { status: t('consultationForm.vitals.bmiStatus.overweight'), colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
   } else if (bmi < 35) {
-    return { status: "Obese (Class I)", colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
+    return { status: t('consultationForm.vitals.bmiStatus.obese1'), colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
   } else if (bmi < 40) {
-    return { status: "Obese (Class II)", colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
+    return { status: t('consultationForm.vitals.bmiStatus.obese2'), colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
   } else {
-    return { status: "Obese (Class III)", colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
+    return { status: t('consultationForm.vitals.bmiStatus.obese3'), colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
   }
 };
 
-const getBloodPressureStatus = (bp: string): { status: string; colorClass: string; textColorClass: string; } => {
+const getBloodPressureStatus = (bp: string, t: (key: string) => string): { status: string; colorClass: string; textColorClass: string; } => {
   if (!bp || !bp.includes('/')) {
-    return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+    return { status: t('consultationForm.vitals.bpStatus.na'), colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
   }
   const parts = bp.split('/');
   const systolic = parseInt(parts[0], 10);
   const diastolic = parseInt(parts[1], 10);
 
   if (isNaN(systolic) || isNaN(diastolic)) {
-    return { status: "Invalid", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+    return { status: t('consultationForm.vitals.bpStatus.invalid'), colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
   }
 
   if (systolic < 90 || diastolic < 60) {
-    return { status: "Hypotension", colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
+    return { status: t('consultationForm.vitals.bpStatus.hypotension'), colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
   } else if (systolic < 120 && diastolic < 80) {
-    return { status: "Normal", colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
+    return { status: t('consultationForm.vitals.bpStatus.normal'), colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
   } else if (systolic >= 120 && systolic <= 129 && diastolic < 80) {
-    return { status: "Elevated", colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
+    return { status: t('consultationForm.vitals.bpStatus.elevated'), colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
   } else if ((systolic >= 130 && systolic <= 139) || (diastolic >= 80 && diastolic <= 89)) {
-    return { status: "Stage 1 HTN", colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
+    return { status: t('consultationForm.vitals.bpStatus.stage1'), colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
   } else if (systolic >= 140 || diastolic >= 90) {
-    return { status: "Stage 2 HTN", colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
+    return { status: t('consultationForm.vitals.bpStatus.stage2'), colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
   } else if (systolic > 180 || diastolic > 120) {
-    return { status: "Hypertensive Crisis", colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
+    return { status: t('consultationForm.vitals.bpStatus.crisis'), colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
   }
-  return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+  return { status: t('consultationForm.vitals.bpStatus.na'), colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
 };
 
 
@@ -258,16 +259,16 @@ export default function MaternityCarePage() {
       const hM = h / 100;
       const calculatedBmi = w / (hM * hM);
       setNewVisitBmi(calculatedBmi.toFixed(2));
-      setNewVisitBmiDisplay(getBmiStatusAndColor(calculatedBmi));
+      setNewVisitBmiDisplay(getBmiStatusAndColor(calculatedBmi, t));
     } else {
       setNewVisitBmi(null);
-      setNewVisitBmiDisplay(getBmiStatusAndColor(null));
+      setNewVisitBmiDisplay(getBmiStatusAndColor(null, t));
     }
-  }, [newVisitForm.weightKg, newVisitForm.heightCm]);
+  }, [newVisitForm.weightKg, newVisitForm.heightCm, t]);
 
   useEffect(() => {
-    setNewVisitBpDisplay(getBloodPressureStatus(newVisitForm.bp || ""));
-  }, [newVisitForm.bp]);
+    setNewVisitBpDisplay(getBloodPressureStatus(newVisitForm.bp || "", t));
+  }, [newVisitForm.bp, t]);
 
   const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
     if (gender === "Male") return "male avatar";
@@ -292,7 +293,7 @@ export default function MaternityCarePage() {
       toast({ title: t('maternity.toast.search.found'), description: t('maternity.toast.search.found.desc', {fullName: found.fullName}) });
     } else {
       setPatientNotFound(true);
-      toast({ variant: "default", title: t('maternity.toast.search.notFound'), description: t('maternity.toast.search.notFound.desc')});
+      toast({ variant: "default", title: t('maternity.toast.search.notFound'), description: t('maternity.toast.search.notFound.desc', {searchNationalId: searchNationalId})});
     }
     setIsLoadingSearch(false);
   };
@@ -377,14 +378,16 @@ export default function MaternityCarePage() {
         bodyTemperature: newVisitForm.bodyTemperature,
         heightCm: newVisitForm.heightCm,
         bmi: newVisitBmi,
-        bmiStatus: newVisitBmiDisplay?.status,
-        bpStatus: newVisitBpDisplay?.status,
+        bmiStatus: newVisitBmiDisplay?.status || undefined,
+        bpStatus: newVisitBpDisplay?.status || undefined,
     };
     console.log("Submitting new antenatal visit (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
     const savedVisit: AntenatalVisit = { 
         id: `AV${Date.now()}`,
-        ...payload
+        ...payload,
+        bmiStatus: payload.bmiStatus || "N/A", // Ensure these have default values
+        bpStatus: payload.bpStatus || "N/A",   // Ensure these have default values
     };
 
     setSelectedPatient(prev => prev ? ({ ...prev, antenatalVisits: [savedVisit, ...prev.antenatalVisits].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()) }) : null);
@@ -539,7 +542,7 @@ export default function MaternityCarePage() {
                                             </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
-                                            <Calendar locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} mode="single" selected={maternityIntakeForm.dob} onSelect={(date) => setMaternityIntakeForm(prev => ({...prev, dob: date}))} initialFocus captionLayout="dropdown-buttons" fromYear={1950} toYear={new Date().getFullYear()} />
+                                            <Calendar locale={currentLocale === 'pt' ? ptBR : undefined} mode="single" selected={maternityIntakeForm.dob} onSelect={(date) => setMaternityIntakeForm(prev => ({...prev, dob: date}))} initialFocus captionLayout="dropdown-buttons" fromYear={1950} toYear={new Date().getFullYear()} />
                                             </PopoverContent>
                                         </Popover>
                                     </div>
@@ -566,7 +569,7 @@ export default function MaternityCarePage() {
                                             </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
-                                            <Calendar locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} mode="single" selected={maternityIntakeForm.lmp} onSelect={(date) => setMaternityIntakeForm(prev => ({...prev, lmp: date}))} initialFocus />
+                                            <Calendar locale={currentLocale === 'pt' ? ptBR : undefined} mode="single" selected={maternityIntakeForm.lmp} onSelect={(date) => setMaternityIntakeForm(prev => ({...prev, lmp: date}))} initialFocus />
                                             </PopoverContent>
                                         </Popover>
                                     </div>
@@ -640,7 +643,7 @@ export default function MaternityCarePage() {
                     />
                     <div className="flex-1">
                         <CardTitle>{selectedPatient.fullName}</CardTitle>
-                        <CardDescription>ID: {selectedPatient.nationalId} | Age: {selectedPatient.age} | Gender: {t(`patientRegistration.gender.${selectedPatient.gender.toLowerCase()}` as any)}</CardDescription>
+                        <CardDescription>ID: {selectedPatient.nationalId} | {t('consultationForm.patientInfo.age')}: {selectedPatient.age} | {t('consultationForm.patientInfo.gender')}: {t(`patientRegistration.gender.${selectedPatient.gender.toLowerCase()}` as any)}</CardDescription>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
@@ -651,9 +654,9 @@ export default function MaternityCarePage() {
                    {latestVisitVitals && (
                     <>
                         <Separator className="my-2"/>
-                        <h4 className="font-medium flex items-center gap-1"><Activity className="h-4 w-4 text-primary"/>{t('maternity.patientOverview.latestVitals.title', {date: new Date(latestVisitVitals.date+"T00:00:00").toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')})}:</h4>
-                        <p>{t('maternity.patientOverview.latestVitals.temp')} {latestVisitVitals.bodyTemperature || 'N/A'}°C | {t('maternity.patientOverview.latestVitals.bp')} {latestVisitVitals.bp || 'N/A'} {latestVisitVitals.bpStatus && <Badge variant="outline" className={cn("ml-1 text-xs", getBloodPressureStatus(latestVisitVitals.bp).colorClass, getBloodPressureStatus(latestVisitVitals.bp).textColorClass )}>{latestVisitVitals.bpStatus}</Badge>}</p>
-                        <p>{t('maternity.patientOverview.latestVitals.wt')} {latestVisitVitals.weightKg || 'N/A'}kg | {t('maternity.patientOverview.latestVitals.ht')} {latestVisitVitals.heightCm || 'N/A'}cm | {t('maternity.patientOverview.latestVitals.bmi')} {latestVisitVitals.bmi || 'N/A'} {latestVisitVitals.bmiStatus && <Badge variant="outline" className={cn("ml-1 text-xs", getBmiStatusAndColor(parseFloat(latestVisitVitals.bmi)).colorClass, getBmiStatusAndColor(parseFloat(latestVisitVitals.bmi)).textColorClass )}>{latestVisitVitals.bmiStatus}</Badge>}</p>
+                        <h4 className="font-medium flex items-center gap-1"><Activity className="mr-1.5 h-4 w-4 text-primary"/>{t('maternity.patientOverview.latestVitals.title', {date: new Date(latestVisitVitals.date+"T00:00:00").toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')})}:</h4>
+                        <p>{t('maternity.patientOverview.latestVitals.temp')} {latestVisitVitals.bodyTemperature || 'N/A'}°C | {t('maternity.patientOverview.latestVitals.bp')} {latestVisitVitals.bp || 'N/A'} {latestVisitVitals.bpStatus && <Badge variant="outline" className={cn("ml-1 text-xs", getBloodPressureStatus(latestVisitVitals.bp || "", t).colorClass, getBloodPressureStatus(latestVisitVitals.bp || "", t).textColorClass )}>{latestVisitVitals.bpStatus}</Badge>}</p>
+                        <p>{t('maternity.patientOverview.latestVitals.wt')} {latestVisitVitals.weightKg || 'N/A'}kg | {t('maternity.patientOverview.latestVitals.ht')} {latestVisitVitals.heightCm || 'N/A'}cm | {t('maternity.patientOverview.latestVitals.bmi')} {latestVisitVitals.bmi || 'N/A'} {latestVisitVitals.bmiStatus && <Badge variant="outline" className={cn("ml-1 text-xs", getBmiStatusAndColor(parseFloat(latestVisitVitals.bmi || "0"), t).colorClass, getBmiStatusAndColor(parseFloat(latestVisitVitals.bmi || "0"), t).textColorClass )}>{latestVisitVitals.bmiStatus}</Badge>}</p>
                     </>
                   )}
                   <Separator className="my-2"/>
@@ -703,7 +706,7 @@ export default function MaternityCarePage() {
                                         </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0">
-                                        <Calendar locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} mode="single" selected={nextScheduledDate} onSelect={setNextScheduledDate} initialFocus />
+                                        <Calendar locale={currentLocale === 'pt' ? ptBR : undefined} mode="single" selected={nextScheduledDate} onSelect={setNextScheduledDate} initialFocus />
                                         </PopoverContent>
                                     </Popover>
                                 </div>
@@ -786,7 +789,7 @@ export default function MaternityCarePage() {
                                             </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
-                                            <Calendar locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} mode="single" selected={newVisitForm.visitDate} onSelect={(date) => setNewVisitForm(prev => ({...prev, visitDate: date}))} initialFocus />
+                                            <Calendar locale={currentLocale === 'pt' ? ptBR : undefined} mode="single" selected={newVisitForm.visitDate} onSelect={(date) => setNewVisitForm(prev => ({...prev, visitDate: date}))} initialFocus />
                                             </PopoverContent>
                                         </Popover>
                                     </div>
@@ -815,7 +818,7 @@ export default function MaternityCarePage() {
                                             <Label className="flex items-center text-xs"><Sigma className="mr-1.5 h-3 w-3" />{t('maternity.newVisitModal.bmi.label')}</Label>
                                             <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-muted/50 min-w-[150px]">
                                                 <span className="text-sm font-medium">{newVisitBmi || "N/A"}</span>
-                                                {newVisitBmiDisplay && newVisitBmiDisplay.status !== "N/A" && (
+                                                {newVisitBmiDisplay && newVisitBmiDisplay.status !== t('consultationForm.vitals.bmiStatus.na') && (
                                                     <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", newVisitBmiDisplay.colorClass, newVisitBmiDisplay.textColorClass)}>{newVisitBmiDisplay.status}</Badge>
                                                 )}
                                             </div>
@@ -823,10 +826,10 @@ export default function MaternityCarePage() {
                                         <div className="space-y-1">
                                             <Label className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />{t('maternity.newVisitModal.bpStatus.label')}</Label>
                                             <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-muted/50 min-w-[150px]">
-                                                {newVisitBpDisplay && newVisitBpDisplay.status !== "N/A" && newVisitBpDisplay.status !== "Invalid" && (
+                                                {newVisitBpDisplay && newVisitBpDisplay.status !== t('consultationForm.vitals.bpStatus.na') && newVisitBpDisplay.status !== t('consultationForm.vitals.bpStatus.invalid') && (
                                                     <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", newVisitBpDisplay.colorClass, newVisitBpDisplay.textColorClass)}>{newVisitBpDisplay.status}</Badge>
                                                 )}
-                                                {(newVisitBpDisplay?.status === "N/A" || newVisitBpDisplay?.status === "Invalid") && (
+                                                {(newVisitBpDisplay?.status === t('consultationForm.vitals.bpStatus.na') || newVisitBpDisplay?.status === t('consultationForm.vitals.bpStatus.invalid')) && (
                                                 <span className="text-sm font-medium">{newVisitBpDisplay.status}</span>
                                                 )}
                                             </div>
@@ -864,7 +867,7 @@ export default function MaternityCarePage() {
                                             </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
-                                            <Calendar locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} mode="single" selected={newVisitForm.nextAppointmentDate} onSelect={(date) => setNewVisitForm(prev => ({...prev, nextAppointmentDate: date}))} initialFocus />
+                                            <Calendar locale={currentLocale === 'pt' ? ptBR : undefined} mode="single" selected={newVisitForm.nextAppointmentDate} onSelect={(date) => setNewVisitForm(prev => ({...prev, nextAppointmentDate: date}))} initialFocus />
                                             </PopoverContent>
                                         </Popover>
                                     </div>
@@ -890,11 +893,11 @@ export default function MaternityCarePage() {
                 <CardContent className="space-y-4">
                     <div className="space-y-1">
                         <Label className="flex items-center gap-1.5"><ScanSearch className="h-4 w-4 text-primary"/>{t('maternity.resultsSummary.ultrasound.label')}</Label>
-                        <Textarea readOnly defaultValue="Anomaly scan at 20w 2d: Normal fetal anatomy. Placenta posterior, clear of os. AFI normal. EFW: 350g. Next scan: Growth scan at 32w." className="text-sm bg-muted/50"/>
+                        <Textarea readOnly defaultValue={t('maternity.resultsSummary.ultrasound.mockValue')} className="text-sm bg-muted/50"/>
                     </div>
                      <div className="space-y-1">
                         <Label className="flex items-center gap-1.5"><Microscope className="h-4 w-4 text-primary"/>{t('maternity.resultsSummary.lab.label')}</Label>
-                        <Textarea readOnly defaultValue="Hb: 11.5 g/dL (12w)\nGTT: Normal (26w)\nUrine Culture: No growth (12w)\nHIV/Syphilis/HepB: Non-reactive" className="text-sm bg-muted/50"/>
+                        <Textarea readOnly defaultValue={t('maternity.resultsSummary.lab.mockValue')} className="text-sm bg-muted/50"/>
                     </div>
                 </CardContent>
                  <CardFooter className="gap-2">
@@ -1018,6 +1021,3 @@ export default function MaternityCarePage() {
       </div>
   );
 }
-
-
-    

@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator, defaultLocale } from '@/lib/i18n';
+import { ptBR } from 'date-fns/locale'; // Import ptBR locale
 
 interface Appointment {
   id: string;
@@ -86,9 +87,14 @@ export default function AppointmentsPage() {
     const fetchAppointments = async () => {
       setIsLoadingAppointments(true);
       try {
-        const response = await fetch('/api/v1/appointments'); 
-        if (!response.ok) {
-          if(response.status === 404) { 
+        // Simulate API call
+        // const response = await fetch('/api/v1/appointments'); 
+        // For now, using mock success after a delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const mockApiResponse = { ok: false, status: 404 }; // Simulate API not found initially
+
+        if (!mockApiResponse.ok) {
+          if(mockApiResponse.status === 404) { 
             console.warn("Mock API /api/v1/appointments not found, using fallback.");
             const fetchedAppointments: Appointment[] = [
               { id: "APT001", patientName: "Alice Wonderland", doctorName: "Dr. Smith", date: "2024-08-15", time: "10:00 AM - 10:30 AM", type: "Consultation", status: "Confirmed" },
@@ -99,8 +105,8 @@ export default function AppointmentsPage() {
              throw new Error(t('appointments.toast.loadAppointmentsError'));
           }
         } else {
-          const data = await response.json();
-          setAppointments(data);
+          // const data = await response.json(); // This would be used with a real API
+          // setAppointments(data);
         }
       } catch (error) {
         console.error("Error fetching appointments:", error);
@@ -118,9 +124,13 @@ export default function AppointmentsPage() {
     const fetchNotifications = async () => {
       setIsLoadingNotifications(true);
       try {
-        const response = await fetch('/api/v1/notifications?context=appointments'); 
-         if (!response.ok) {
-          if(response.status === 404) { 
+        // Simulate API call
+        // const response = await fetch('/api/v1/notifications?context=appointments'); 
+        await new Promise(resolve => setTimeout(resolve, 800));
+        const mockApiResponse = { ok: false, status: 404 }; // Simulate API not found
+
+         if (!mockApiResponse.ok) {
+          if(mockApiResponse.status === 404) { 
             console.warn("Mock API /api/v1/notifications not found, using fallback.");
              const fetchedNotifications: NotificationItem[] = [
               { id: 1, message: "Appointment with Alice Wonderland confirmed for tomorrow at 10:00 AM.", time: "2 hours ago", read: false },
@@ -130,8 +140,8 @@ export default function AppointmentsPage() {
             throw new Error(t('appointments.toast.loadNotificationsError'));
           }
         } else {
-          const data = await response.json();
-          setNotifications(data);
+          // const data = await response.json();
+          // setNotifications(data);
         }
       } catch (error) {
         console.error("Error fetching notifications:", error);
@@ -148,17 +158,21 @@ export default function AppointmentsPage() {
     const fetchDoctors = async () => {
         setIsLoadingDoctors(true);
         try {
-            const response = await fetch('/api/v1/doctors'); 
-             if (!response.ok) {
-              if(response.status === 404) { 
+            // Simulate API call
+            // const response = await fetch('/api/v1/doctors'); 
+            await new Promise(resolve => setTimeout(resolve, 600));
+            const mockApiResponse = { ok: false, status: 404 }; // Simulate API not found
+
+             if (!mockApiResponse.ok) {
+              if(mockApiResponse.status === 404) { 
                 console.warn("Mock API /api/v1/doctors not found, using fallback.");
                 setDoctors(initialMockDoctors);
               } else {
                  throw new Error(t('appointments.toast.loadDoctorsError'));
               }
             } else {
-              const data = await response.json();
-              setDoctors(data);
+              // const data = await response.json();
+              // setDoctors(data);
             }
         } catch (error) {
             console.error("Error fetching doctors:", error);
@@ -190,24 +204,35 @@ export default function AppointmentsPage() {
         patientName: newPatientName,
         doctorId: newSelectedDoctorId,
         date: newAppointmentDate,
-        time: newAppointmentTime,
+        time: newAppointmentTime, // Assuming this is like "10:00"
         type: newAppointmentType,
     };
 
     try {
-        const response = await fetch('/api/v1/appointments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        if (!response.ok) {
+        // Simulate API call
+        // const response = await fetch('/api/v1/appointments', {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify(payload),
+        // });
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const mockApiResponse = { ok: false, status: 404 }; // Simulate API not found
+
+        if (!mockApiResponse.ok) {
             // Mocking successful response if API is not found (404)
-            if (response.status === 404) {
+            if (mockApiResponse.status === 404) {
                 console.warn("Mock API POST /api/v1/appointments not found, simulating success.");
+                const doctorName = doctors.find(d => d.id === newSelectedDoctorId)?.name || "Unknown Doctor";
+                const timeString = `${newAppointmentTime} - ${new Date(new Date(`1970-01-01T${newAppointmentTime}`).getTime() + 30*60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`; // Mock 30 min duration
+                
                 const mockNewApt: Appointment = {
                     id: `APT${Date.now()}`,
-                    ...payload,
-                    doctorName: doctors.find(d => d.id === newSelectedDoctorId)?.name || "Unknown Doctor",
+                    patientName: newPatientName,
+                    doctorId: newSelectedDoctorId,
+                    date: newAppointmentDate,
+                    time: timeString,
+                    type: newAppointmentType,
+                    doctorName: doctorName,
                     status: "Pending"
                 };
                 setAppointments(prev => [mockNewApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
@@ -216,16 +241,17 @@ export default function AppointmentsPage() {
                   description: t('appointments.toast.scheduled.desc', {patientName: newPatientName, doctorName: mockNewApt.doctorName, date: newAppointmentDate, time: newAppointmentTime }),
                 });
             } else {
-                const errorData = await response.json().catch(() => ({ error: "Failed to schedule. API error."}));
-                throw new Error(errorData.error || `API error: ${response.statusText}`);
+                // const errorData = await response.json().catch(() => ({ error: "Failed to schedule. API error."}));
+                // throw new Error(errorData.error || `API error: ${response.statusText}`);
+                 throw new Error("Failed to schedule. API error (mock).");
             }
         } else {
-            const newApt: Appointment = await response.json();
-            setAppointments(prev => [newApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
-            toast({
-              title: t('appointments.toast.scheduled'),
-              description: t('appointments.toast.scheduled.desc', {patientName: newPatientName, doctorName: newApt.doctorName, date: newAppointmentDate, time: newAppointmentTime }),
-            });
+            // const newApt: Appointment = await response.json();
+            // setAppointments(prev => [newApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
+            // toast({
+            //   title: t('appointments.toast.scheduled'),
+            //   description: t('appointments.toast.scheduled.desc', {patientName: newPatientName, doctorName: newApt.doctorName, date: newAppointmentDate, time: newAppointmentTime }),
+            // });
         }
         
         setNewPatientName("");
@@ -249,7 +275,7 @@ export default function AppointmentsPage() {
 
   const selectedDateDisplayString = selectedCalendarDate 
     ? selectedCalendarDate.toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) 
-    : t('appointments.upcoming.description', {selectedDateString: t('appointments.allDates')});
+    : t('appointments.allDates');
 
 
   return (
@@ -361,7 +387,7 @@ export default function AppointmentsPage() {
                         <TableCell>{apt.time}</TableCell>
                         <TableCell className="flex items-center gap-1">
                           {apt.type === "Telemedicine" && <Video className="h-4 w-4 text-primary" />}
-                          {t(`appointments.scheduleModal.type.${apt.type.toLowerCase().replace('-', '')}`, apt.type)}
+                           {t(`appointments.scheduleModal.type.${apt.type.toLowerCase().replace('-', '')}` as any, apt.type)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Badge variant={
@@ -397,7 +423,7 @@ export default function AppointmentsPage() {
                   onSelect={setSelectedCalendarDate}
                   className="rounded-md border"
                   disabled={isLoadingAppointments}
-                  locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} 
+                  locale={currentLocale === 'pt' ? ptBR : undefined} 
                 />
               </CardContent>
             </Card>
@@ -435,5 +461,3 @@ export default function AppointmentsPage() {
       </div>
   );
 }
-
-    
