@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2, Cell } from "lucide-react";
+import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2 } from "lucide-react"; // Removed Cell
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
-import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid } from "recharts"
+import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid, Cell } from "recharts"; // Added Cell here
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -42,17 +42,18 @@ interface WaitingListItem {
 }
 
 const initialMockWaitingListData: WaitingListItem[] = [
-    { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
+    { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient General Consultation", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
     { id: "WL002", patientName: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
 ];
 
-const initialVisitChartData = [
-  { department: "Outpatient", visits: 0, fill: "hsl(var(--chart-1))" },
-  { department: "Lab", visits: 0, fill: "hsl(var(--chart-2))" },
-  { department: "Pharmacy", visits: 0, fill: "hsl(var(--chart-3))" },
-  { department: "Specialist", visits: 0, fill: "hsl(var(--chart-4))" },
-  { department: "Emergency", visits: 0, fill: "hsl(var(--chart-5))" },
+const initialVisitChartDataTemplate = (t: Function) => [
+  { department: t('visitingPatients.visitDetails.department.outpatient'), visits: 0, fill: "hsl(var(--chart-1))" },
+  { department: t('visitingPatients.visitDetails.department.lab'), visits: 0, fill: "hsl(var(--chart-2))" },
+  { department: t('visitingPatients.visitDetails.department.pharmacy'), visits: 0, fill: "hsl(var(--chart-3))" },
+  { department: t('visitingPatients.visitDetails.department.specialist'), visits: 0, fill: "hsl(var(--chart-4))" },
+  { department: t('visitingPatients.visitDetails.department.emergency'), visits: 0, fill: "hsl(var(--chart-5))" },
 ];
+
 
 export default function VisitingPatientsPage() {
   const { currentLocale } = useLocale();
@@ -60,11 +61,14 @@ export default function VisitingPatientsPage() {
 
   const chartConfig = {
     visits: { label: t('visitingPatients.analytics.visitsByDept.visitsLabel') },
-    outpatient: { label: t('visitingPatients.visitDetails.department.outpatient'), color: "hsl(var(--chart-1))" },
-    lab: { label: t('visitingPatients.visitDetails.department.lab'), color: "hsl(var(--chart-2))" },
-    pharmacy: { label: t('visitingPatients.visitDetails.department.pharmacy'), color: "hsl(var(--chart-3))" },
-    specialist: { label: t('visitingPatients.visitDetails.department.specialist'), color: "hsl(var(--chart-4))" },
-    emergency: { label: t('visitingPatients.visitDetails.department.emergency'), color: "hsl(var(--chart-5))" },
+    outpatientgeneralconsultation: { label: t('visitingPatients.visitDetails.department.outpatient'), color: "hsl(var(--chart-1))" },
+    laboratoryscheduledtests: { label: t('visitingPatients.visitDetails.department.lab'), color: "hsl(var(--chart-2))" },
+    pharmacyprescriptionrefill: { label: t('visitingPatients.visitDetails.department.pharmacy'), color: "hsl(var(--chart-3))" },
+    specialistconsultation: { label: t('visitingPatients.visitDetails.department.specialist'), color: "hsl(var(--chart-4))" },
+    emergencytriage: { label: t('visitingPatients.visitDetails.department.emergency'), color: "hsl(var(--chart-5))" },
+     maternitycheckup: { label: t('visitingPatients.visitDetails.department.maternity'), color: "hsl(var(--chart-1))" }, // Reused color for example
+    dentalclinic: { label: t('visitingPatients.visitDetails.department.dental'), color: "hsl(var(--chart-2))" }, // Reused color for example
+    otherappointment: { label: t('visitingPatients.visitDetails.department.other'), color: "hsl(var(--chart-3))" }, // Reused color for example
   } satisfies ChartConfig;
   
   const [searchNationalId, setSearchNationalId] = useState("");
@@ -78,7 +82,7 @@ export default function VisitingPatientsPage() {
   const [isAddingToWaitingList, setIsAddingToWaitingList] = useState(false);
 
   const [currentDate, setCurrentDate] = useState<string | null>(null);
-  const hospitalName = "HealthFlow Central Hospital"; 
+  const hospitalName = "H365 Central Hospital"; 
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalNationalId, setModalNationalId] = useState("");
@@ -91,7 +95,7 @@ export default function VisitingPatientsPage() {
   const [waitingList, setWaitingList] = useState<WaitingListItem[]>([]);
   const [isWaitingListLoading, setIsWaitingListLoading] = useState(true);
 
-  const [visitChartData, setVisitChartData] = useState<typeof initialVisitChartData>(initialVisitChartData);
+  const [visitChartData, setVisitChartData] = useState<any[]>(initialVisitChartDataTemplate(t));
   const [analyticsStats, setAnalyticsStats] = useState({
     avgWaitTime: "0",
     totalProcessed: "0",
@@ -99,63 +103,67 @@ export default function VisitingPatientsPage() {
   });
   const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(true);
 
+
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+  }, [currentLocale]);
 
-    const fetchInitialData = async () => {
+  const fetchInitialData = useCallback(async () => {
       setIsWaitingListLoading(true);
       setIsAnalyticsLoading(true);
+      const currentT = getTranslator(currentLocale); // Get t function based on currentLocale
+
       try {
         // Fetching waiting list
-        const wlResponse = await fetch('/api/v1/visits/waiting-list'); // Mock
-        if (!wlResponse.ok) {
-            if(wlResponse.status === 404) { setWaitingList([]); } 
-            else { 
-                console.warn("Mock API /api/v1/visits/waiting-list not found, using fallback.");
-                setWaitingList(initialMockWaitingListData);
-            }
-        } else {
-            const wlData = await wlResponse.json();
-            setWaitingList(wlData);
+        // const wlResponse = await fetch('/api/v1/visits/waiting-list'); 
+        // For now, use mock. In real app, handle !wlResponse.ok and errorData
+        await new Promise(resolve => setTimeout(resolve, 700)); // Simulate fetch
+        const mockWlResponseStatus = 404; // Simulate API not found for fallback
+
+        if (mockWlResponseStatus === 404) { 
+            console.warn("Mock API /api/v1/visits/waiting-list not found, using fallback mock data.");
+            setWaitingList(initialMockWaitingListData.map(item => ({
+                ...item,
+                location: currentT(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)
+            })));
         }
+        // else { const wlData = await wlResponse.json(); /* process wlData */ }
+
 
         // Fetching analytics
-        const statsResponse = await fetch('/api/v1/visits/stats'); // Mock
-        if (!statsResponse.ok) {
-            if(statsResponse.status === 404) {
-                console.warn("Mock API /api/v1/visits/stats not found, using fallback.");
-                const defaultChartData = [
-                    { department: t('visitingPatients.visitDetails.department.outpatient'), visits: Math.floor(Math.random()*10) + 1, fill: "hsl(var(--chart-1))" },
-                    { department: t('visitingPatients.visitDetails.department.lab'), visits: Math.floor(Math.random()*5) + 1, fill: "hsl(var(--chart-2))" },
-                    { department: t('visitingPatients.visitDetails.department.pharmacy'), visits: Math.floor(Math.random()*7) + 1, fill: "hsl(var(--chart-3))" },
-                ];
-                setVisitChartData(defaultChartData);
-                setAnalyticsStats({ avgWaitTime: "15", totalProcessed: "5", peakHour: "10:00 AM"});
-            } else throw new Error('Failed to fetch visit stats');
-        } else {
-            const statsData = await statsResponse.json();
-            setVisitChartData(statsData.chartData || initialVisitChartData.map(d => ({...d, visits: Math.floor(Math.random()*10) + 1 })));
-            setAnalyticsStats(statsData.summaryStats || { avgWaitTime: "15", totalProcessed: "5", peakHour: "10:00 AM"});
+        // const statsResponse = await fetch('/api/v1/visits/stats');
+        await new Promise(resolve => setTimeout(resolve, 800)); // Simulate fetch
+        const mockStatsResponseStatus = 404; // Simulate API not found
+
+        if (mockStatsResponseStatus === 404) {
+            console.warn("Mock API /api/v1/visits/stats not found, using fallback mock data.");
+            const defaultChartData = initialVisitChartDataTemplate(currentT).map(d => ({...d, visits: Math.floor(Math.random()*10) + 1 }));
+            setVisitChartData(defaultChartData);
+            setAnalyticsStats({ avgWaitTime: "15", totalProcessed: (initialMockWaitingListData.length + 5).toString(), peakHour: "10:00 AM"});
         }
+        // else { const statsData = await statsResponse.json(); /* process statsData */ }
 
       } catch (error) {
         console.error("Error fetching initial data:", error);
-        toast({ variant: "destructive", title: t('visitingPatients.toast.loadError'), description: t('visitingPatients.toast.loadError.desc') });
-        setWaitingList(initialMockWaitingListData);
-        const fallbackChartData = [
-            { department: t('visitingPatients.visitDetails.department.outpatient'), visits: Math.floor(Math.random()*50) + 5, fill: "hsl(var(--chart-1))" },
-            { department: t('visitingPatients.visitDetails.department.lab'), visits: Math.floor(Math.random()*20) + 2, fill: "hsl(var(--chart-2))" },
-        ];
+        toast({ variant: "destructive", title: currentT('visitingPatients.toast.loadError'), description: currentT('visitingPatients.toast.loadError.desc') });
+        setWaitingList(initialMockWaitingListData.map(item => ({
+            ...item,
+            location: currentT(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)
+        })));
+        const fallbackChartData = initialVisitChartDataTemplate(currentT).map(d => ({...d, visits: Math.floor(Math.random()*50) + 5 }));
         setVisitChartData(fallbackChartData);
-        const totalProcessedFromInitialList = initialMockWaitingListData.length;
-        setAnalyticsStats({ avgWaitTime: "25", totalProcessed: (totalProcessedFromInitialList + 15).toString(), peakHour: "11:00 AM"});
+        setAnalyticsStats({ avgWaitTime: "25", totalProcessed: (initialMockWaitingListData.length + 15).toString(), peakHour: "11:00 AM"});
       } finally {
         setIsWaitingListLoading(false);
         setIsAnalyticsLoading(false);
       }
-    };
-    fetchInitialData();
-  }, [t, currentLocale]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentLocale]); // Removed t from dependency array to avoid re-fetching on every render if t changes identity
+
+    useEffect(() => {
+        fetchInitialData();
+    }, [fetchInitialData]);
+
 
   const getAvatarHint = (gender?: "Male" | "Female" | "Other") : string => {
     if (gender === "Male") return "male avatar";
@@ -176,26 +184,21 @@ export default function VisitingPatientsPage() {
     setAssignedDoctor("");
 
     try {
-      const response = await fetch(`/api/v1/patients/search?nationalId=${searchNationalId.trim()}`);
-      if (!response.ok) {
-        if (response.status === 404) {
+      // const response = await fetch(`/api/v1/patients/search?nationalId=${searchNationalId.trim()}`);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      const mockResponseStatus = searchNationalId.trim() === "12345" ? 200 : 404; // Mock based on ID
+
+      if (mockResponseStatus !== 200) {
+        if (mockResponseStatus === 404) {
           setPatientNotFound(true);
           setSearchedPatient(null);
           toast({ variant: "default", title: t('visitingPatients.toast.notFound'), description: t('visitingPatients.toast.notFound.desc', {searchNationalId: searchNationalId.trim()}) });
         } else {
-           // Fallback for demo if API not there
-          if (searchNationalId.trim() === "12345") { // Example found ID
-            setSearchedPatient({ id: "P001", nationalId: "12345", fullName: "Demo Found Patient", dob: "1980-01-01", gender: "Male", chronicConditions: "Hypertension" });
-            setPatientNotFound(false);
-            toast({ title: t('visitingPatients.toast.patientFound'), description: t('visitingPatients.toast.patientFound.desc', {fullName: "Demo Found Patient"}) });
-          } else {
-            setPatientNotFound(true);
-            setSearchedPatient(null);
-            toast({ variant: "default", title: t('visitingPatients.toast.notFound'), description: t('visitingPatients.toast.notFound.desc', {searchNationalId: searchNationalId.trim()}) });
-          }
+          // For other errors, you might throw or set a generic error message
+          throw new Error("Simulated API error during search.");
         }
       } else {
-        const data: Patient = await response.json();
+        const data: Patient = { id: "P001", nationalId: "12345", fullName: "Demo Found Patient", dob: "1980-01-01", gender: "Male", chronicConditions: "Hypertension" };
         setSearchedPatient(data);
         setPatientNotFound(false);
         toast({ title: t('visitingPatients.toast.patientFound'), description: t('visitingPatients.toast.patientFound.desc', {fullName: data.fullName}) });
@@ -203,12 +206,7 @@ export default function VisitingPatientsPage() {
     } catch (error: any) {
       console.error("Error searching patient:", error);
       toast({ variant: "destructive", title: t('visitingPatients.toast.searchError'), description: error.message || t('visitingPatients.toast.searchError.desc') });
-       // Fallback for demo if API call fails generally
-        if (searchNationalId.trim() === "12345") {
-            setSearchedPatient({ id: "P001", nationalId: "12345", fullName: "Demo Found Patient", dob: "1980-01-01", gender: "Male", chronicConditions: "Hypertension" });
-            setPatientNotFound(false);
-             toast({ title: t('visitingPatients.toast.patientFound'), description: t('visitingPatients.toast.patientFound.desc', {fullName: "Demo Found Patient"}) });
-        } else {
+       if (searchNationalId.trim() !== "12345") { // If not the specifically mocked "found" ID
             setPatientNotFound(true);
         }
     } finally {
@@ -231,32 +229,50 @@ export default function VisitingPatientsPage() {
       patientId: searchedPatient.id,
       department: department,
       reasonForVisit: reasonForVisit,
-      assignedDoctor: assignedDoctor || undefined,
+      assignedDoctor: assignedDoctor || null,
       visitDate: new Date().toISOString()
     };
 
     try {
-      const response = await fetch('/api/v1/visits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Failed to add to waiting list. API error."}));
-        throw new Error(errorData.error || `API error: ${response.statusText}`);
+      // const response = await fetch('/api/v1/visits', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(payload),
+      // });
+      console.log("Adding to waiting list (mock):", payload);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      const mockResponseStatus = 201; // Simulate success
+
+      if (mockResponseStatus !== 201) { // Assuming 201 for created
+          throw new Error("Failed to add to waiting list. API error.");
       }
-      const newVisitData = await response.json(); 
+      
+      const newVisitData = { id: `WL${Date.now()}` }; // Simplified mock response
 
       const newWaitingListItem: WaitingListItem = {
-          id: newVisitData.id || `WL${Date.now()}`, 
+          id: newVisitData.id, 
           patientName: searchedPatient.fullName,
           photoUrl: `https://placehold.co/40x40.png`, 
           gender: searchedPatient.gender,
-          location: department,
-          status: reasonForVisit, 
+          location: department, // department is the location for waiting list context
+          status: reasonForVisit, // reasonForVisit becomes the status/reason in waiting list
           timeAdded: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setWaitingList(prev => [newWaitingListItem, ...prev]);
+      
+      setVisitChartData(prevChartData => {
+        const updatedChartData = [...prevChartData];
+        const deptIndex = updatedChartData.findIndex(d => d.department === department);
+        if (deptIndex > -1) {
+          updatedChartData[deptIndex].visits += 1;
+        } else {
+          const departmentKey = department.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '') as keyof typeof chartConfig;
+          const color = chartConfig[departmentKey]?.color || "hsl(var(--chart-5))";
+          updatedChartData.push({ department: department, visits: 1, fill: color });
+        }
+        return updatedChartData;
+      });
+      setAnalyticsStats(prev => ({...prev, totalProcessed: (parseInt(prev.totalProcessed) + 1).toString() }));
 
       toast({ title: t('visitingPatients.toast.addedToVisitList'), description: t('visitingPatients.toast.addedToVisitList.desc', {patientName: newWaitingListItem.patientName, department: department})});
 
@@ -290,24 +306,26 @@ export default function VisitingPatientsPage() {
     };
 
     try {
-      const response = await fetch('/api/v1/patients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Registration failed. API error."}));
-        throw new Error(errorData.error || `API error: ${response.statusText}`);
+      // const response = await fetch('/api/v1/patients', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(payload),
+      // });
+      console.log("Registering patient from modal (mock):", payload);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      const mockResponseStatus = 201; // Simulate success
+
+      if (mockResponseStatus !== 201) {
+          throw new Error("Registration failed. API error.");
       }
-      // const registeredPatient = await response.json(); 
 
       toast({
         title: t('visitingPatients.toast.patientRegistered'),
         description: t('visitingPatients.toast.patientRegistered.desc', {fullName: payload.fullName, nationalId: payload.nationalId}),
       });
-      setSearchNationalId(payload.nationalId);
+      setSearchNationalId(payload.nationalId); 
       setIsModalOpen(false);
-      setPatientNotFound(false);
+      setPatientNotFound(false); 
 
       setModalNationalId("");
       setModalFullName("");
@@ -444,7 +462,7 @@ export default function VisitingPatientsPage() {
                   <CardHeader>
                     <CardTitle className="text-xl">{searchedPatient.fullName}</CardTitle>
                     <CardDescription>
-                      {t('visitingPatients.patientCard.nationalId')} {searchedPatient.nationalId} | {t('visitingPatients.patientCard.dob')} {new Date(searchedPatient.dob+"T00:00:00").toLocaleDateString()} | {t('visitingPatients.patientCard.gender')} {t(`patientRegistration.gender.${searchedPatient.gender.toLowerCase()}` as any)}
+                      {t('visitingPatients.patientCard.nationalId')} {searchedPatient.nationalId} | {t('visitingPatients.patientCard.dob')} {new Date(searchedPatient.dob+"T00:00:00").toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')} | {t('visitingPatients.patientCard.gender')} {t(`patientRegistration.gender.${searchedPatient.gender.toLowerCase()}` as any, searchedPatient.gender)}
                       <br/>{t('visitingPatients.patientCard.chronicConditions')} {searchedPatient.chronicConditions || t('visitingPatients.patientCard.noneReported')}
                     </CardDescription>
                   </CardHeader>
@@ -456,15 +474,15 @@ export default function VisitingPatientsPage() {
                           <SelectValue placeholder={t('visitingPatients.visitDetails.department.placeholder')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Outpatient General Consultation">{t('visitingPatients.visitDetails.department.outpatient')}</SelectItem>
-                          <SelectItem value="Laboratory (Scheduled Tests)">{t('visitingPatients.visitDetails.department.lab')}</SelectItem>
-                          <SelectItem value="Imaging (Scheduled Scan)">{t('visitingPatients.visitDetails.department.imaging')}</SelectItem>
-                          <SelectItem value="Pharmacy (Prescription Refill)">{t('visitingPatients.visitDetails.department.pharmacy')}</SelectItem>
-                          <SelectItem value="Specialist Consultation">{t('visitingPatients.visitDetails.department.specialist')}</SelectItem>
-                          <SelectItem value="Emergency Triage">{t('visitingPatients.visitDetails.department.emergency')}</SelectItem>
-                          <SelectItem value="Maternity Check-up">{t('visitingPatients.visitDetails.department.maternity')}</SelectItem>
-                          <SelectItem value="Dental Clinic">{t('visitingPatients.visitDetails.department.dental')}</SelectItem>
-                           <SelectItem value="Other Appointment">{t('visitingPatients.visitDetails.department.other')}</SelectItem>
+                          <SelectItem value={t('visitingPatients.visitDetails.department.outpatient')}>{t('visitingPatients.visitDetails.department.outpatient')}</SelectItem>
+                          <SelectItem value={t('visitingPatients.visitDetails.department.lab')}>{t('visitingPatients.visitDetails.department.lab')}</SelectItem>
+                          <SelectItem value={t('visitingPatients.visitDetails.department.imaging')}>{t('visitingPatients.visitDetails.department.imaging')}</SelectItem>
+                          <SelectItem value={t('visitingPatients.visitDetails.department.pharmacy')}>{t('visitingPatients.visitDetails.department.pharmacy')}</SelectItem>
+                          <SelectItem value={t('visitingPatients.visitDetails.department.specialist')}>{t('visitingPatients.visitDetails.department.specialist')}</SelectItem>
+                          <SelectItem value={t('visitingPatients.visitDetails.department.emergency')}>{t('visitingPatients.visitDetails.department.emergency')}</SelectItem>
+                          <SelectItem value={t('visitingPatients.visitDetails.department.maternity')}>{t('visitingPatients.visitDetails.department.maternity')}</SelectItem>
+                          <SelectItem value={t('visitingPatients.visitDetails.department.dental')}>{t('visitingPatients.visitDetails.department.dental')}</SelectItem>
+                           <SelectItem value={t('visitingPatients.visitDetails.department.other')}>{t('visitingPatients.visitDetails.department.other')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -504,7 +522,7 @@ export default function VisitingPatientsPage() {
               <CardTitle className="flex items-center gap-2 text-base">
                 <Clock className="h-5 w-5 text-primary" />
                  {currentDate === null ?
-                    `${t('patientRegistration.waitingList.titleBasePart')} ${hospitalName}` :
+                    `${t('visitingPatients.waitingList.titleBasePart')} ${hospitalName}` :
                     t('visitingPatients.waitingList.title', {currentDate: currentDate, hospitalName: hospitalName})
                   }
               </CardTitle>
@@ -556,22 +574,20 @@ export default function VisitingPatientsPage() {
                <Button variant="outline" className="w-full mt-4 text-sm" onClick={async () => {
                     setIsWaitingListLoading(true);
                     try {
-                        const response = await fetch('/api/v1/visits/waiting-list');
-                        if (!response.ok) {
-                            if(response.status === 404) { setWaitingList([]); }
-                            else { 
-                                console.warn("Mock API /api/v1/visits/waiting-list not found during refresh, using fallback.");
-                                setWaitingList(initialMockWaitingListData.map(item => ({...item, timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})).sort(() => 0.5 - Math.random()));
-                            }
-                        } else {
-                            const wlData = await response.json();
-                            setWaitingList(wlData);
+                        // const response = await fetch('/api/v1/visits/waiting-list');
+                        await new Promise(resolve => setTimeout(resolve, 700));
+                        const mockWlResponseStatus = 404; // Simulate API not found
+
+                        if (mockWlResponseStatus === 404) { 
+                            console.warn("Mock API /api/v1/visits/waiting-list not found during refresh, using fallback mock data.");
+                            setWaitingList(initialMockWaitingListData.map(item => ({...item, timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), location: t(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)})).sort(() => 0.5 - Math.random()));
                         }
-                        toast({title: t('patientRegistration.waitingList.refresh') + " (Mock Success)"});
+                        // else { const wlData = await response.json(); /* process wlData */ }
+                        toast({title: t('visitingPatients.toast.listRefreshed')});
                     } catch (error) {
                         console.error("Error refreshing waiting list:", error);
                         toast({variant: "destructive", title: t('visitingPatients.toast.loadError'), description: t('visitingPatients.toast.refreshError.desc')});
-                        setWaitingList(initialMockWaitingListData.map(item => ({...item, timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})).sort(() => 0.5 - Math.random())); 
+                         setWaitingList(initialMockWaitingListData.map(item => ({...item, timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), location: t(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)})).sort(() => 0.5 - Math.random())); 
                     } finally {
                         setIsWaitingListLoading(false);
                     }
@@ -643,7 +659,7 @@ export default function VisitingPatientsPage() {
                     />
                     <Bar dataKey="visits" radius={4}>
                        {visitChartData.map((_entry, index) => {
-                        const departmentKey = (_entry.department || "Unknown").toLowerCase().replace(/\s+/g, '') as keyof typeof chartConfig;
+                        const departmentKey = (_entry.department || "Unknown").toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '') as keyof typeof chartConfig;
                         const chartItem = chartConfig[departmentKey];
                         const color = _entry.fill || chartItem?.color || '#8884d8';
                         return <Cell key={`cell-${index}`} fill={color} />;
@@ -656,7 +672,7 @@ export default function VisitingPatientsPage() {
                             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mt-3">
                               {visitChartData.map((dataEntry, index) => {
                                 const departmentName = dataEntry.department || "Unknown Department";
-                                const departmentKey = departmentName.toLowerCase().replace(/\s+/g, '') as keyof typeof chartConfig;
+                                const departmentKey = departmentName.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '') as keyof typeof chartConfig;
                                 const chartItem = chartConfig[departmentKey];
                                 const label = chartItem?.label || departmentName;
                                 const color = dataEntry.fill || chartItem?.color || '#8884d8';
@@ -683,5 +699,3 @@ export default function VisitingPatientsPage() {
       </div>
   );
 }
-
-    
