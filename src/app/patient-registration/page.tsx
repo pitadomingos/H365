@@ -21,7 +21,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from "next/link";
 import { useLocale } from '@/context/locale-context';
-import { getTranslator } from '@/lib/i18n';
+import { getTranslator, defaultLocale } from '@/lib/i18n';
+import { ptBR } from 'date-fns/locale';
 
 interface WaitingListItem {
   id: number | string;
@@ -56,7 +57,8 @@ type PatientFormValues = z.infer<typeof patientFormSchema>;
 
 export default function PatientRegistrationPage() {
   const { currentLocale } = useLocale();
-  const t = getTranslator(currentLocale);
+  const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
+
 
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientFormSchema),
@@ -84,7 +86,7 @@ export default function PatientRegistrationPage() {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [currentDate, setCurrentDate] = useState('');
+  const [currentDate, setCurrentDate] = useState<string | null>(null);
   const hospitalName = "HealthFlow Central Hospital"; 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,21 +95,36 @@ export default function PatientRegistrationPage() {
   const [waitingList, setWaitingList] = useState<WaitingListItem[]>([]);
   const [isWaitingListLoading, setIsWaitingListLoading] = useState(true);
 
+ useEffect(() => {
+    setCurrentDate(new Date().toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+  }, [currentLocale]);
+
+
   useEffect(() => {
-    setCurrentDate(new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
-    
-    setIsWaitingListLoading(true);
-    // Simulate fetching waiting list
-    setTimeout(() => {
-      const initialWaitingList: WaitingListItem[] = [
-        { id: 1, name: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
-        { id: 2, name: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
-        { id: 3, name: "Charlie Brown", gender: "Male", timeAdded: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
-      ];
-      setWaitingList(initialWaitingList);
-      setIsWaitingListLoading(false);
-    }, 1500);
-  }, []);
+    const fetchWaitingList = async () => {
+      setIsWaitingListLoading(true);
+      try {
+        console.log("Fetching waiting list for Patient Registration page...");
+        // const response = await fetch('/api/v1/visits/waiting-list');
+        // if (!response.ok) throw new Error("Failed to fetch waiting list");
+        // const data = await response.json();
+        // setWaitingList(data);
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+        const mockData: WaitingListItem[] = [
+          { id: 1, name: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/40x40.png" },
+          { id: 2, name: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "Dispatched to Ward A", photoUrl: "https://placehold.co/40x40.png" },
+          { id: 3, name: "Charlie Brown", gender: "Male", timeAdded: "11:00 AM", location: "Laboratory", status: "Awaiting Results", photoUrl: "https://placehold.co/40x40.png" },
+        ];
+        setWaitingList(mockData);
+      } catch (error) {
+        console.error("Error fetching waiting list:", error);
+        toast({ variant: "destructive", title: t('patientRegistration.toast.loadError'), description: t('patientRegistration.loadingWaitingList') });
+      } finally {
+        setIsWaitingListLoading(false);
+      }
+    };
+    fetchWaitingList();
+  }, [t]);
 
   const enableCamera = useCallback(async () => {
     if (hasCameraPermission === false && !stream) {
@@ -146,16 +163,16 @@ export default function PatientRegistrationPage() {
       videoRef.current.onloadedmetadata = () => {
         videoRef.current?.play().catch(error => {
            console.error('Error attempting to play video:', error);
-           toast({ variant: "destructive", title: "Camera Error", description: "Could not start video preview." });
+           toast({ variant: "destructive", title: t('patientRegistration.photoCapture.cameraError'), description: "Could not start video preview." });
         });
       };
     }
     return () => {
-      if (stream && !capturedImage) { // Only stop stream if it's active and no image is captured
+      if (stream && !capturedImage) { 
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [stream, capturedImage]);
+  }, [stream, capturedImage, t]);
 
 
   const capturePhoto = () => {
@@ -185,16 +202,16 @@ export default function PatientRegistrationPage() {
         context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
         const dataUrl = canvas.toDataURL('image/png');
         setCapturedImage(dataUrl);
-        stream.getTracks().forEach(track => track.stop()); // Stop stream after capture
-        setStream(null); // Clear stream state
+        stream.getTracks().forEach(track => track.stop()); 
+        setStream(null); 
       }
     }
   };
 
   const discardPhoto = () => {
     setCapturedImage(null);
-    // Re-enable camera automatically or let user click again
-    // if (hasCameraPermission !== false) { enableCamera(); } 
+    // Automatically try to re-enable camera if permission was not denied
+    // if (hasCameraPermission !== false) { enableCamera(); } // Commented out for now to give user explicit control
   };
 
   const downloadCSVTemplate = () => {
@@ -226,16 +243,39 @@ export default function PatientRegistrationPage() {
   const handleFileUpload = async () => {
     if (selectedFile) {
       setIsUploading(true);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500)); 
-      toast({
-        title: t('patientRegistration.toast.fileUploadMock.title'),
-        description: t('patientRegistration.toast.fileUploadMock.description', { fileName: selectedFile.name }),
-      });
-      setSelectedFile(null);
-      const fileInput = document.getElementById('bulkPatientFile') as HTMLInputElement;
-      if (fileInput) fileInput.value = ""; 
-      setIsUploading(false);
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      try {
+        console.log("Uploading bulk patient file (mock):", selectedFile.name);
+        // const response = await fetch('/api/v1/patients/bulk', {
+        //   method: 'POST',
+        //   body: formData, 
+        // });
+        // if (!response.ok) {
+        //   const errorData = await response.json().catch(() => ({ error: "Bulk upload failed" }));
+        //   throw new Error(errorData.error || `API error: ${response.status}`);
+        // }
+        // const result = await response.json();
+        // toast({ title: "Bulk Registration Started", description: `${result.message}. Successful: ${result.results.successful}, Failed: ${result.results.failed}` });
+        await new Promise(resolve => setTimeout(resolve, 1500)); 
+        toast({
+          title: t('patientRegistration.toast.fileUploadMock.title'),
+          description: t('patientRegistration.toast.fileUploadMock.description', { fileName: selectedFile.name }),
+        });
+        setSelectedFile(null);
+        const fileInput = document.getElementById('bulkPatientFile') as HTMLInputElement;
+        if (fileInput) fileInput.value = ""; 
+      } catch (error: any) {
+        console.error("Bulk upload error:", error);
+        toast({
+          variant: "destructive",
+          title: t('patientRegistration.toast.regFailed.title'),
+          description: error.message || "An unexpected error occurred during bulk upload.",
+        });
+      } finally {
+        setIsUploading(false);
+      }
     } else {
       toast({
         variant: "destructive",
@@ -267,33 +307,31 @@ export default function PatientRegistrationPage() {
     };
 
     try {
-      // Simulate API call
       console.log("Submitting to /api/v1/patients (mock):", payload);
-      // const response = await fetch('/api/v1/patients', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(payload),
-      // });
-      // if (!response.ok) {
-      //   const errorData = await response.json().catch(() => ({ error: "API request failed" }));
-      //   throw new Error(errorData.error || `API request failed with status: ${response.status}`);
-      // }
-      // const result = await response.json();
-      await new Promise(resolve => setTimeout(resolve, 1500)); 
+      const response = await fetch('/api/v1/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "API request failed" }));
+        throw new Error(errorData.error || `API request failed with status: ${response.status}`);
+      }
+      const result = await response.json(); 
       
       const age = data.dateOfBirth ? new Date().getFullYear() - new Date(data.dateOfBirth).getFullYear() : 'N/A';
       const allergiesDisplay = (data.allergies || "").split(',').map(s => s.trim()).filter(Boolean).join(', ') || 'None';
       const chronicConditionsDisplay = (data.chronicConditions || "").split(',').map(s => s.trim()).filter(Boolean).join(', ') || 'None';
-
+      
       toast({ 
         title: t('patientRegistration.toast.regSuccess.title'), 
         description: t('patientRegistration.toast.regSuccess.description', { 
-            fullName: data.fullName, 
-            nationalId: data.nationalId, 
-            age: age.toString(), 
-            gender: data.gender,
-            allergies: allergiesDisplay,
-            chronicConditions: chronicConditionsDisplay
+            fullName: result.patient.fullName, 
+            nationalId: result.patient.nationalId, 
+            age: result.patient.age?.toString() || age.toString(), 
+            gender: result.patient.gender || data.gender,
+            allergies: result.patient.allergies?.join(', ') || allergiesDisplay,
+            chronicConditions: result.patient.chronicConditions?.join(', ') || chronicConditionsDisplay
         })
       });
       form.reset();
@@ -340,7 +378,6 @@ export default function PatientRegistrationPage() {
               </CardHeader>
               <CardContent className="py-6">
                 <div className="grid lg:grid-cols-[240px_1fr] gap-x-6 gap-y-4 items-start">
-                   {/* Photo Section (Visual Only) */}
                   <div className="flex flex-col items-center">
                     <div className="relative w-[240px] h-[308px] bg-muted rounded-md flex items-center justify-center overflow-hidden border border-dashed border-primary/50">
                        {!capturedImage && (
@@ -362,16 +399,16 @@ export default function PatientRegistrationPage() {
                             data-ai-hint={getAvatarHint(form.watch("gender") as PatientFormValues["gender"])}
                           />
                         ) : !(stream && hasCameraPermission) && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted text-muted-foreground p-2">
-                                <UserCircle className="w-24 h-24" />
+                             <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground p-2">
+                                <UserCircle className="w-24 h-24 opacity-50" />
+                                {hasCameraPermission === null && <p className="text-xs mt-2 text-center">{t('patientRegistration.photoCapture.enablePrompt')}</p>}
                                 {hasCameraPermission === false && <p className="text-xs mt-2 text-center">{t('patientRegistration.photoCapture.cameraDenied.description')}</p>}
-                            </div>
+                             </div>
                         )}
                     </div>
                     <canvas ref={canvasRef} className="hidden"></canvas>
                   </div>
                   
-                  {/* Personal Information Fields */}
                   <div className="space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">{t('patientRegistration.personalInfo.title')}</h3>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -405,11 +442,11 @@ export default function PatientRegistrationPage() {
                                   )}
                                 >
                                   <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {field.value ? format(field.value, "PPP") : <span>{t('patientRegistration.dob.placeholder')}</span>}
+                                  {field.value ? format(field.value, "PPP", { locale: currentLocale === 'pt' ? ptBR : undefined }) : <span>{t('patientRegistration.dob.placeholder')}</span>}
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-auto p-0">
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
+                                <Calendar locale={currentLocale === 'pt' ? ptBR : undefined} mode="single" selected={field.value} onSelect={field.onChange} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
                               </PopoverContent>
                             </Popover>
                           )}
@@ -447,7 +484,7 @@ export default function PatientRegistrationPage() {
                         <Textarea id="chronicConditions" placeholder={t('patientRegistration.chronicConditions.placeholder')} {...form.register("chronicConditions")} />
                         {form.formState.errors.chronicConditions && <p className="text-xs text-destructive">{form.formState.errors.chronicConditions.message}</p>}
                     </div>
-                     {/* Photo Capture Controls - Moved below Personal Info on the right */}
+                    
                     <div className="pt-2 mt-4 border-t">
                         <h3 className="text-md font-semibold flex items-center gap-2 border-b pb-1">
                             <Camera className="h-5 w-5" /> {t('patientRegistration.photoCapture.title')} <span className="text-destructive">*</span>
@@ -479,14 +516,10 @@ export default function PatientRegistrationPage() {
                                 </AlertDescription>
                             </Alert>
                         )}
-                        {hasCameraPermission === null && !stream && !capturedImage &&(
-                           <p className="text-xs text-muted-foreground mt-1">{t('patientRegistration.photoCapture.enablePrompt')}</p>
-                        )}
                     </div>
                   </div>
                 </div>
                 
-                {/* Rest of the form sections */}
                 <div className="space-y-6 pt-4">
                   <div className="space-y-4">
                     <h3 className="text-md font-semibold border-b pb-1">{t('patientRegistration.contactInfo.title')}</h3>
@@ -589,8 +622,11 @@ export default function PatientRegistrationPage() {
           <div className="lg:col-span-1 space-y-6">
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                   {t('patientRegistration.waitingList.title', {date: currentDate, hospitalName: hospitalName})}
+                 <CardTitle className="flex items-center gap-2 text-base">
+                  {currentDate === null ?
+                    `${t('patientRegistration.waitingList.titleBasePart')} ${hospitalName}` :
+                    t('patientRegistration.waitingList.title', { currentDate: currentDate, hospitalName: hospitalName })
+                  }
                 </CardTitle>
                 <CardDescription className="text-xs">
                   {t('patientRegistration.waitingList.description')}
@@ -600,7 +636,7 @@ export default function PatientRegistrationPage() {
                 {isWaitingListLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="ml-2 text-muted-foreground">Loading waiting list...</p>
+                    <p className="ml-2 text-muted-foreground">{t('patientRegistration.loadingWaitingList')}</p>
                   </div>
                 ) : waitingList.length > 0 ? (
                   <ul className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
@@ -637,7 +673,26 @@ export default function PatientRegistrationPage() {
                     <p>{t('patientRegistration.waitingList.empty')}</p>
                   </div>
                 )}
-                 <Button type="button" variant="outline" className="w-full mt-6" onClick={() => {setIsWaitingListLoading(true); setTimeout(() => { setWaitingList([...waitingList].sort(() => 0.5 - Math.random())); setIsWaitingListLoading(false); toast({title: "List Refreshed (Mock)"})}, 700) }} disabled={isWaitingListLoading}>
+                 <Button type="button" variant="outline" className="w-full mt-6" onClick={async () => {
+                    setIsWaitingListLoading(true); 
+                    try {
+                        // const response = await fetch('/api/v1/visits/waiting-list');
+                        // if (!response.ok) throw new Error("Failed to refresh");
+                        // const data = await response.json();
+                        // setWaitingList(data);
+                        await new Promise(resolve => setTimeout(resolve, 700)); // Simulate API delay
+                        const mockData: WaitingListItem[] = [
+                            { id: Date.now(), name: "Refreshed Patient Alpha", gender: "Male", timeAdded: new Date().toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}), location: "Outpatient", status: "Waiting", photoUrl: "https://placehold.co/40x40.png" },
+                            ...waitingList.slice(0,2).map(p => ({...p, timeAdded: new Date(Date.now() - Math.random()*100000).toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'})})),
+                        ].sort(() => 0.5 - Math.random());
+                        setWaitingList(mockData);
+                        toast({title: t('visitingPatients.toast.listRefreshed')})
+                    } catch(err) {
+                        toast({variant: "destructive", title: t('visitingPatients.toast.loadError'), description: t('visitingPatients.toast.refreshError.desc')})
+                    } finally {
+                        setIsWaitingListLoading(false);
+                    }
+                    }} disabled={isWaitingListLoading}>
                     {isWaitingListLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                     {t('patientRegistration.waitingList.refresh')}
                  </Button>

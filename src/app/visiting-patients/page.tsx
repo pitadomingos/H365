@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, UserPlus, Users, Clock, Building, MapPin, Activity, BarChart3, CalendarIcon, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
-import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid, Cell } from "recharts"; // Correctly import Cell from recharts
+import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip, Legend as RechartsLegend, CartesianGrid, Cell } from "recharts";
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator, defaultLocale } from '@/lib/i18n';
+import { ptBR } from 'date-fns/locale';
 
 interface Patient {
   id: string;
@@ -57,19 +58,19 @@ const initialVisitChartDataTemplate = (t: Function) => [
 
 export default function VisitingPatientsPage() {
   const { currentLocale } = useLocale();
-  const t = getTranslator(currentLocale);
+  const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
 
-  const chartConfig = {
+  const chartConfig = React.useMemo(() => ({
     visits: { label: t('visitingPatients.analytics.visitsByDept.visitsLabel') },
     outpatientgeneralconsultation: { label: t('visitingPatients.visitDetails.department.outpatient'), color: "hsl(var(--chart-1))" },
     laboratoryscheduledtests: { label: t('visitingPatients.visitDetails.department.lab'), color: "hsl(var(--chart-2))" },
     pharmacyprescriptionrefill: { label: t('visitingPatients.visitDetails.department.pharmacy'), color: "hsl(var(--chart-3))" },
     specialistconsultation: { label: t('visitingPatients.visitDetails.department.specialist'), color: "hsl(var(--chart-4))" },
     emergencytriage: { label: t('visitingPatients.visitDetails.department.emergency'), color: "hsl(var(--chart-5))" },
-     maternitycheckup: { label: t('visitingPatients.visitDetails.department.maternity'), color: "hsl(var(--chart-1))" },
+    maternitycheckup: { label: t('visitingPatients.visitDetails.department.maternity'), color: "hsl(var(--chart-1))" }, // Re-using colors for demo
     dentalclinic: { label: t('visitingPatients.visitDetails.department.dental'), color: "hsl(var(--chart-2))" },
     otherappointment: { label: t('visitingPatients.visitDetails.department.other'), color: "hsl(var(--chart-3))" },
-  } satisfies ChartConfig;
+  }), [t]) satisfies ChartConfig;
   
   const [searchNationalId, setSearchNationalId] = useState("");
   const [searchedPatient, setSearchedPatient] = useState<Patient | null>(null);
@@ -111,69 +112,51 @@ export default function VisitingPatientsPage() {
   const fetchInitialData = useCallback(async () => {
       setIsWaitingListLoading(true);
       setIsAnalyticsLoading(true);
-      const currentT = getTranslator(currentLocale); 
-
+      
       try {
-        console.log("Fetching waiting list...");
-        const wlResponse = await fetch('/api/v1/visits/waiting-list'); 
-        
-        if (!wlResponse.ok) {
-            if(wlResponse.status === 404) {
-                 console.warn("API /api/v1/visits/waiting-list not found, using fallback mock data.");
-                 setWaitingList(initialMockWaitingListData.map(item => ({
-                    ...item,
-                    location: currentT(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)
-                })));
-            } else {
-                const errorData = await wlResponse.json().catch(() => ({ error: "Failed to fetch waiting list" }));
-                throw new Error(errorData.error || `API error ${wlResponse.status}`);
-            }
-        } else {
-            const wlData = await wlResponse.json();
-            setWaitingList(wlData.map((item: WaitingListItem) => ({
-                ...item,
-                location: currentT(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)
-            })));
-        }
+        // Fetch Waiting List
+        // const wlResponse = await fetch('/api/v1/visits/waiting-list'); 
+        // if (!wlResponse.ok) throw new Error("Failed to fetch waiting list");
+        // const wlData = await wlResponse.json();
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const wlData = initialMockWaitingListData.map(item => ({
+            ...item,
+            location: t(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)
+        }));
+        setWaitingList(wlData);
 
+        // Fetch Analytics Stats
+        // const statsResponse = await fetch('/api/v1/visits/stats');
+        // if (!statsResponse.ok) throw new Error("Failed to fetch stats");
+        // const statsData = await statsResponse.json();
+         await new Promise(resolve => setTimeout(resolve, 500));
+        const statsData = {
+            chartData: initialVisitChartDataTemplate(t).map(d => ({...d, visits: Math.floor(Math.random()*10) + 1 })),
+            summaryStats: { avgWaitTime: "15", totalProcessed: (initialMockWaitingListData.length + 5).toString(), peakHour: "10:00 AM"}
+        };
 
-        console.log("Fetching analytics data...");
-        const statsResponse = await fetch('/api/v1/visits/stats');
-
-        if (!statsResponse.ok) {
-            if (statsResponse.status === 404) {
-                console.warn("API /api/v1/visits/stats not found, using fallback mock data.");
-                const defaultChartData = initialVisitChartDataTemplate(currentT).map(d => ({...d, visits: Math.floor(Math.random()*10) + 1 }));
-                setVisitChartData(defaultChartData);
-                setAnalyticsStats({ avgWaitTime: "15", totalProcessed: (initialMockWaitingListData.length + 5).toString(), peakHour: "10:00 AM"});
-            } else {
-                const errorData = await statsResponse.json().catch(() => ({ error: "Failed to fetch stats" }));
-                throw new Error(errorData.error || `API error ${statsResponse.status}`);
-            }
-        } else {
-            const statsData = await statsResponse.json();
-            setVisitChartData(statsData.chartData.map((d: any) => ({
-                ...d,
-                department: currentT(`visitingPatients.visitDetails.department.${d.department.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, d.department)
-            })) || initialVisitChartDataTemplate(currentT).map(d => ({...d, visits: Math.floor(Math.random()*10) + 1 })));
-            setAnalyticsStats(statsData.summaryStats || { avgWaitTime: "15", totalProcessed: (initialMockWaitingListData.length + 5).toString(), peakHour: "10:00 AM"});
-        }
+        setVisitChartData(statsData.chartData.map((d: any) => ({
+            ...d,
+            department: t(`visitingPatients.visitDetails.department.${d.department.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, d.department)
+        })) || initialVisitChartDataTemplate(t).map(d => ({...d, visits: Math.floor(Math.random()*10) + 1 })));
+        setAnalyticsStats(statsData.summaryStats || { avgWaitTime: "15", totalProcessed: (initialMockWaitingListData.length + 5).toString(), peakHour: "10:00 AM"});
 
       } catch (error) {
         console.error("Error fetching initial data:", error);
-        toast({ variant: "destructive", title: currentT('visitingPatients.toast.loadError'), description: (error as Error).message || currentT('visitingPatients.toast.loadError.desc') });
+        toast({ variant: "destructive", title: t('visitingPatients.toast.loadError'), description: (error as Error).message || t('visitingPatients.toast.loadError.desc') });
+        // Fallback mock data
         setWaitingList(initialMockWaitingListData.map(item => ({
             ...item,
-            location: currentT(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)
+            location: t(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)
         })));
-        const fallbackChartData = initialVisitChartDataTemplate(currentT).map(d => ({...d, visits: Math.floor(Math.random()*50) + 5 }));
+        const fallbackChartData = initialVisitChartDataTemplate(t).map(d => ({...d, visits: Math.floor(Math.random()*50) + 5 }));
         setVisitChartData(fallbackChartData);
         setAnalyticsStats({ avgWaitTime: "25", totalProcessed: (initialMockWaitingListData.length + 15).toString(), peakHour: "11:00 AM"});
       } finally {
         setIsWaitingListLoading(false);
         setIsAnalyticsLoading(false);
       }
-    }, [currentLocale]); 
+    }, [currentLocale, t]); 
 
     useEffect(() => {
         fetchInitialData();
@@ -200,28 +183,24 @@ export default function VisitingPatientsPage() {
 
     try {
       console.log(`Searching for patient with ID: ${searchNationalId.trim()}`);
-      const response = await fetch(`/api/v1/patients/search?nationalId=${searchNationalId.trim()}`);
+      // const response = await fetch(`/api/v1/patients/search?nationalId=${searchNationalId.trim()}`);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
       
-      if (!response.ok) {
-        if (response.status === 404) {
+      // Mock response logic
+      if (searchNationalId.trim() === "12345") { // Mock found patient
+          const data: Patient = { id: "P001", nationalId: "12345", fullName: "Demo Patient Visit", dob: "1990-01-01", gender: "Male", chronicConditions: "Hypertension" };
+          setSearchedPatient(data);
+          setPatientNotFound(false);
+          toast({ title: t('visitingPatients.toast.patientFound'), description: t('visitingPatients.toast.patientFound.desc', { fullName: data.fullName }) });
+      } else { // Mock not found or other errors
           setPatientNotFound(true);
           setSearchedPatient(null);
-          toast({ variant: "default", title: t('visitingPatients.toast.notFound'), description: t('visitingPatients.toast.notFound.desc', {searchNationalId: searchNationalId.trim()}) });
-        } else {
-          const errorData = await response.json().catch(() => ({error: `API Error: ${response.status}`}));
-          throw new Error(errorData.error || `API Error: ${response.status}`);
-        }
-      } else {
-        const data: Patient = await response.json();
-        setSearchedPatient(data);
-        setPatientNotFound(false);
-        toast({ title: t('visitingPatients.toast.patientFound'), description: t('visitingPatients.toast.patientFound.desc', {fullName: data.fullName}) });
+          toast({ variant: "default", title: t('visitingPatients.toast.notFound'), description: t('visitingPatients.toast.notFound.desc', { searchNationalId: searchNationalId.trim() }) });
       }
     } catch (error: any) {
       console.error("Error searching patient:", error);
+      setPatientNotFound(true); // Ensure UI shows not found on error
       toast({ variant: "destructive", title: t('visitingPatients.toast.searchError'), description: error.message || t('visitingPatients.toast.searchError.desc') });
-      // Fallback to "not found" for UI consistency if it's not a specifically mocked "found" ID
-      setPatientNotFound(true);
     } finally {
       setIsLoadingSearch(false);
     }
@@ -248,18 +227,24 @@ export default function VisitingPatientsPage() {
 
     try {
       console.log("Adding to waiting list, payload:", payload);
-      const response = await fetch('/api/v1/visits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      
-      if (!response.ok) {
-          const errorData = await response.json().catch(() => ({error: `API Error: ${response.status}`}));
-          throw new Error(errorData.error || `Failed to add to waiting list. API Error: ${response.status}`);
-      }
-      
-      const newVisitData = await response.json(); // Assuming backend returns the created visit
+      // const response = await fetch('/api/v1/visits', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(payload),
+      // });
+      // if (!response.ok) {
+      //     const errorData = await response.json().catch(() => ({error: `API Error: ${response.status}`}));
+      //     throw new Error(errorData.error || `Failed to add to waiting list. API Error: ${response.status}`);
+      // }
+      // const newVisitData = await response.json();
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+      const newVisitData = { // Mock API response
+          id: `VISIT${Date.now()}`,
+          department: department,
+          reasonForVisit: reasonForVisit,
+          visitDate: payload.visitDate,
+      };
+
 
       const newWaitingListItem: WaitingListItem = {
           id: newVisitData.id, 
@@ -272,7 +257,6 @@ export default function VisitingPatientsPage() {
       };
       setWaitingList(prev => [newWaitingListItem, ...prev]);
       
-      // Optimistic update for chart - ideally, re-fetch or use API response for chart data
       setVisitChartData(prevChartData => {
         const updatedChartData = [...prevChartData];
         const deptIndex = updatedChartData.findIndex(d => d.department === department);
@@ -280,7 +264,7 @@ export default function VisitingPatientsPage() {
           updatedChartData[deptIndex].visits += 1;
         } else {
            const departmentKey = department.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '') as keyof typeof chartConfig;
-           const color = chartConfig[departmentKey]?.color || "hsl(var(--chart-5))";
+           const color = chartConfig[departmentKey]?.color || "hsl(var(--chart-5))"; // Fallback color
            updatedChartData.push({ department: department, visits: 1, fill: color });
         }
         return updatedChartData;
@@ -316,28 +300,30 @@ export default function VisitingPatientsPage() {
       dateOfBirth: format(modalDob, "yyyy-MM-dd"),
       gender: modalGender,
       chronicConditions: modalChronicConditions,
-      // Other fields will be default/empty for quick registration
       contactNumber: "N/A", 
       address: "N/A",
       district: "N/A",
       province: "N/A",
-      photoDataUri: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" // Minimal placeholder
+      photoDataUri: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" 
     };
 
     try {
       console.log("Registering patient from modal, payload:", payload);
-      const response = await fetch('/api/v1/patients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      // const response = await fetch('/api/v1/patients', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(payload),
+      // });
+      // if (!response.ok) {
+      //     const errorData = await response.json().catch(() => ({error: `API Error: ${response.status}`}));
+      //     throw new Error(errorData.error || `Registration failed. API Error: ${response.status}`);
+      // }
+      // const registeredPatientData = await response.json();
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
+      const registeredPatientData = { // Mock API response
+        patient: { fullName: modalFullName, nationalId: modalNationalId }
+      };
 
-      if (!response.ok) {
-          const errorData = await response.json().catch(() => ({error: `API Error: ${response.status}`}));
-          throw new Error(errorData.error || `Registration failed. API Error: ${response.status}`);
-      }
-
-      const registeredPatientData = await response.json();
 
       toast({
         title: t('visitingPatients.toast.patientRegistered'),
@@ -346,9 +332,6 @@ export default function VisitingPatientsPage() {
       setSearchNationalId(payload.nationalId); 
       setIsModalOpen(false);
       setPatientNotFound(false); 
-
-      // Optionally, trigger a search immediately
-      // await handleSearchPatient(); // Uncomment if you want to auto-search after quick reg
 
       setModalNationalId("");
       setModalFullName("");
@@ -439,11 +422,11 @@ export default function VisitingPatientsPage() {
                                   )}
                                 >
                                   <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {modalDob ? format(modalDob, "PPP") : <span>{t('visitingPatients.quickRegModal.dob.placeholder')}</span>}
+                                  {modalDob ? format(modalDob, "PPP", { locale: currentLocale === 'pt' ? ptBR : undefined }) : <span>{t('visitingPatients.quickRegModal.dob.placeholder')}</span>}
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-auto p-0">
-                                <Calendar locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} mode="single" selected={modalDob} onSelect={setModalDob} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
+                                <Calendar locale={currentLocale === 'pt' ? ptBR : undefined} mode="single" selected={modalDob} onSelect={setModalDob} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
                               </PopoverContent>
                             </Popover>
                           </div>
@@ -597,28 +580,23 @@ export default function VisitingPatientsPage() {
                <Button variant="outline" className="w-full mt-4 text-sm" onClick={async () => {
                     setIsWaitingListLoading(true);
                     try {
-                        console.log("Refreshing waiting list...");
-                        const response = await fetch('/api/v1/visits/waiting-list');
-                         if (!response.ok) {
-                             if(response.status === 404) {
-                                console.warn("API /api/v1/visits/waiting-list not found during refresh, using fallback mock data.");
-                                setWaitingList(initialMockWaitingListData.map(item => ({...item, timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), location: t(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)})).sort(() => 0.5 - Math.random()));
-                            } else {
-                                const errorData = await response.json().catch(() => ({ error: "Failed to refresh waiting list" }));
-                                throw new Error(errorData.error || `API error ${response.status}`);
-                            }
-                        } else {
-                            const wlData = await response.json();
-                            setWaitingList(wlData.map((item: WaitingListItem) => ({
-                                ...item,
-                                location: t(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)
-                            })));
-                        }
+                        // const response = await fetch('/api/v1/visits/waiting-list');
+                        //  if (!response.ok) throw new Error("Failed to refresh");
+                        // const wlData = await response.json();
+                        // setWaitingList(wlData.map((item: WaitingListItem) => ({
+                        //     ...item,
+                        //     location: t(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)
+                        // })));
+                        await new Promise(resolve => setTimeout(resolve, 700)); // Simulate API delay
+                        const mockData: WaitingListItem[] = [
+                            { id: Date.now(), name: "Refreshed Patient Alpha", gender: "Male", timeAdded: new Date().toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}), location: t('visitingPatients.visitDetails.department.outpatient'), status: "Waiting", photoUrl: "https://placehold.co/40x40.png" },
+                            ...initialMockWaitingListData.slice(0,2).map(p => ({...p, timeAdded: new Date(Date.now() - Math.random()*100000).toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}), location: t(`visitingPatients.visitDetails.department.${p.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, p.location)})),
+                        ].sort(() => 0.5 - Math.random());
+                        setWaitingList(mockData);
                         toast({title: t('visitingPatients.toast.listRefreshed')});
                     } catch (error) {
                         console.error("Error refreshing waiting list:", error);
                         toast({variant: "destructive", title: t('visitingPatients.toast.loadError'), description: (error as Error).message || t('visitingPatients.toast.refreshError.desc')});
-                         setWaitingList(initialMockWaitingListData.map(item => ({...item, timeAdded: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), location: t(`visitingPatients.visitDetails.department.${item.location.toLowerCase().replace(/\s+/g, '').replace(/[()]/g, '')}`, item.location)})).sort(() => 0.5 - Math.random())); 
                     } finally {
                         setIsWaitingListLoading(false);
                     }

@@ -1,5 +1,5 @@
 
-"use client"; // This page uses client-side state for mock data
+"use client"; 
 
 import React, { useState, useEffect } from 'react'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,11 @@ import { Bell, Briefcase, Users, Loader2, Star, FileClock } from "lucide-react";
 import { SpecialistConsultationForm } from "./specialist-consultation-form";
 import { getTreatmentRecommendationAction } from "../treatment-recommendation/actions";
 import Image from "next/image";
+import { useLocale } from '@/context/locale-context';
+import { getTranslator, defaultLocale } from '@/lib/i18n';
+import { ConsultationInitialData } from '@/app/treatment-recommendation/consultation-form';
+import { toast } from "@/hooks/use-toast";
+
 
 interface MockListItem {
   id: string;
@@ -34,39 +39,97 @@ const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
   return "patient avatar";
 };
 
+// Mock data for full draft details, similar to the one in ConsultationRoomPage
+const MOCK_SPECIALIST_FULL_DRAFT_DETAILS: Record<string, ConsultationInitialData> = {
+    "DRAFT_SPEC001": {
+        patientData: { 
+            nationalId: "SPEC_DRF001_NID", 
+            fullName: "Walter White", 
+            age: 52, 
+            gender: "Male", 
+            address: "308 Negra Arroyo Lane, Albuquerque, NM", 
+            homeClinic: "Local Clinic", 
+            photoUrl: "https://placehold.co/120x120.png", 
+            allergies: ["None"], 
+            chronicConditions: ["Lung Cancer (suspected)"],
+            referringDoctor: "Dr. Saul Goodman",
+            referringDepartment: "General Practice",
+            reasonForReferral: "Persistent cough, weight loss. Chest X-ray shows suspicious nodule.",
+            assignedSpecialty: "Oncology"
+        },
+        nationalIdSearch: "SPEC_DRF001_NID",
+        currentSpecialty: "Oncology",
+        bodyTemperature: "37.1",
+        weight: "70", // Initial weight
+        height: "180",
+        bloodPressure: "130/85",
+        symptoms: "Patient presents with a persistent cough for the past 3 months, hemoptysis noted twice. Significant weight loss of 10kg over 2 months. Denies fever. Smoker for 30 years, 1 pack/day.",
+        labResultsSummary: "CBC: WNL. LDH slightly elevated.",
+        imagingDataSummary: "Chest X-ray: 3cm spiculated mass in right upper lobe. CT Chest ordered.",
+        specialistComments: "Findings highly suspicious for malignancy. Staging CT and biopsy required. Discussed prognosis and initial treatment options if confirmed.",
+        recommendation: null,
+    },
+    "DRAFT_SPEC002": {
+        patientData: { 
+            nationalId: "SPEC_DRF002_NID", 
+            fullName: "Skyler White", 
+            age: 45, 
+            gender: "Female", 
+            address: "308 Negra Arroyo Lane, Albuquerque, NM", 
+            homeClinic: "Local Clinic", 
+            photoUrl: "https://placehold.co/120x120.png", 
+            allergies: [], 
+            chronicConditions: ["Anxiety"],
+            referringDoctor: "Dr. Marie Schrader",
+            referringDepartment: "Psychiatry",
+            reasonForReferral: "New onset seizures.",
+            assignedSpecialty: "Neurology"
+        },
+        nationalIdSearch: "SPEC_DRF002_NID",
+        currentSpecialty: "Neurology",
+        symptoms: "Patient reports two episodes of generalized tonic-clonic seizures in the past month. No prior history. Currently on sertraline for anxiety.",
+        labResultsSummary: "Electrolytes WNL. Prolactin normal post-episode.",
+        imagingDataSummary: "MRI Brain pending.",
+        specialistComments: "EEG ordered. Start Keppra 500mg BID. Advise driving restrictions.",
+        recommendation: null,
+    },
+};
+
+
 export default function SpecializationsPage() {
+  const { currentLocale } = useLocale();
+  const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
+
   const [referralList, setReferralList] = useState<MockListItem[]>([]);
   const [isLoadingReferrals, setIsLoadingReferrals] = useState(true);
   const [specialistNotifications, setSpecialistNotifications] = useState<MockListItem[]>([]);
   const [isLoadingSpecialistNotifications, setIsLoadingSpecialistNotifications] = useState(true);
   const [draftedConsultations, setDraftedConsultations] = useState<DraftedConsultationItem[]>([]);
   const [isLoadingDraftedConsultations, setIsLoadingDraftedConsultations] = useState(true);
+  const [dataToLoadInForm, setDataToLoadInForm] = useState<ConsultationInitialData | null>(null);
 
 
   useEffect(() => {
-    // Simulate fetching referral list
     setIsLoadingReferrals(true);
     setTimeout(() => {
       const mockReferralListData: MockListItem[] = [
-        { id: "REF001", patientName: "Edward Scissorhands", gender: "Male", referringDoctor: "Dr. Primary", reason: "Cardiac evaluation", timeReferred: "09:00 AM", specialty: "Cardiology", photoUrl: "https://placehold.co/32x32.png" },
-        { id: "REF002", patientName: "Fiona Gallagher", gender: "Female", referringDoctor: "Dr. GP", reason: "Persistent Headaches", timeReferred: "09:30 AM", specialty: "Neurology", photoUrl: "https://placehold.co/32x32.png" },
+        { id: "REF001", patientName: "Walter White", gender: "Male", referringDoctor: "Dr. Primary", reason: "Lung Cancer Assessment", timeReferred: "09:00 AM", specialty: "Oncology", photoUrl: "https://placehold.co/32x32.png" },
+        { id: "REF002", patientName: "Skyler White", gender: "Female", referringDoctor: "Dr. GP", reason: "New Onset Seizures", timeReferred: "09:30 AM", specialty: "Neurology", photoUrl: "https://placehold.co/32x32.png" },
       ];
       setReferralList(mockReferralListData);
       setIsLoadingReferrals(false);
     }, 1200);
 
-    // Simulate fetching specialist notifications
     setIsLoadingSpecialistNotifications(true);
     setTimeout(() => {
       const mockSpecialistNotificationsData: MockListItem[] = [
-        { id: "SNOTIF001", patientName: "Edward Scissorhands", gender: "Male", message: "Previous ECG results uploaded.", time: "10 mins ago", read: false, photoUrl: "https://placehold.co/32x32.png" },
-        { id: "SNOTIF002", patientName: "Fiona Gallagher", gender: "Female", message: "MRI scheduled for tomorrow.", time: "25 mins ago", read: true, photoUrl: "https://placehold.co/32x32.png" },
+        { id: "SNOTIF001", patientName: "Walter White", gender: "Male", message: "CT Chest results available.", time: "10 mins ago", read: false, photoUrl: "https://placehold.co/32x32.png" },
+        { id: "SNOTIF002", patientName: "Skyler White", gender: "Female", message: "EEG scheduled for tomorrow.", time: "25 mins ago", read: true, photoUrl: "https://placehold.co/32x32.png" },
       ];
       setSpecialistNotifications(mockSpecialistNotificationsData);
       setIsLoadingSpecialistNotifications(false);
     }, 1500);
 
-    // Simulate fetching drafted consultations
     setIsLoadingDraftedConsultations(true);
     setTimeout(() => {
       const mockDraftedData: DraftedConsultationItem[] = [
@@ -78,23 +141,33 @@ export default function SpecializationsPage() {
     }, 1700);
   }, []);
 
+  const handleResumeConsultation = (draftId: string) => {
+    const draftDetails = MOCK_SPECIALIST_FULL_DRAFT_DETAILS[draftId];
+    if (draftDetails) {
+      setDataToLoadInForm(draftDetails);
+      toast({title: t('consultationRoom.toast.loadingDraft.title'), description: t('consultationRoom.toast.loadingDraft.description', { patientName: draftDetails.patientData?.fullName || "patient" })});
+    } else {
+      toast({variant: "destructive", title: t('consultationForm.toast.error'), description: t('consultationRoom.toast.loadingDraft.error')});
+    }
+  };
+
 
   return (
       <div className="grid lg:grid-cols-[300px_1fr] xl:grid-cols-[350px_1fr] gap-6 h-full items-start">
         {/* Left Panel */}
-        <div className="lg:sticky lg:top-[calc(theme(spacing.16)_+_theme(spacing.6))] flex flex-col gap-6">
+        <div className="lg:sticky lg:top-[calc(theme(spacing.16)_+_theme(spacing.6))] flex flex-col gap-6 max-h-[calc(100vh_-_theme(spacing.16)_-_theme(spacing.12)_-_theme(spacing.2))] overflow-y-auto">
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Briefcase className="h-5 w-5 text-primary" /> Specialist Referral List
+                <Briefcase className="h-5 w-5 text-primary" /> {t('specializations.referralList.title')}
               </CardTitle>
-              <CardDescription className="text-xs">Patients referred for specialist consultation.</CardDescription>
+              <CardDescription className="text-xs">{t('specializations.referralList.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="max-h-[calc(33vh-80px)] overflow-y-auto"> {/* Adjusted height */}
+            <CardContent className="overflow-y-auto">
               {isLoadingReferrals ? (
                 <div className="flex items-center justify-center py-6 text-muted-foreground">
                   <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-                  Loading referrals...
+                  {t('specializations.referralList.loading')}
                 </div>
               ) : referralList.length > 0 ? (
                 <ul className="space-y-3">
@@ -110,8 +183,8 @@ export default function SpecializationsPage() {
                       />
                       <div className="flex-1">
                         <p className="font-semibold text-sm">{patient.patientName}</p>
-                        <p className="text-xs text-muted-foreground">To: {patient.specialty}</p>
-                        <p className="text-xs text-muted-foreground">Ref: {patient.referringDoctor} | {patient.reason}</p>
+                        <p className="text-xs text-muted-foreground">{t('specializations.referralList.to')}: {patient.specialty}</p>
+                        <p className="text-xs text-muted-foreground">{t('specializations.referralList.from')}: {patient.referringDoctor} | {patient.reason}</p>
                       </div>
                     </li>
                   ))}
@@ -119,7 +192,7 @@ export default function SpecializationsPage() {
               ) : (
                 <div className="text-center py-6 text-muted-foreground">
                   <Users className="mx-auto h-10 w-10 mb-1" />
-                  <p className="text-sm">Referral list is empty.</p>
+                  <p className="text-sm">{t('specializations.referralList.empty')}</p>
                 </div>
               )}
             </CardContent>
@@ -128,15 +201,15 @@ export default function SpecializationsPage() {
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Bell className="h-5 w-5 text-primary" /> Specialist Notifications
+                <Bell className="h-5 w-5 text-primary" /> {t('specializations.notifications.title')}
               </CardTitle>
-               <CardDescription className="text-xs">Updates relevant to specialist consultations.</CardDescription>
+               <CardDescription className="text-xs">{t('specializations.notifications.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="max-h-[calc(33vh-80px)] overflow-y-auto"> {/* Adjusted height */}
+            <CardContent className="overflow-y-auto">
               {isLoadingSpecialistNotifications ? (
                  <div className="flex items-center justify-center py-6 text-muted-foreground">
                   <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-                  Loading notifications...
+                  {t('specializations.notifications.loading')}
                 </div>
               ) : specialistNotifications.length > 0 ? (
                 <ul className="space-y-2.5">
@@ -162,7 +235,7 @@ export default function SpecializationsPage() {
               ) : (
                  <div className="text-center py-6 text-muted-foreground">
                   <Bell className="mx-auto h-10 w-10 mb-1" />
-                  <p className="text-sm">No new notifications for specialists.</p>
+                  <p className="text-sm">{t('specializations.notifications.empty')}</p>
                 </div>
               )}
             </CardContent>
@@ -171,15 +244,15 @@ export default function SpecializationsPage() {
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                    <FileClock className="h-5 w-5 text-primary" /> Incomplete Consultations
+                    <FileClock className="h-5 w-5 text-primary" /> {t('specializations.drafts.title')}
                 </CardTitle>
-                <CardDescription className="text-xs">Specialist consultations awaiting results or further action.</CardDescription>
+                <CardDescription className="text-xs">{t('specializations.drafts.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="max-h-[calc(34vh-80px)] overflow-y-auto"> {/* Adjusted height */}
+            <CardContent className="overflow-y-auto">
                 {isLoadingDraftedConsultations ? (
                     <div className="flex items-center justify-center py-6 text-muted-foreground">
                         <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-                        Loading drafts...
+                        {t('specializations.drafts.loading')}
                     </div>
                 ) : draftedConsultations.length > 0 ? (
                     <ul className="space-y-3">
@@ -196,13 +269,13 @@ export default function SpecializationsPage() {
                                     />
                                     <div className="flex-1">
                                         <p className="font-semibold text-sm">{consult.patientName}</p>
-                                        <p className="text-xs text-muted-foreground">Reason: {consult.reasonForDraft}</p>
-                                        <p className="text-xs text-muted-foreground">Specialty: {consult.specialty}</p>
-                                        <p className="text-xs text-muted-foreground">Saved: {consult.lastSavedTime}</p>
+                                        <p className="text-xs text-muted-foreground">{t('specializations.drafts.reason')}: {consult.reasonForDraft}</p>
+                                        <p className="text-xs text-muted-foreground">{t('specializations.drafts.specialty')}: {consult.specialty}</p>
+                                        <p className="text-xs text-muted-foreground">{t('specializations.drafts.saved')}: {consult.lastSavedTime}</p>
                                     </div>
                                 </div>
-                                <Button variant="outline" size="sm" className="w-full mt-2 text-xs" onClick={() => alert(`Resuming specialist consultation for ${consult.patientName} (mock action)`)}>
-                                    Resume Consultation
+                                <Button variant="outline" size="sm" className="w-full mt-2 text-xs" onClick={() => handleResumeConsultation(consult.id)}>
+                                    {t('specializations.drafts.resumeButton')}
                                 </Button>
                             </li>
                         ))}
@@ -210,7 +283,7 @@ export default function SpecializationsPage() {
                 ) : (
                     <div className="text-center py-6 text-muted-foreground">
                         <FileClock className="mx-auto h-10 w-10 mb-1" />
-                        <p className="text-sm">No incomplete specialist consultations.</p>
+                        <p className="text-sm">{t('specializations.drafts.empty')}</p>
                     </div>
                 )}
             </CardContent>
@@ -221,12 +294,17 @@ export default function SpecializationsPage() {
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              <Star className="h-8 w-8" /> Specialist Consultation Room
+              <Star className="h-8 w-8" /> {t('specializations.pageTitle')}
             </h1>
           </div>
-          <SpecialistConsultationForm getRecommendationAction={getTreatmentRecommendationAction} />
+          <SpecialistConsultationForm 
+            getRecommendationAction={getTreatmentRecommendationAction} 
+            initialData={dataToLoadInForm}
+            />
         </div>
 
       </div>
-  )
+  );
 }
+
+    

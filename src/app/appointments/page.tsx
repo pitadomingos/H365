@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator, defaultLocale } from '@/lib/i18n';
-import { ptBR } from 'date-fns/locale'; // Import ptBR locale
+import { ptBR } from 'date-fns/locale'; 
 
 interface Appointment {
   id: string;
@@ -63,7 +63,7 @@ const initialMockDoctors: Doctor[] = [
 
 export default function AppointmentsPage() {
   const { currentLocale } = useLocale();
-  const t = getTranslator(currentLocale);
+  const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
 
   const [selectedCalendarDate, setSelectedCalendarDate] = React.useState<Date | undefined>(new Date());
   const [appointments, setAppointments] = React.useState<Appointment[]>([]);
@@ -87,35 +87,19 @@ export default function AppointmentsPage() {
     const fetchAppointments = async () => {
       setIsLoadingAppointments(true);
       try {
-        // Simulate API call
         // const response = await fetch('/api/v1/appointments'); 
-        // For now, using mock success after a delay
+        // if (!response.ok) throw new Error(t('appointments.toast.loadAppointmentsError'));
+        // const data = await response.json();
+        // setAppointments(data);
         await new Promise(resolve => setTimeout(resolve, 1000));
-        const mockApiResponse = { ok: false, status: 404 }; // Simulate API not found initially
-
-        if (!mockApiResponse.ok) {
-          if(mockApiResponse.status === 404) { 
-            console.warn("Mock API /api/v1/appointments not found, using fallback.");
-            const fetchedAppointments: Appointment[] = [
-              { id: "APT001", patientName: "Alice Wonderland", doctorName: "Dr. Smith", date: "2024-08-15", time: "10:00 AM - 10:30 AM", type: "Consultation", status: "Confirmed" },
-              { id: "APT002", patientName: "Bob The Builder", doctorName: "Dr. Jones", date: "2024-08-15", time: "11:00 AM - 11:45 AM", type: "Check-up", status: "Pending" },
-            ];
-            setAppointments(fetchedAppointments);
-          } else {
-             throw new Error(t('appointments.toast.loadAppointmentsError'));
-          }
-        } else {
-          // const data = await response.json(); // This would be used with a real API
-          // setAppointments(data);
-        }
-      } catch (error) {
-        console.error("Error fetching appointments:", error);
-        toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadAppointmentsError')});
         const fetchedAppointments: Appointment[] = [
           { id: "APT001", patientName: "Alice Wonderland", doctorName: "Dr. Smith", date: "2024-08-15", time: "10:00 AM - 10:30 AM", type: "Consultation", status: "Confirmed" },
           { id: "APT002", patientName: "Bob The Builder", doctorName: "Dr. Jones", date: "2024-08-15", time: "11:00 AM - 11:45 AM", type: "Check-up", status: "Pending" },
         ];
         setAppointments(fetchedAppointments);
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+        toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadAppointmentsError')});
       } finally {
         setIsLoadingAppointments(false);
       }
@@ -124,32 +108,18 @@ export default function AppointmentsPage() {
     const fetchNotifications = async () => {
       setIsLoadingNotifications(true);
       try {
-        // Simulate API call
-        // const response = await fetch('/api/v1/notifications?context=appointments'); 
+        // const response = await fetch('/api/v1/notifications?context=appointments');
+        // if (!response.ok) throw new Error(t('appointments.toast.loadNotificationsError'));
+        // const data = await response.json();
+        // setNotifications(data);
         await new Promise(resolve => setTimeout(resolve, 800));
-        const mockApiResponse = { ok: false, status: 404 }; // Simulate API not found
-
-         if (!mockApiResponse.ok) {
-          if(mockApiResponse.status === 404) { 
-            console.warn("Mock API /api/v1/notifications not found, using fallback.");
-             const fetchedNotifications: NotificationItem[] = [
-              { id: 1, message: "Appointment with Alice Wonderland confirmed for tomorrow at 10:00 AM.", time: "2 hours ago", read: false },
-            ];
-            setNotifications(fetchedNotifications);
-          } else {
-            throw new Error(t('appointments.toast.loadNotificationsError'));
-          }
-        } else {
-          // const data = await response.json();
-          // setNotifications(data);
-        }
-      } catch (error) {
-        console.error("Error fetching notifications:", error);
-        toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadNotificationsError')});
         const fetchedNotifications: NotificationItem[] = [
           { id: 1, message: "Appointment with Alice Wonderland confirmed for tomorrow at 10:00 AM.", time: "2 hours ago", read: false },
         ];
         setNotifications(fetchedNotifications);
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+        toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadNotificationsError')});
       } finally {
         setIsLoadingNotifications(false);
       }
@@ -158,26 +128,15 @@ export default function AppointmentsPage() {
     const fetchDoctors = async () => {
         setIsLoadingDoctors(true);
         try {
-            // Simulate API call
-            // const response = await fetch('/api/v1/doctors'); 
+            // const response = await fetch('/api/v1/doctors');
+            // if (!response.ok) throw new Error(t('appointments.toast.loadDoctorsError'));
+            // const data = await response.json();
+            // setDoctors(data);
             await new Promise(resolve => setTimeout(resolve, 600));
-            const mockApiResponse = { ok: false, status: 404 }; // Simulate API not found
-
-             if (!mockApiResponse.ok) {
-              if(mockApiResponse.status === 404) { 
-                console.warn("Mock API /api/v1/doctors not found, using fallback.");
-                setDoctors(initialMockDoctors);
-              } else {
-                 throw new Error(t('appointments.toast.loadDoctorsError'));
-              }
-            } else {
-              // const data = await response.json();
-              // setDoctors(data);
-            }
+            setDoctors(initialMockDoctors);
         } catch (error) {
             console.error("Error fetching doctors:", error);
             toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadDoctorsError') });
-            setDoctors(initialMockDoctors);
         } finally {
             setIsLoadingDoctors(false);
         }
@@ -186,7 +145,7 @@ export default function AppointmentsPage() {
     fetchAppointments();
     fetchNotifications();
     fetchDoctors();
-  }, [t, currentLocale]); 
+  }, [t]); 
 
   const handleScheduleNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,55 +163,45 @@ export default function AppointmentsPage() {
         patientName: newPatientName,
         doctorId: newSelectedDoctorId,
         date: newAppointmentDate,
-        time: newAppointmentTime, // Assuming this is like "10:00"
+        time: newAppointmentTime, 
         type: newAppointmentType,
     };
 
     try {
-        // Simulate API call
         // const response = await fetch('/api/v1/appointments', {
         //     method: 'POST',
         //     headers: { 'Content-Type': 'application/json' },
         //     body: JSON.stringify(payload),
         // });
+        // if (!response.ok) {
+        //     const errorData = await response.json().catch(() => ({ error: "Failed to schedule. API error."}));
+        //     throw new Error(errorData.error || `API error: ${response.statusText}`);
+        // }
+        // const newApt: Appointment = await response.json();
+        // Optimistic update for mock:
         await new Promise(resolve => setTimeout(resolve, 1500));
-        const mockApiResponse = { ok: false, status: 404 }; // Simulate API not found
+        const doctor = doctors.find(d => d.id === newSelectedDoctorId);
+        const timeParts = newAppointmentTime.split(':');
+        const appointmentDateObj = new Date(newAppointmentDate + 'T' + newAppointmentTime);
+        const endTime = new Date(appointmentDateObj.getTime() + 30 * 60000); // Mock 30 min duration
+        const formattedTime = `${newAppointmentTime} - ${endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        
+        const newApt: Appointment = {
+            id: `APT${Date.now()}`,
+            patientName: newPatientName,
+            doctorId: newSelectedDoctorId,
+            doctorName: doctor ? doctor.name : "Unknown Doctor",
+            date: newAppointmentDate,
+            time: formattedTime,
+            type: newAppointmentType,
+            status: "Pending"
+        };
 
-        if (!mockApiResponse.ok) {
-            // Mocking successful response if API is not found (404)
-            if (mockApiResponse.status === 404) {
-                console.warn("Mock API POST /api/v1/appointments not found, simulating success.");
-                const doctorName = doctors.find(d => d.id === newSelectedDoctorId)?.name || "Unknown Doctor";
-                const timeString = `${newAppointmentTime} - ${new Date(new Date(`1970-01-01T${newAppointmentTime}`).getTime() + 30*60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`; // Mock 30 min duration
-                
-                const mockNewApt: Appointment = {
-                    id: `APT${Date.now()}`,
-                    patientName: newPatientName,
-                    doctorId: newSelectedDoctorId,
-                    date: newAppointmentDate,
-                    time: timeString,
-                    type: newAppointmentType,
-                    doctorName: doctorName,
-                    status: "Pending"
-                };
-                setAppointments(prev => [mockNewApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
-                toast({
-                  title: t('appointments.toast.scheduled'),
-                  description: t('appointments.toast.scheduled.desc', {patientName: newPatientName, doctorName: mockNewApt.doctorName, date: newAppointmentDate, time: newAppointmentTime }),
-                });
-            } else {
-                // const errorData = await response.json().catch(() => ({ error: "Failed to schedule. API error."}));
-                // throw new Error(errorData.error || `API error: ${response.statusText}`);
-                 throw new Error("Failed to schedule. API error (mock).");
-            }
-        } else {
-            // const newApt: Appointment = await response.json();
-            // setAppointments(prev => [newApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
-            // toast({
-            //   title: t('appointments.toast.scheduled'),
-            //   description: t('appointments.toast.scheduled.desc', {patientName: newPatientName, doctorName: newApt.doctorName, date: newAppointmentDate, time: newAppointmentTime }),
-            // });
-        }
+        setAppointments(prev => [newApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
+        toast({
+          title: t('appointments.toast.scheduled'),
+          description: t('appointments.toast.scheduled.desc', {patientName: newPatientName, doctorName: newApt.doctorName, date: newAppointmentDate, time: newAppointmentTime }),
+        });
         
         setNewPatientName("");
         setNewSelectedDoctorId("");
@@ -461,3 +410,5 @@ export default function AppointmentsPage() {
       </div>
   );
 }
+
+    

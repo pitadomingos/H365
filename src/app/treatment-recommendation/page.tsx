@@ -2,7 +2,7 @@
 "use client"; 
 
 import React, { useState, useEffect } from 'react';
-import { ClipboardEdit, ListChecks, Bell, Users, FileClock, Loader2 } from "lucide-react";
+import { ClipboardEdit, ListChecks, Bell, Users, FileClock, Loader2, Star } from "lucide-react";
 import { ConsultationForm, type ConsultationInitialData } from "./consultation-form";
 import { getTreatmentRecommendationAction } from "./actions";
 import Image from "next/image";
@@ -12,15 +12,16 @@ import { useLocale } from '@/context/locale-context';
 import { getTranslator, defaultLocale } from '@/lib/i18n';
 import { toast } from "@/hooks/use-toast";
 
+
 interface MockListItem {
   id: string;
   patientName: string;
   timeAdded?: string;
   location?: string;
   status?: string;
-  message?: string;
+  message?: string; 
   time?: string;
-  read?: boolean;
+  read?: boolean; 
   photoUrl: string;
   gender?: "Male" | "Female" | "Other";
 }
@@ -30,56 +31,12 @@ interface DraftedConsultationItem extends MockListItem {
   lastSavedTime: string;
 }
 
-const initialMockWaitingListData: MockListItem[] = [
-  { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/32x32.png" },
-  { id: "WL002", patientName: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "With Doctor", photoUrl: "https://placehold.co/32x32.png" },
-];
-
-const initialMockLabNotificationsData: MockListItem[] = [
-  { id: "NOTIF001", patientName: "Charlie Brown", gender: "Male", message: "Lab results are ready.", time: "5 mins ago", read: false, photoUrl: "https://placehold.co/32x32.png" },
-  { id: "NOTIF002", patientName: "Diana Prince", gender: "Female", message: "Imaging report available.", time: "15 mins ago", read: true, photoUrl: "https://placehold.co/32x32.png" },
-];
-
-const MOCK_FULL_DRAFT_DETAILS: Record<string, ConsultationInitialData> = {
-    "DRAFT001": {
-        patientData: { nationalId: "DRF001_NID", fullName: "Edward Scissorhands", age: 30, gender: "Male", address: "1 Gothic Lane", homeClinic: "Suburbia Clinic", photoUrl: "https://placehold.co/120x120.png", allergies: ["Sunlight"], chronicConditions: ["Arthritis"] },
-        nationalIdSearch: "DRF001_NID",
-        bodyTemperature: "36.5",
-        weight: "65",
-        height: "170",
-        bloodPressure: "110/70",
-        symptoms: "Joint pain, difficulty holding objects. Patient expresses frustration with garden shears.",
-        labResultsSummary: "Inflammatory markers slightly elevated.",
-        imagingDataSummary: "X-rays show early signs of joint degradation.",
-        doctorComments: "Advised NSAIDs and occupational therapy. Consider referral to rheumatology if no improvement.",
-        recommendation: null, 
-    },
-    "DRAFT002": {
-        patientData: { nationalId: "DRF002_NID", fullName: "Fiona Gallagher", age: 28, gender: "Female", address: "South Side, Chicago", homeClinic: "County General", photoUrl: "https://placehold.co/120x120.png", allergies: ["Poverty"], chronicConditions: ["Resilience"] },
-        nationalIdSearch: "DRF002_NID",
-        bodyTemperature: "37.0",
-        weight: "58",
-        height: "165",
-        bloodPressure: "120/80",
-        symptoms: "Patient reports feeling overwhelmed, managing multiple family responsibilities. Expresses fatigue.",
-        labResultsSummary: "All labs within normal limits.",
-        imagingDataSummary: "Not applicable.",
-        doctorComments: "Discussed coping mechanisms and stress management. Offered referral to social services.",
-        recommendation: null,
-    },
-};
-
-const initialMockDraftedConsultationsData: DraftedConsultationItem[] = [
-    { id: "DRAFT001", patientName: "Edward Scissorhands", gender: "Male", reasonForDraft: "Awaiting X-Ray results", lastSavedTime: "Yesterday 04:30 PM", photoUrl: "https://placehold.co/32x32.png" },
-    { id: "DRAFT002", patientName: "Fiona Gallagher", gender: "Female", reasonForDraft: "Pending social worker input", lastSavedTime: "Today 09:15 AM", photoUrl: "https://placehold.co/32x32.png" },
-];
-
-
 const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
   if (gender === "Male") return "male avatar";
   if (gender === "Female") return "female avatar";
   return "patient avatar";
 };
+
 
 function WaitingListInternal({t}: {t: (key: string) => string}) {
   const [waitingList, setWaitingList] = useState<MockListItem[]>([]);
@@ -87,7 +44,12 @@ function WaitingListInternal({t}: {t: (key: string) => string}) {
 
   useEffect(() => {
     setIsLoading(true);
+    // Simulate API call
     setTimeout(() => {
+      const initialMockWaitingListData: MockListItem[] = [
+        { id: "WL001", patientName: "Alice Wonderland", gender: "Female", timeAdded: "10:30 AM", location: "Outpatient", status: "Waiting for Doctor", photoUrl: "https://placehold.co/32x32.png" },
+        { id: "WL002", patientName: "Bob The Builder", gender: "Male", timeAdded: "10:45 AM", location: "Consultation Room 1", status: "With Doctor", photoUrl: "https://placehold.co/32x32.png" },
+      ];
       setWaitingList(initialMockWaitingListData);
       setIsLoading(false);
     }, 1000);
@@ -144,7 +106,12 @@ function LabNotificationsInternal({t}: {t: (key: string) => string}) {
 
   useEffect(() => {
     setIsLoading(true);
+    // Simulate API call
     setTimeout(() => {
+      const initialMockLabNotificationsData: MockListItem[] = [
+        { id: "NOTIF001", patientName: "Charlie Brown", gender: "Male", message: "Lab results are ready.", time: "5 mins ago", read: false, photoUrl: "https://placehold.co/32x32.png" },
+        { id: "NOTIF002", patientName: "Diana Prince", gender: "Female", message: "Imaging report available.", time: "15 mins ago", read: true, photoUrl: "https://placehold.co/32x32.png" },
+      ];
       setLabNotifications(initialMockLabNotificationsData);
       setIsLoading(false);
     }, 1200);
@@ -196,13 +163,47 @@ function LabNotificationsInternal({t}: {t: (key: string) => string}) {
   );
 }
 
+const MOCK_FULL_DRAFT_DETAILS: Record<string, ConsultationInitialData> = {
+    "DRAFT001": {
+        patientData: { nationalId: "DRF001_NID", fullName: "Edward Scissorhands", age: 30, gender: "Male", address: "1 Gothic Lane", homeClinic: "Suburbia Clinic", photoUrl: "https://placehold.co/120x120.png", allergies: ["Sunlight"], chronicConditions: ["Arthritis"] },
+        nationalIdSearch: "DRF001_NID",
+        bodyTemperature: "36.5",
+        weight: "65",
+        height: "170",
+        bloodPressure: "110/70",
+        symptoms: "Joint pain, difficulty holding objects. Patient expresses frustration with garden shears.",
+        labResultsSummary: "Inflammatory markers slightly elevated.",
+        imagingDataSummary: "X-rays show early signs of joint degradation.",
+        doctorComments: "Advised NSAIDs and occupational therapy. Consider referral to rheumatology if no improvement.",
+        recommendation: null, 
+    },
+    "DRAFT002": {
+        patientData: { nationalId: "DRF002_NID", fullName: "Fiona Gallagher", age: 28, gender: "Female", address: "South Side, Chicago", homeClinic: "County General", photoUrl: "https://placehold.co/120x120.png", allergies: ["Poverty"], chronicConditions: ["Resilience"] },
+        nationalIdSearch: "DRF002_NID",
+        bodyTemperature: "37.0",
+        weight: "58",
+        height: "165",
+        bloodPressure: "120/80",
+        symptoms: "Patient reports feeling overwhelmed, managing multiple family responsibilities. Expresses fatigue.",
+        labResultsSummary: "All labs within normal limits.",
+        imagingDataSummary: "Not applicable.",
+        doctorComments: "Discussed coping mechanisms and stress management. Offered referral to social services.",
+        recommendation: null,
+    },
+};
+
 function IncompleteConsultationsInternal({t, onResume}: {t: (key: string) => string, onResume: (draftId: string) => void}) {
     const [draftedConsultations, setDraftedConsultations] = useState<DraftedConsultationItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         setIsLoading(true);
+        // Simulate API call
         setTimeout(() => {
+            const initialMockDraftedConsultationsData: DraftedConsultationItem[] = [
+                { id: "DRAFT001", patientName: "Edward Scissorhands", gender: "Male", reasonForDraft: "Awaiting X-Ray results", lastSavedTime: "Yesterday 04:30 PM", photoUrl: "https://placehold.co/32x32.png" },
+                { id: "DRAFT002", patientName: "Fiona Gallagher", gender: "Female", reasonForDraft: "Pending social worker input", lastSavedTime: "Today 09:15 AM", photoUrl: "https://placehold.co/32x32.png" },
+            ];
             setDraftedConsultations(initialMockDraftedConsultationsData);
             setIsLoading(false);
         }, 1500);
@@ -261,16 +262,17 @@ function IncompleteConsultationsInternal({t, onResume}: {t: (key: string) => str
 
 export default function ConsultationRoomPage() {
   const { currentLocale } = useLocale();
-  const t = getTranslator(currentLocale);
+  const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
+
   const [dataToLoadInForm, setDataToLoadInForm] = useState<ConsultationInitialData | null>(null);
 
   const handleResumeConsultation = (draftId: string) => {
     const draftDetails = MOCK_FULL_DRAFT_DETAILS[draftId];
     if (draftDetails) {
       setDataToLoadInForm(draftDetails);
-      toast({title: "Loading Draft", description: `Loading draft for ${draftDetails.patientData?.fullName || 'patient'}...`});
+      toast({title: t('consultationRoom.toast.loadingDraft.title'), description: t('consultationRoom.toast.loadingDraft.description', { patientName: draftDetails.patientData?.fullName || "patient" })});
     } else {
-      toast({variant: "destructive", title: "Error", description: "Could not find draft details."});
+      toast({variant: "destructive", title: t('consultationForm.toast.error'), description: t('consultationRoom.toast.loadingDraft.error')});
     }
   };
 
@@ -300,3 +302,4 @@ export default function ConsultationRoomPage() {
 }
 
     
+
