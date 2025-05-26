@@ -9,7 +9,8 @@ import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocale } from '@/context/locale-context';
-import { getTranslator } from '@/lib/i18n';
+import { getTranslator, defaultLocale } from '@/lib/i18n';
+import { toast } from "@/hooks/use-toast";
 
 interface MockListItem {
   id: string;
@@ -51,7 +52,7 @@ const MOCK_FULL_DRAFT_DETAILS: Record<string, ConsultationInitialData> = {
         labResultsSummary: "Inflammatory markers slightly elevated.",
         imagingDataSummary: "X-rays show early signs of joint degradation.",
         doctorComments: "Advised NSAIDs and occupational therapy. Consider referral to rheumatology if no improvement.",
-        recommendation: null, // No AI recommendation in this mock draft
+        recommendation: null, 
     },
     "DRAFT002": {
         patientData: { nationalId: "DRF002_NID", fullName: "Fiona Gallagher", age: 28, gender: "Female", address: "South Side, Chicago", homeClinic: "County General", photoUrl: "https://placehold.co/120x120.png", allergies: ["Poverty"], chronicConditions: ["Resilience"] },
@@ -80,7 +81,7 @@ const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
   return "patient avatar";
 };
 
-function WaitingList({t}: {t: (key: string) => string}) {
+function WaitingListInternal({t}: {t: (key: string) => string}) {
   const [waitingList, setWaitingList] = useState<MockListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -100,7 +101,7 @@ function WaitingList({t}: {t: (key: string) => string}) {
         </CardTitle>
         <CardDescription className="text-xs">{t('consultationRoom.waitingList.description')}</CardDescription>
       </CardHeader>
-      <CardContent className="max-h-[calc(33vh-80px)] overflow-y-auto">
+      <CardContent className="overflow-y-auto">
         {isLoading ? (
            <div className="flex items-center justify-center py-6 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
@@ -137,7 +138,7 @@ function WaitingList({t}: {t: (key: string) => string}) {
   );
 }
 
-function LabNotifications({t}: {t: (key: string) => string}) {
+function LabNotificationsInternal({t}: {t: (key: string) => string}) {
   const [labNotifications, setLabNotifications] = useState<MockListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -157,7 +158,7 @@ function LabNotifications({t}: {t: (key: string) => string}) {
         </CardTitle>
          <CardDescription className="text-xs">{t('consultationRoom.notifications.description')}</CardDescription>
       </CardHeader>
-      <CardContent className="max-h-[calc(33vh-80px)] overflow-y-auto">
+      <CardContent className="overflow-y-auto">
         {isLoading ? (
             <div className="flex items-center justify-center py-6 text-muted-foreground">
                 <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
@@ -195,7 +196,7 @@ function LabNotifications({t}: {t: (key: string) => string}) {
   );
 }
 
-function IncompleteConsultations({t, onResume}: {t: (key: string) => string, onResume: (draftId: string) => void}) {
+function IncompleteConsultationsInternal({t, onResume}: {t: (key: string) => string, onResume: (draftId: string) => void}) {
     const [draftedConsultations, setDraftedConsultations] = useState<DraftedConsultationItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -215,7 +216,7 @@ function IncompleteConsultations({t, onResume}: {t: (key: string) => string, onR
                 </CardTitle>
                 <CardDescription className="text-xs">{t('consultationRoom.drafts.description')}</CardDescription>
             </CardHeader>
-            <CardContent className="max-h-[calc(34vh-80px)] overflow-y-auto"> {/* Adjusted max-h for better fit */}
+            <CardContent className="overflow-y-auto"> 
                 {isLoading ? (
                      <div className="flex items-center justify-center py-6 text-muted-foreground">
                         <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
@@ -276,10 +277,10 @@ export default function ConsultationRoomPage() {
   return (
       <div className="grid lg:grid-cols-[300px_1fr] xl:grid-cols-[350px_1fr] gap-6 h-full items-start">
         {/* Left Panel */}
-        <div className="lg:sticky lg:top-[calc(theme(spacing.16)_-_theme(spacing.6))] flex flex-col gap-6 max-h-[calc(100vh_-_theme(spacing.16)_-_theme(spacing.12)_-_theme(spacing.2))] overflow-y-auto">
-          <WaitingList t={t} />
-          <LabNotifications t={t} />
-          <IncompleteConsultations t={t} onResume={handleResumeConsultation} />
+        <div className="lg:sticky lg:top-[calc(theme(spacing.16)_+_theme(spacing.6))] flex flex-col gap-6 max-h-[calc(100vh_-_theme(spacing.16)_-_theme(spacing.12)_-_theme(spacing.2))] overflow-y-auto">
+          <WaitingListInternal t={t} />
+          <LabNotificationsInternal t={t} />
+          <IncompleteConsultationsInternal t={t} onResume={handleResumeConsultation} />
         </div>
 
         {/* Center Panel */}

@@ -30,6 +30,9 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { COMMON_ORDERABLE_LAB_TESTS, type OrderableLabTest } from '@/lib/constants';
+import { useLocale } from '@/context/locale-context';
+import { getTranslator, defaultLocale } from '@/lib/i18n';
+import { cn } from "@/lib/utils";
 
 const FormSchema = z.object({
   nationalIdSearch: z.string().optional(),
@@ -86,55 +89,58 @@ interface ConsultationFormProps {
   initialData?: ConsultationInitialData | null;
 }
 
-const getBmiStatusAndColor = (bmi: number | null): { status: string; colorClass: string; textColorClass: string; } => {
+const getBmiStatusAndColor = (bmi: number | null, t: (key: string) => string): { status: string; colorClass: string; textColorClass: string; } => {
   if (bmi === null || isNaN(bmi)) {
-    return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+    return { status: t('consultationForm.vitals.bmiStatus.na'), colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
   }
   if (bmi < 18.5) {
-    return { status: "Underweight", colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
+    return { status: t('consultationForm.vitals.bmiStatus.underweight'), colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
   } else if (bmi < 25) {
-    return { status: "Normal weight", colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
+    return { status: t('consultationForm.vitals.bmiStatus.normal'), colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
   } else if (bmi < 30) {
-    return { status: "Overweight", colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
+    return { status: t('consultationForm.vitals.bmiStatus.overweight'), colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
   } else if (bmi < 35) {
-    return { status: "Obese (Class I)", colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
+    return { status: t('consultationForm.vitals.bmiStatus.obese1'), colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
   } else if (bmi < 40) {
-    return { status: "Obese (Class II)", colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
+    return { status: t('consultationForm.vitals.bmiStatus.obese2'), colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
   } else {
-    return { status: "Obese (Class III)", colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
+    return { status: t('consultationForm.vitals.bmiStatus.obese3'), colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
   }
 };
 
-const getBloodPressureStatus = (bp: string): { status: string; colorClass: string; textColorClass: string; } => {
+const getBloodPressureStatus = (bp: string, t: (key: string) => string): { status: string; colorClass: string; textColorClass: string; } => {
   if (!bp || !bp.includes('/')) {
-    return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+    return { status: t('consultationForm.vitals.bpStatus.na'), colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
   }
   const parts = bp.split('/');
   const systolic = parseInt(parts[0], 10);
   const diastolic = parseInt(parts[1], 10);
 
   if (isNaN(systolic) || isNaN(diastolic)) {
-    return { status: "Invalid", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+    return { status: t('consultationForm.vitals.bpStatus.invalid'), colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
   }
 
   if (systolic < 90 || diastolic < 60) {
-    return { status: "Hypotension", colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
+    return { status: t('consultationForm.vitals.bpStatus.hypotension'), colorClass: "bg-blue-100 dark:bg-blue-800/30", textColorClass: "text-blue-700 dark:text-blue-300" };
   } else if (systolic < 120 && diastolic < 80) {
-    return { status: "Normal", colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
+    return { status: t('consultationForm.vitals.bpStatus.normal'), colorClass: "bg-green-100 dark:bg-green-800/30", textColorClass: "text-green-700 dark:text-green-300" };
   } else if (systolic >= 120 && systolic <= 129 && diastolic < 80) {
-    return { status: "Elevated", colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
+    return { status: t('consultationForm.vitals.bpStatus.elevated'), colorClass: "bg-yellow-100 dark:bg-yellow-800/30", textColorClass: "text-yellow-700 dark:text-yellow-300" };
   } else if ((systolic >= 130 && systolic <= 139) || (diastolic >= 80 && diastolic <= 89)) {
-    return { status: "Stage 1 HTN", colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
+    return { status: t('consultationForm.vitals.bpStatus.stage1'), colorClass: "bg-orange-100 dark:bg-orange-800/30", textColorClass: "text-orange-700 dark:text-orange-300" };
   } else if (systolic >= 140 || diastolic >= 90) {
-    return { status: "Stage 2 HTN", colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
+    return { status: t('consultationForm.vitals.bpStatus.stage2'), colorClass: "bg-red-100 dark:bg-red-800/30", textColorClass: "text-red-700 dark:text-red-300" };
   } else if (systolic > 180 || diastolic > 120) {
-    return { status: "Hypertensive Crisis", colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
+    return { status: t('consultationForm.vitals.bpStatus.crisis'), colorClass: "bg-red-200 dark:bg-red-900/40", textColorClass: "text-red-800 dark:text-red-200" };
   }
-  return { status: "N/A", colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
+  return { status: t('consultationForm.vitals.bpStatus.na'), colorClass: "bg-gray-200 dark:bg-gray-700", textColorClass: "text-gray-800 dark:text-gray-200" };
 };
 
 
 export function ConsultationForm({ getRecommendationAction, initialData }: ConsultationFormProps) {
+  const { currentLocale } = useLocale();
+  const t = getTranslator(currentLocale);
+
   const [isAiPending, startAiTransition] = useTransition();
   const [recommendation, setRecommendation] = useState<TreatmentRecommendationOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -201,20 +207,20 @@ export function ConsultationForm({ getRecommendationAction, initialData }: Consu
       const hM = h / 100;
       const calculatedBmi = w / (hM * hM);
       setBmi(calculatedBmi.toFixed(2));
-      setBmiDisplay(getBmiStatusAndColor(calculatedBmi));
+      setBmiDisplay(getBmiStatusAndColor(calculatedBmi, t));
     } else {
       setBmi(null);
-      setBmiDisplay(getBmiStatusAndColor(null));
+      setBmiDisplay(getBmiStatusAndColor(null, t));
     }
-  }, [weightKg, heightCm]);
+  }, [weightKg, heightCm, t]);
 
   useEffect(() => {
     if (bloodPressureInput) {
-      setBpDisplay(getBloodPressureStatus(bloodPressureInput));
+      setBpDisplay(getBloodPressureStatus(bloodPressureInput, t));
     } else {
-      setBpDisplay(getBloodPressureStatus(""));
+      setBpDisplay(getBloodPressureStatus("", t));
     }
-  }, [bloodPressureInput]);
+  }, [bloodPressureInput, t]);
 
   const getAvatarHint = (gender?: "Male" | "Female" | "Other") => {
     if (gender === "Male") return "male avatar";
@@ -225,7 +231,7 @@ export function ConsultationForm({ getRecommendationAction, initialData }: Consu
   const handlePatientSearch = async () => {
     const nationalId = form.getValues("nationalIdSearch");
     if (!nationalId) {
-      toast({ variant: "destructive", title: "Error", description: "Please enter a National ID to search." });
+      toast({ variant: "destructive", title: t('consultationForm.toast.error'), description: t('consultationForm.toast.search.missingId') });
       return;
     }
     setIsSearching(true);
@@ -244,8 +250,8 @@ export function ConsultationForm({ getRecommendationAction, initialData }: Consu
         doctorComments: "",
     });
     setBmi(null);
-    setBmiDisplay(getBmiStatusAndColor(null));
-    setBpDisplay(getBloodPressureStatus(""));
+    setBmiDisplay(getBmiStatusAndColor(null, t));
+    setBpDisplay(getBloodPressureStatus("", t));
     setSelectedLabTests({});
 
     await new Promise(resolve => setTimeout(resolve, 1000)); 
@@ -262,9 +268,9 @@ export function ConsultationForm({ getRecommendationAction, initialData }: Consu
         chronicConditions: nationalId === "123456789" ? ["Asthma"] : ["Hypertension", "Type 2 Diabetes"],
       };
       setPatientData(fetchedPatientData);
-      toast({ title: "Patient Found", description: `${fetchedPatientData.fullName}'s details loaded.` });
+      toast({ title: t('consultationForm.toast.search.found'), description: t('consultationForm.toast.search.found.desc', {fullName: fetchedPatientData.fullName}) });
     } else {
-      toast({ variant: "destructive", title: "Not Found", description: "Patient with this National ID not found." });
+      toast({ variant: "destructive", title: t('consultationForm.toast.search.notFound'), description: t('consultationForm.toast.search.notFound.desc') });
       setPatientData(null); 
     }
     setIsSearching(false);
@@ -272,7 +278,7 @@ export function ConsultationForm({ getRecommendationAction, initialData }: Consu
 
   const onAiSubmit: SubmitHandler<FormValues> = (data) => {
     if (!patientData) {
-      toast({ variant: "destructive", title: "Error", description: "Please search and load patient data first." });
+      toast({ variant: "destructive", title: t('consultationForm.toast.error'), description: t('consultationForm.toast.ai.noPatient') });
       return;
     }
     setError(null);
@@ -309,17 +315,17 @@ ${visitHistoryString || "No recent visit history available."}
       const result = await getRecommendationAction(aiInput);
       if ('error' in result) {
         setError(result.error);
-        toast({ variant: "destructive", title: "AI Error", description: result.error });
+        toast({ variant: "destructive", title: t('consultationForm.toast.ai.error'), description: result.error });
       } else {
         setRecommendation(result);
-        toast({ title: "AI Recommendation Received", description: "Review the suggestions below." });
+        toast({ title: t('consultationForm.toast.ai.success'), description: t('consultationForm.toast.ai.success.desc') });
       }
     });
   };
 
   const handleOutcome = async (outcome: string) => {
     if (!patientData) {
-        toast({ variant: "destructive", title: "No patient loaded", description: "Please load patient data before selecting an outcome." });
+        toast({ variant: "destructive", title: t('consultationForm.toast.error'), description: t('consultationForm.toast.outcome.noPatient') });
         return;
     }
     setIsSubmittingOutcome(true);
@@ -352,15 +358,15 @@ ${visitHistoryString || "No recent visit history available."}
     console.log("Submitting to /api/v1/consultations (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500)); 
 
-    toast({ title: "Consultation Finished", description: `Outcome: ${outcome}. Action (mock): ${outcome} process initiated for ${patientData?.fullName}.` });
+    toast({ title: t('consultationForm.toast.outcome.success'), description: t('consultationForm.toast.outcome.success.desc', {outcome: outcome, patientName: patientData.fullName}) });
     
     form.reset();
     setPatientData(null);
     setRecommendation(null);
     setError(null);
     setBmi(null);
-    setBmiDisplay(getBmiStatusAndColor(null));
-    setBpDisplay(getBloodPressureStatus(""));
+    setBmiDisplay(getBmiStatusAndColor(null, t));
+    setBpDisplay(getBloodPressureStatus("", t));
     setSelectedLabTests({});
     setIsOutcomeModalOpen(false);
     setIsSubmittingOutcome(false);
@@ -368,7 +374,7 @@ ${visitHistoryString || "No recent visit history available."}
   
   const handleSaveProgress = async () => {
     if (!patientData) {
-      toast({ variant: "destructive", title: "No patient loaded", description: "Cannot save progress without patient data." });
+      toast({ variant: "destructive", title: t('consultationForm.toast.saveDraft.noPatient'), description: t('consultationForm.toast.saveDraft.noPatient.desc') });
       return;
     }
     setIsSavingProgress(true);
@@ -396,7 +402,7 @@ ${visitHistoryString || "No recent visit history available."}
 
     console.log("Saving Draft to /api/v1/consultations/drafts (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({ title: "Progress Saved (Mock)", description: "Consultation draft has been saved." });
+    toast({ title: t('consultationForm.toast.saveDraft.success'), description: t('consultationForm.toast.saveDraft.success.desc') });
     setIsSavingProgress(false);
   };
 
@@ -417,8 +423,8 @@ ${visitHistoryString || "No recent visit history available."}
     console.log("Submitting Lab Order to /api/v1/consultations/{consultationId}/lab-orders (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
     toast({
-        title: "Lab Order Submitted (Mock)", 
-        description:`Lab tests ordered for ${patientData?.fullName}: ${orderedTestLabels.length > 0 ? orderedTestLabels.join(', ') : 'No specific tests selected.'}`
+        title: t('consultationForm.toast.labOrder.success'), 
+        description: t('consultationForm.toast.labOrder.success.desc', {patientName: patientData.fullName, testLabels: (orderedTestLabels.length > 0 ? orderedTestLabels.join(', ') : t('consultationForm.noSpecificTests'))})
     });
     setSelectedLabTests({}); 
     const notesEl = document.getElementById('consultLabClinicalNotes') as HTMLTextAreaElement;
@@ -438,7 +444,7 @@ ${visitHistoryString || "No recent visit history available."}
     };
     console.log("Submitting Imaging Order to /api/v1/consultations/{consultationId}/imaging-orders (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${patientData?.fullName}. Details: ${payload.imagingType} - ${payload.regionDetails}`});
+    toast({title: t('consultationForm.toast.imagingOrder.success'), description: t('consultationForm.toast.imagingOrder.success.desc', {patientName: patientData.fullName, imagingType: payload.imagingType, regionDetails: payload.regionDetails})});
     
     const typeEl = document.getElementById('consultImagingType') as HTMLSelectElement;
     const regionEl = document.getElementById('consultImagingRegionDetails') as HTMLTextAreaElement;
@@ -460,21 +466,21 @@ ${visitHistoryString || "No recent visit history available."}
       <div className="lg:col-span-2 space-y-6">
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle>Patient Information</CardTitle>
-            <CardDescription>Search for patient by National ID (e.g., 123456789 or 987654321 for demo).</CardDescription>
+            <CardTitle>{t('consultationForm.patientInfoCard.title')}</CardTitle>
+            <CardDescription>{t('consultationForm.patientInfoCard.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2">
               <Input
                 id="nationalIdSearch"
-                placeholder="Enter National ID"
+                placeholder={t('consultationForm.nationalId.placeholder')}
                 {...form.register('nationalIdSearch')}
                 className="max-w-xs"
                 disabled={isActionDisabled}
               />
               <Button onClick={handlePatientSearch} disabled={isActionDisabled || !form.watch("nationalIdSearch")?.trim()}>
                 {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                {isSearching ? "Searching..." : "Search Patient"}
+                {isSearching ? t('consultationForm.searchButton.loading') : t('consultationForm.searchButton')}
               </Button>
             </div>
 
@@ -482,7 +488,7 @@ ${visitHistoryString || "No recent visit history available."}
               <div className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-4 items-start mt-4 p-4 border rounded-md bg-muted/30">
                 <Image
                   src={patientData.photoUrl}
-                  alt="Patient Photo"
+                  alt={t('consultationForm.patientPhoto.alt')}
                   width={120}
                   height={120}
                   className="rounded-md border"
@@ -490,10 +496,10 @@ ${visitHistoryString || "No recent visit history available."}
                 />
                 <div className="space-y-1.5 text-sm">
                   <h3 className="text-xl font-semibold">{patientData.fullName}</h3>
-                  <p><strong>National ID:</strong> {patientData.nationalId}</p>
-                  <p><strong>Age:</strong> {patientData.age} | <strong>Gender:</strong> {patientData.gender}</p>
-                  <p><strong>Address:</strong> {patientData.address}</p>
-                  <p><strong>Home Clinic:</strong> {patientData.homeClinic}</p>
+                  <p><strong>{t('consultationForm.patientInfo.id')}:</strong> {patientData.nationalId}</p>
+                  <p><strong>{t('consultationForm.patientInfo.age')}:</strong> {patientData.age} | <strong>{t('consultationForm.patientInfo.gender')}:</strong> {t(`patientRegistration.gender.${patientData.gender.toLowerCase()}` as any)}</p>
+                  <p><strong>{t('consultationForm.patientInfo.address')}:</strong> {patientData.address}</p>
+                  <p><strong>{t('consultationForm.patientInfo.homeClinic')}:</strong> {patientData.homeClinic}</p>
                 </div>
               </div>
             )}
@@ -503,46 +509,46 @@ ${visitHistoryString || "No recent visit history available."}
         <form onSubmit={form.handleSubmit(onAiSubmit)} className="space-y-6">
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle>Patient Vitals & Symptoms</CardTitle>
+              <CardTitle>{t('consultationForm.vitalsCard.title')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 <div className="space-y-1">
-                  <Label htmlFor="bodyTemperature" className="flex items-center"><Thermometer className="mr-1.5 h-4 w-4 text-primary" />Temp (°C)</Label>
-                  <Input id="bodyTemperature" placeholder="e.g., 37.5" {...form.register('bodyTemperature')} disabled={isActionDisabled || !patientData} />
+                  <Label htmlFor="bodyTemperature" className="flex items-center"><Thermometer className="mr-1.5 h-4 w-4 text-primary" />{t('consultationForm.vitals.temp.label')}</Label>
+                  <Input id="bodyTemperature" placeholder={t('consultationForm.vitals.temp.placeholder')} {...form.register('bodyTemperature')} disabled={isActionDisabled || !patientData} />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="weight" className="flex items-center"><Weight className="mr-1.5 h-4 w-4 text-primary" />Weight (kg)</Label>
-                  <Input id="weight" placeholder="e.g., 70" {...form.register('weight')} disabled={isActionDisabled || !patientData}/>
+                  <Label htmlFor="weight" className="flex items-center"><Weight className="mr-1.5 h-4 w-4 text-primary" />{t('consultationForm.vitals.weight.label')}</Label>
+                  <Input id="weight" placeholder={t('consultationForm.vitals.weight.placeholder')} {...form.register('weight')} disabled={isActionDisabled || !patientData}/>
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="height" className="flex items-center"><Ruler className="mr-1.5 h-4 w-4 text-primary" />Height (cm)</Label>
-                  <Input id="height" placeholder="e.g., 175" {...form.register('height')} disabled={isActionDisabled || !patientData}/>
+                  <Label htmlFor="height" className="flex items-center"><Ruler className="mr-1.5 h-4 w-4 text-primary" />{t('consultationForm.vitals.height.label')}</Label>
+                  <Input id="height" placeholder={t('consultationForm.vitals.height.placeholder')} {...form.register('height')} disabled={isActionDisabled || !patientData}/>
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="bloodPressure" className="flex items-center"><BloodPressureIcon className="mr-1.5 h-4 w-4 text-primary" />BP (mmHg)</Label>
-                  <Input id="bloodPressure" placeholder="e.g., 120/80" {...form.register('bloodPressure')} disabled={isActionDisabled || !patientData}/>
+                  <Label htmlFor="bloodPressure" className="flex items-center"><BloodPressureIcon className="mr-1.5 h-4 w-4 text-primary" />{t('consultationForm.vitals.bp.label')}</Label>
+                  <Input id="bloodPressure" placeholder={t('consultationForm.vitals.bp.placeholder')} {...form.register('bloodPressure')} disabled={isActionDisabled || !patientData}/>
                 </div>
                  <div className="space-y-1">
-                  <Label className="flex items-center"><Sigma className="mr-1.5 h-4 w-4 text-primary" />BMI (kg/m²)</Label>
+                  <Label className="flex items-center"><Sigma className="mr-1.5 h-4 w-4 text-primary" />{t('consultationForm.vitals.bmi.label')}</Label>
                   <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-muted/50 min-w-[150px]">
                     <span className="text-sm font-medium">{bmi || "N/A"}</span>
-                    {bmiDisplay && bmiDisplay.status !== "N/A" && (
-                      <Badge className={`${bmiDisplay.colorClass} ${bmiDisplay.textColorClass} border-transparent text-xs px-1.5 py-0.5`} >
+                    {bmiDisplay && bmiDisplay.status !== t('consultationForm.vitals.bmiStatus.na') && (
+                      <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", bmiDisplay.colorClass, bmiDisplay.textColorClass)} >
                         {bmiDisplay.status}
                       </Badge>
                     )}
                   </div>
                 </div>
                  <div className="space-y-1">
-                  <Label className="flex items-center"><BloodPressureIcon className="mr-1.5 h-4 w-4 text-primary" />BP Status</Label>
+                  <Label className="flex items-center"><BloodPressureIcon className="mr-1.5 h-4 w-4 text-primary" />{t('consultationForm.vitals.bpStatus.label')}</Label>
                   <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-muted/50 min-w-[150px]">
-                    {bpDisplay && bpDisplay.status !== "N/A" && bpDisplay.status !== "Invalid" && (
-                      <Badge className={`${bpDisplay.colorClass} ${bpDisplay.textColorClass} border-transparent text-xs px-1.5 py-0.5`}>
+                    {bpDisplay && bpDisplay.status !== t('consultationForm.vitals.bpStatus.na') && bpDisplay.status !== t('consultationForm.vitals.bpStatus.invalid') && (
+                      <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", bpDisplay.colorClass, bpDisplay.textColorClass)}>
                         {bpDisplay.status}
                       </Badge>
                     )}
-                    {(bpDisplay?.status === "N/A" || bpDisplay?.status === "Invalid") && (
+                    {(bpDisplay?.status === t('consultationForm.vitals.bpStatus.na') || bpDisplay?.status === t('consultationForm.vitals.bpStatus.invalid')) && (
                        <span className="text-sm font-medium">{bpDisplay.status}</span>
                     )}
                   </div>
@@ -550,10 +556,10 @@ ${visitHistoryString || "No recent visit history available."}
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="symptoms">Symptoms / Chief Complaint <span className="text-destructive">*</span></Label>
+                <Label htmlFor="symptoms">{t('consultationForm.symptoms.label')} <span className="text-destructive">*</span></Label>
                 <Textarea
                   id="symptoms"
-                  placeholder="Detailed description of patient's symptoms..."
+                  placeholder={t('consultationForm.symptoms.placeholder')}
                   {...form.register('symptoms')}
                   className="min-h-[100px]"
                   disabled={isActionDisabled || !patientData}
@@ -568,24 +574,30 @@ ${visitHistoryString || "No recent visit history available."}
           {patientData && (
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle>Diagnostic Orders</CardTitle>
-                <CardDescription>Request lab tests or imaging studies for {patientData.fullName}.</CardDescription>
+                <CardTitle>{t('consultationForm.diagnosticOrders.title')}</CardTitle>
+                <CardDescription>{t('consultationForm.diagnosticOrders.description', {patientName: patientData.fullName})}</CardDescription>
               </CardHeader>
-              <CardContent>
+               <CardContent>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Dialog onOpenChange={(open) => { if (!open) {setSelectedLabTests({}); const notesEl = document.getElementById('consultLabClinicalNotes') as HTMLTextAreaElement; if(notesEl) notesEl.value = ""; }}}>
+                  <Dialog onOpenChange={(open) => { 
+                      if (!open) {
+                          setSelectedLabTests({}); 
+                          const notesEl = document.getElementById('consultLabClinicalNotes') as HTMLTextAreaElement; 
+                          if(notesEl) notesEl.value = ""; 
+                      }
+                  }}>
                     <DialogTrigger asChild>
                         <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
-                        <FlaskConical className="mr-2 h-4 w-4" /> Order Labs
+                        <FlaskConical className="mr-2 h-4 w-4" /> {t('consultationForm.diagnosticOrders.orderLabsButton')}
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                        <DialogTitle>Order Lab Tests for {patientData?.fullName}</DialogTitle>
-                        <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
+                        <DialogTitle>{t('consultationForm.labModal.title', {patientName: patientData?.fullName || ""})}</DialogTitle>
+                        <DialogDescription>{t('consultationForm.labModal.description')}</DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                        <Label className="text-base font-semibold">Common Lab Tests:</Label>
+                        <Label className="text-base font-semibold">{t('consultationForm.labModal.commonTestsLabel')}:</Label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                             {COMMON_ORDERABLE_LAB_TESTS.map((test) => (
                             <div key={test.id} className="flex items-center space-x-2">
@@ -603,15 +615,15 @@ ${visitHistoryString || "No recent visit history available."}
                         </div>
                         <Separator className="my-2" />
                         <div className="space-y-2">
-                            <Label htmlFor="consultLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
-                            <Textarea id="consultLabClinicalNotes" placeholder="e.g., Routine screening, specific concerns..." disabled={isSubmittingLabOrder} />
+                            <Label htmlFor="consultLabClinicalNotes">{t('consultationForm.labModal.notes.label')}</Label>
+                            <Textarea id="consultLabClinicalNotes" placeholder={t('consultationForm.labModal.notes.placeholder')} disabled={isSubmittingLabOrder} />
                         </div>
                         </div>
                         <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingLabOrder}>Cancel</Button></DialogClose>
+                        <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingLabOrder}>{t('consultationForm.labModal.cancelButton')}</Button></DialogClose>
                         <Button type="button" onClick={handleSubmitLabOrder} disabled={isSubmittingLabOrder || Object.values(selectedLabTests).every(v => !v)}>
                             {isSubmittingLabOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                            {isSubmittingLabOrder ? "Submitting..." : "Submit Lab Order"}
+                            {isSubmittingLabOrder ? t('consultationForm.labModal.submitButton.loading') : t('consultationForm.labModal.submitButton')}
                         </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -629,43 +641,43 @@ ${visitHistoryString || "No recent visit history available."}
                     }}>
                     <DialogTrigger asChild>
                         <Button variant="outline" className="flex-shrink-0" disabled={isActionDisabled || !patientData}>
-                        <RadioTower className="mr-2 h-4 w-4" /> Order Imaging Study
+                        <RadioTower className="mr-2 h-4 w-4" /> {t('consultationForm.diagnosticOrders.orderImagingButton')}
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                        <DialogTitle>Order Imaging Study for {patientData?.fullName}</DialogTitle>
-                        <DialogDescription>Select imaging type, specify details, and add clinical notes.</DialogDescription>
+                        <DialogTitle>{t('consultationForm.imagingModal.title', {patientName: patientData?.fullName || ""})}</DialogTitle>
+                        <DialogDescription>{t('consultationForm.imagingModal.description')}</DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                         <div className="space-y-2">
-                            <Label htmlFor="consultImagingType">Imaging Type</Label>
+                            <Label htmlFor="consultImagingType">{t('consultationForm.imagingModal.type.label')}</Label>
                             <Select disabled={isSubmittingImagingOrder} name="consultImagingType" defaultValue="" id="consultImagingType">
                             <SelectTrigger>
-                                <SelectValue placeholder="Select imaging type" />
+                                <SelectValue placeholder={t('consultationForm.imagingModal.type.placeholder')} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="ultrasound">Ultrasound</SelectItem>
-                                <SelectItem value="xray">X-Ray</SelectItem>
-                                <SelectItem value="mri">MRI</SelectItem>
-                                <SelectItem value="ctscan">CT Scan</SelectItem>
+                                <SelectItem value="ultrasound">{t('consultationForm.imagingModal.type.ultrasound')}</SelectItem>
+                                <SelectItem value="xray">{t('consultationForm.imagingModal.type.xray')}</SelectItem>
+                                <SelectItem value="mri">{t('consultationForm.imagingModal.type.mri')}</SelectItem>
+                                <SelectItem value="ctscan">{t('consultationForm.imagingModal.type.ctscan')}</SelectItem>
                             </SelectContent>
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="consultImagingRegionDetails">Region / Details of Study</Label>
-                            <Textarea id="consultImagingRegionDetails" placeholder="e.g., Abdominal Ultrasound, Chest X-ray PA view, MRI Brain..." disabled={isSubmittingImagingOrder}/>
+                            <Label htmlFor="consultImagingRegionDetails">{t('consultationForm.imagingModal.region.label')}</Label>
+                            <Textarea id="consultImagingRegionDetails" placeholder={t('consultationForm.imagingModal.region.placeholder')} disabled={isSubmittingImagingOrder}/>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="consultImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
-                            <Textarea id="consultImagingClinicalNotes" placeholder="e.g., Rule out appendicitis, check for pneumonia..." disabled={isSubmittingImagingOrder}/>
+                            <Label htmlFor="consultImagingClinicalNotes">{t('consultationForm.imagingModal.notes.label')}</Label>
+                            <Textarea id="consultImagingClinicalNotes" placeholder={t('consultationForm.imagingModal.notes.placeholder')} disabled={isSubmittingImagingOrder}/>
                         </div>
                         </div>
                         <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingImagingOrder}>Cancel</Button></DialogClose>
+                        <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingImagingOrder}>{t('consultationForm.imagingModal.cancelButton')}</Button></DialogClose>
                         <Button type="button" onClick={handleSubmitImagingOrder} disabled={isSubmittingImagingOrder}>
                             {isSubmittingImagingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                            {isSubmittingImagingOrder ? "Submitting..." : "Submit Imaging Order"}
+                            {isSubmittingImagingOrder ? t('consultationForm.imagingModal.submitButton.loading') : t('consultationForm.imagingModal.submitButton')}
                         </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -673,7 +685,7 @@ ${visitHistoryString || "No recent visit history available."}
                   
                   <Button variant="outline" className="flex-shrink-0" onClick={handleSaveProgress} disabled={isActionDisabled || !patientData}>
                       {isSavingProgress ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                      {isSavingProgress ? "Saving..." : "Save Progress"}
+                      {isSavingProgress ? t('consultationForm.saveDraftButton.loading') : t('consultationForm.saveDraftButton')}
                   </Button>
                 </div>
               </CardContent>
@@ -683,25 +695,25 @@ ${visitHistoryString || "No recent visit history available."}
 
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle>Medical Data for AI Analysis</CardTitle>
-              <CardDescription>Provide summaries of existing lab results and imaging data if available for AI input.</CardDescription>
+              <CardTitle>{t('consultationForm.aiAnalysisCard.title')}</CardTitle>
+              <CardDescription>{t('consultationForm.aiAnalysisCard.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1">
-                <Label htmlFor="labResultsSummary">Lab Results Summary</Label>
+                <Label htmlFor="labResultsSummary">{t('consultationForm.labSummary.label')}</Label>
                 <Textarea
                   id="labResultsSummary"
-                  placeholder="e.g., CBC: WBC 12.5 x 10^9/L. Blood Glucose: 110 mg/dL..."
+                  placeholder={t('consultationForm.labSummary.placeholder')}
                   {...form.register('labResultsSummary')}
                   className="min-h-[100px]"
                   disabled={isActionDisabled || !patientData}
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="imagingDataSummary">Imaging Data Summary</Label>
+                <Label htmlFor="imagingDataSummary">{t('consultationForm.imagingSummary.label')}</Label>
                 <Textarea
                   id="imagingDataSummary"
-                  placeholder="e.g., Chest X-ray: Bilateral infiltrates. CT Brain: No acute findings..."
+                  placeholder={t('consultationForm.imagingSummary.placeholder')}
                   {...form.register('imagingDataSummary')}
                   className="min-h-[100px]"
                   disabled={isActionDisabled || !patientData}
@@ -715,7 +727,7 @@ ${visitHistoryString || "No recent visit history available."}
                 ) : (
                   <Sparkles className="mr-2 h-4 w-4" />
                 )}
-                {isAiPending ? "Getting Recommendation..." : "Get AI Recommendation"}
+                {isAiPending ? t('consultationForm.getAiButton.loading') : t('consultationForm.getAiButton')}
               </Button>
             </CardFooter>
           </Card>
@@ -724,7 +736,7 @@ ${visitHistoryString || "No recent visit history available."}
 
         {error && !recommendation && (
           <Alert variant="destructive" className="mt-6">
-            <AlertTitle>AI Error</AlertTitle>
+            <AlertTitle>{t('consultationForm.aiError.title')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -734,36 +746,36 @@ ${visitHistoryString || "No recent visit history available."}
             <Card className="shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl">
-                  <Sparkles className="h-6 w-6 text-primary" /> AI Generated Insights for {patientData.fullName}
+                  <Sparkles className="h-6 w-6 text-primary" /> {t('consultationForm.aiInsights.title', {patientName: patientData.fullName})}
                 </CardTitle>
-                <CardDescription>Please review carefully and apply clinical judgment.</CardDescription>
+                <CardDescription>{t('consultationForm.aiInsights.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Stethoscope className="h-5 w-5" />Potential Diagnoses</h3>
-                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.diagnosis || "No specific diagnosis provided."}</p>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Stethoscope className="h-5 w-5" />{t('consultationForm.aiInsights.diagnosis.title')}</h3>
+                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.diagnosis || t('consultationForm.aiInsights.diagnosis.none')}</p>
                 </div>
                 <Separator />
                 <div>
-                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Pill className="h-5 w-5" />Draft Prescription</h3>
-                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.prescription || "No specific prescription provided."}</p>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><Pill className="h-5 w-5" />{t('consultationForm.aiInsights.prescription.title')}</h3>
+                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.prescription || t('consultationForm.aiInsights.prescription.none')}</p>
                 </div>
                 <Separator />
                 <div>
-                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><FileText className="h-5 w-5" />Treatment Recommendations</h3>
-                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.recommendations || "No specific recommendations provided."}</p>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><FileText className="h-5 w-5" />{t('consultationForm.aiInsights.recommendations.title')}</h3>
+                  <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md">{recommendation.recommendations || t('consultationForm.aiInsights.recommendations.none')}</p>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="shadow-sm">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Edit3 className="mr-1.5 h-5 w-5 text-primary"/>Doctor's Comments / Adjustments</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Edit3 className="mr-1.5 h-5 w-5 text-primary"/>{t('consultationForm.doctorComments.title')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Textarea
                         id="doctorComments"
-                        placeholder="Add any comments, adjustments, or final decisions here..."
+                        placeholder={t('consultationForm.doctorComments.placeholder')}
                         {...form.register('doctorComments')}
                         className="min-h-[100px]"
                         disabled={isActionDisabled}
@@ -775,21 +787,21 @@ ${visitHistoryString || "No recent visit history available."}
                 <Dialog open={isOutcomeModalOpen} onOpenChange={setIsOutcomeModalOpen}>
                     <DialogTrigger asChild>
                     <Button variant="default" disabled={isActionDisabled || !patientData} size="lg">
-                        <Send className="mr-2 h-4 w-4" /> Finish Consultation &amp; Select Outcome
+                        <Send className="mr-2 h-4 w-4" /> {t('consultationForm.finishButton.general')}
                     </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Consultation Outcome for {patientData?.fullName}</DialogTitle>
-                        <DialogDescription>Select the appropriate next step for the patient.</DialogDescription>
+                        <DialogTitle>{t('consultationForm.outcomeModal.title', {patientName: patientData?.fullName || ""})}</DialogTitle>
+                        <DialogDescription>{t('consultationForm.outcomeModal.description')}</DialogDescription>
                     </DialogHeader>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4">
                         {[
-                          { label: "Send Home", value: "Send Home", icon: Home },
-                          { label: "Send to Pharmacy", value: "Send to Pharmacy", icon: ArrowRightToLine },
-                          { label: "Admit to Ward", value: "Send to Inpatient (Ward)", icon: BedDouble },
-                          { label: "Refer to Specialist", value: "Refer to Specialist", icon: Users2 },
-                          { label: "Deceased", value: "Deceased", icon: Skull }
+                          { label: t('consultationForm.outcomeModal.options.sendHome'), value: "Send Home", icon: Home },
+                          { label: t('consultationForm.outcomeModal.options.sendToPharmacy'), value: "Send to Pharmacy", icon: ArrowRightToLine },
+                          { label: t('consultationForm.outcomeModal.options.admit'), value: "Send to Inpatient (Ward)", icon: BedDouble },
+                          { label: t('consultationForm.outcomeModal.options.referSpecialist'), value: "Refer to Specialist", icon: Users2 },
+                          { label: t('consultationForm.outcomeModal.options.deceased'), value: "Deceased", icon: Skull }
                         ].map(opt => (
                            <Button 
                             key={opt.value} 
@@ -798,11 +810,11 @@ ${visitHistoryString || "No recent visit history available."}
                             disabled={isSubmittingOutcome}
                           >
                             {isSubmittingOutcome ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <opt.icon className="mr-2 h-4 w-4"/>}
-                            {isSubmittingOutcome ? "Processing..." : opt.label}
+                            {isSubmittingOutcome ? t('consultationForm.outcomeModal.processing') : opt.label}
                           </Button>
                         ))}
                          <DialogClose asChild>
-                            <Button type="button" variant="ghost" disabled={isSubmittingOutcome}>Cancel</Button>
+                            <Button type="button" variant="ghost" disabled={isSubmittingOutcome}>{t('consultationForm.outcomeModal.cancelButton')}</Button>
                          </DialogClose>
                     </div>
                     </DialogContent>
@@ -817,30 +829,30 @@ ${visitHistoryString || "No recent visit history available."}
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <UserCircle className="h-6 w-6 text-primary" /> Patient Quick Summary
+                <UserCircle className="h-6 w-6 text-primary" /> {t('consultationForm.patientSummary.title')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <div><strong>Name:</strong> {patientData.fullName}</div>
-              <div><strong>Age:</strong> {patientData.age} | <strong>Gender:</strong> {patientData.gender}</div>
-              <div><strong>National ID:</strong> {patientData.nationalId}</div>
+              <div><strong>{t('consultationForm.patientSummary.name')}:</strong> {patientData.fullName}</div>
+              <div><strong>{t('consultationForm.patientSummary.age')}:</strong> {patientData.age} | <strong>{t('consultationForm.patientSummary.gender')}:</strong> {t(`patientRegistration.gender.${patientData.gender.toLowerCase()}` as any)}</div>
+              <div><strong>{t('consultationForm.patientSummary.id')}:</strong> {patientData.nationalId}</div>
               <Separator />
               <div>
-                <h4 className="font-semibold mb-1 flex items-center gap-1.5"><ShieldAlert className="h-4 w-4 text-destructive"/>Allergies:</h4>
+                <h4 className="font-semibold mb-1 flex items-center gap-1.5"><ShieldAlert className="h-4 w-4 text-destructive"/>{t('consultationForm.patientSummary.allergies')}:</h4>
                 {patientData.allergies.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {patientData.allergies.map(allergy => <Badge key={allergy} variant="destructive" className="text-xs">{allergy}</Badge>)}
                   </div>
-                ) : <p className="text-muted-foreground">None reported.</p>}
+                ) : <p className="text-muted-foreground">{t('consultationForm.patientSummary.noneReported')}</p>}
               </div>
               <Separator />
               <div>
-                <h4 className="font-semibold mb-1 flex items-center gap-1.5"><HeartPulse className="h-4 w-4 text-blue-500"/>Chronic Conditions:</h4>
+                <h4 className="font-semibold mb-1 flex items-center gap-1.5"><HeartPulse className="h-4 w-4 text-blue-500"/>{t('consultationForm.patientSummary.chronicConditions')}:</h4>
                 {patientData.chronicConditions.length > 0 ? (
                    <div className="flex flex-wrap gap-1">
                     {patientData.chronicConditions.map(condition => <Badge key={condition} variant="secondary" className="text-xs">{condition}</Badge>)}
                   </div>
-                ) : <p className="text-muted-foreground">None reported.</p>}
+                ) : <p className="text-muted-foreground">{t('consultationForm.patientSummary.noneReported')}</p>}
               </div>
             </CardContent>
           </Card>
@@ -848,9 +860,9 @@ ${visitHistoryString || "No recent visit history available."}
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <History className="h-6 w-6 text-primary" /> Visit History (Last 5)
+                <History className="h-6 w-6 text-primary" /> {t('consultationForm.visitHistory.title')}
               </CardTitle>
-              <CardDescription>Recent encounters for this patient.</CardDescription>
+              <CardDescription>{t('consultationForm.visitHistory.description')}</CardDescription>
             </CardHeader>
             <CardContent className="max-h-[400px] overflow-y-auto">
               {mockVisitHistory.length > 0 ? (
@@ -861,17 +873,17 @@ ${visitHistoryString || "No recent visit history available."}
                         <p className="text-sm font-semibold flex items-center gap-1.5"><FileClock className="h-4 w-4" />{visit.date}</p>
                         <Badge variant="outline" className="text-xs">{visit.department}</Badge>
                       </div>
-                      <p className="text-xs"><strong>Doctor:</strong> {visit.doctor}</p>
-                      <p className="text-xs mt-0.5"><strong>Reason:</strong> {visit.reason}</p>
+                      <p className="text-xs"><strong>{t('consultationForm.visitHistory.doctor')}:</strong> {visit.doctor}</p>
+                      <p className="text-xs mt-0.5"><strong>{t('consultationForm.visitHistory.reason')}:</strong> {visit.reason}</p>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No visit history available.</p>
+                <p className="text-sm text-muted-foreground text-center py-4">{t('consultationForm.visitHistory.empty')}</p>
               )}
             </CardContent>
             <CardFooter>
-                <Button variant="link" className="p-0 h-auto text-xs" disabled>View Full History</Button>
+                <Button variant="link" className="p-0 h-auto text-xs" disabled>{t('consultationForm.visitHistory.viewFull')}</Button>
             </CardFooter>
           </Card>
         </div>
@@ -880,3 +892,5 @@ ${visitHistoryString || "No recent visit history available."}
   );
 }
 
+
+    

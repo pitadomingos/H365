@@ -2,7 +2,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Pill, ClipboardList, AlertTriangle, CheckCircle2, PackageCheck, FileText, RefreshCw, BellDot, Loader2, ListOrdered, Layers } from "lucide-react";
@@ -18,6 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useLocale } from '@/context/locale-context';
+import { getTranslator, defaultLocale } from '@/lib/i18n';
 
 interface Prescription {
   id: string;
@@ -37,11 +38,11 @@ interface StockItem {
 }
 
 interface RequisitionLogItem {
-  id: string; // Requisition ID from backend
-  requestedItemsSummary: string; // e.g., "Amoxicillin (50 units), Paracetamol (100 units)" or "Multiple items (3)"
-  dateSubmitted: string; // ISO date string
-  submittedBy: string; // Mocked as "Current Pharmacist"
-  status: "Pending" | "Partially Fulfilled" | "Fulfilled" | "Cancelled"; // Mock status
+  id: string; 
+  requestedItemsSummary: string; 
+  dateSubmitted: string; 
+  submittedBy: string; 
+  status: "Pending" | "Partially Fulfilled" | "Fulfilled" | "Cancelled"; 
 }
 
 const initialPrescriptionsData: Prescription[] = [
@@ -72,6 +73,9 @@ const initialRequisitionLogData: RequisitionLogItem[] = [
 
 
 export default function DrugDispensingPage() {
+  const { currentLocale } = useLocale();
+  const t = getTranslator(currentLocale);
+
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoadingPrescriptions, setIsLoadingPrescriptions] = useState(true);
   const [stockLevels, setStockLevels] = useState<StockItem[]>([]);
@@ -100,7 +104,7 @@ export default function DrugDispensingPage() {
     setIsLoadingSummary(true);
     setIsLoadingRequisitionLog(true);
 
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
     setPrescriptions(initialPrescriptionsData);
     setIsLoadingPrescriptions(false);
 
@@ -128,14 +132,14 @@ export default function DrugDispensingPage() {
   const isItemPendingRequisition = (itemId: string): boolean => {
     return requisitionLog.some(log => 
       log.status === "Pending" && 
-      log.requestedItemsSummary.includes(stockLevels.find(s => s.id === itemId)?.name || '###') // Basic check, can be improved
+      log.requestedItemsSummary.includes(stockLevels.find(s => s.id === itemId)?.name || '###') 
     );
   };
 
   const handleRefreshAll = async () => {
     setIsRefreshingAll(true);
-    await fetchAllData(); // This now includes fetching requisition log
-    toast({ title: "Pharmacy Data Refreshed", description: "Prescriptions, stock, summary, and requisition log updated (mock)." });
+    await fetchAllData(); 
+    toast({ title: t('pharmacy.toast.dataRefreshed'), description: t('pharmacy.toast.dataRefreshed.desc') });
     setIsRefreshingAll(false);
   };
 
@@ -156,8 +160,8 @@ export default function DrugDispensingPage() {
     }
     
     toast({
-      title: "Medication Dispensed (Mock)",
-      description: `${prescription.medication} dispensed to ${prescription.patientName}.`,
+      title: t('pharmacy.toast.dispensed'),
+      description: t('pharmacy.toast.dispensed.desc', {medicationName: prescription.medication, patientName: prescription.patientName }),
     });
     setIsDispensingId(null);
     setDailySummary(prev => ({
@@ -169,19 +173,19 @@ export default function DrugDispensingPage() {
 
   const handleRequisitionStock = async (item: StockItem) => {
     if (isItemPendingRequisition(item.id)) {
-      toast({ variant: "default", title: "Already Requested", description: `${item.name} has a pending requisition.` });
+      toast({ variant: "default", title: t('pharmacy.toast.requisition.alreadyPending'), description: t('pharmacy.toast.requisition.alreadyPending.desc', {itemName: item.name}) });
       return;
     }
     setIsRequisitioningItemId(item.id);
-    const requestedQuantity = Math.max(0, item.threshold * 2 - item.currentStock); // Ensure non-negative
+    const requestedQuantity = Math.max(0, item.threshold * 2 - item.currentStock); 
     if (requestedQuantity === 0) {
-        toast({variant: "default", title: "Sufficient Stock", description: `${item.name} does not need immediate requisition based on current levels.`});
+        toast({variant: "default", title: t('pharmacy.toast.requisition.sufficientStock'), description: t('pharmacy.toast.requisition.sufficientStock.desc', {itemName: item.name})});
         setIsRequisitioningItemId(null);
         return;
     }
 
     const payload = {
-      requestingFacilityId: "HOSPITAL_PHARM_001", // Mock facility ID
+      requestingFacilityId: "HOSPITAL_PHARM_001", 
       items: [{ itemId: item.id, itemName: item.name, requestedQuantity, currentStockAtFacility: item.currentStock }],
       notes: `Low stock for ${item.name}. Requisition from individual item action.`
     };
@@ -198,8 +202,8 @@ export default function DrugDispensingPage() {
     setRequisitionLog(prev => [newLogEntry, ...prev]);
     toast({
       variant: "default",
-      title: "Stock Requisition Submitted (Mock)",
-      description: `Requisition for ${item.name} sent to central warehouse.`,
+      title: t('pharmacy.toast.requisition.submitted'),
+      description: t('pharmacy.toast.requisition.submitted.desc', {itemName: item.name}),
     });
     setIsRequisitioningItemId(null);
   };
@@ -209,11 +213,11 @@ export default function DrugDispensingPage() {
     const itemsToRequisition = stockLevels.filter(item => 
         item.currentStock < item.threshold && 
         !isItemPendingRequisition(item.id) &&
-        (item.threshold * 2 - item.currentStock) > 0 // Ensure requested quantity is positive
+        (item.threshold * 2 - item.currentStock) > 0 
     );
 
     if (itemsToRequisition.length === 0) {
-      toast({ title: "No Items to Requisition", description: "All low stock items either have sufficient stock or are already pending requisition." });
+      toast({ title: t('pharmacy.toast.requisition.bulk.none'), description: t('pharmacy.toast.requisition.bulk.none.desc') });
       setIsRequisitioningAll(false);
       return;
     }
@@ -245,8 +249,8 @@ export default function DrugDispensingPage() {
 
     toast({
       variant: "default",
-      title: "Bulk Stock Requisition Submitted (Mock)",
-      description: `Requisition for ${itemsToRequisition.length} eligible low stock item(s) sent.`,
+      title: t('pharmacy.toast.requisition.bulk.submitted'),
+      description: t('pharmacy.toast.requisition.bulk.submitted.desc', {count: itemsToRequisition.length.toString()}),
     });
     setIsRequisitioningAll(false);
   };
@@ -258,17 +262,16 @@ export default function DrugDispensingPage() {
   ).length;
 
   return (
-    <AppShell>
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Pill className="h-8 w-8" /> Drug Dispensing Pharmacy
+            <Pill className="h-8 w-8" /> {t('pharmacy.pageTitle')}
           </h1>
           <div className="text-sm text-muted-foreground">
             {clientTime ? (
-              `${clientTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${clientTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              `${clientTime.toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${clientTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
             ) : (
-              "\u00A0" 
+              t('pharmacy.currentTime.loading')
             )}
           </div>
         </div>
@@ -277,26 +280,26 @@ export default function DrugDispensingPage() {
           <Card className="lg:col-span-2 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ClipboardList className="h-6 w-6 text-primary" /> Pending Prescriptions
+                <ClipboardList className="h-6 w-6 text-primary" /> {t('pharmacy.prescriptions.title')}
               </CardTitle>
-              <CardDescription>Manage and dispense medications for patients.</CardDescription>
+              <CardDescription>{t('pharmacy.prescriptions.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingPrescriptions ? (
                  <div className="flex items-center justify-center py-10">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="ml-2 text-muted-foreground">Loading prescriptions...</p>
+                  <p className="ml-2 text-muted-foreground">{t('pharmacy.prescriptions.loading')}</p>
                 </div>
               ) : prescriptions.filter(p => p.status === "Waiting").length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Patient Name</TableHead>
-                      <TableHead>Medication</TableHead>
-                      <TableHead>Qty</TableHead>
-                      <TableHead>Doctor</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
+                      <TableHead>{t('pharmacy.prescriptions.table.patient')}</TableHead>
+                      <TableHead>{t('pharmacy.prescriptions.table.medication')}</TableHead>
+                      <TableHead>{t('pharmacy.prescriptions.table.qty')}</TableHead>
+                      <TableHead>{t('pharmacy.prescriptions.table.doctor')}</TableHead>
+                      <TableHead>{t('pharmacy.prescriptions.table.status')}</TableHead>
+                      <TableHead className="text-right">{t('pharmacy.prescriptions.table.action')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -308,18 +311,18 @@ export default function DrugDispensingPage() {
                         <TableCell>{rx.doctor}</TableCell>
                         <TableCell>
                           <Badge variant={rx.status === "Dispensed" ? "secondary" : rx.status === "Waiting" ? "default" : "outline"}>
-                            {rx.status}
+                            {t(`pharmacy.prescriptions.status.${rx.status.toLowerCase()}`)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           {rx.status === "Waiting" ? (
                             <Button size="sm" onClick={() => handleDispense(rx)} disabled={isDispensingId === rx.id}>
                               {isDispensingId === rx.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PackageCheck className="mr-2 h-4 w-4" />}
-                              {isDispensingId === rx.id ? "Dispensing..." : "Dispense"}
+                              {isDispensingId === rx.id ? t('pharmacy.prescriptions.actions.dispensing') : t('pharmacy.prescriptions.actions.dispense')}
                             </Button>
                           ) : (
                             <Button size="sm" variant="outline" disabled>
-                              <CheckCircle2 className="mr-2 h-4 w-4" /> Dispensed
+                              <CheckCircle2 className="mr-2 h-4 w-4" /> {t('pharmacy.prescriptions.actions.dispensed')}
                             </Button>
                           )}
                         </TableCell>
@@ -328,13 +331,13 @@ export default function DrugDispensingPage() {
                   </TableBody>
                 </Table>
               ) : (
-                 <p className="text-center py-10 text-muted-foreground">No prescriptions currently waiting for dispensing.</p>
+                 <p className="text-center py-10 text-muted-foreground">{t('pharmacy.prescriptions.empty')}</p>
               )}
             </CardContent>
             <CardFooter className="flex-col sm:flex-row items-start sm:items-center gap-2">
                 <Button variant="outline" onClick={handleRefreshAll} disabled={isRefreshingAll || isLoadingPrescriptions}>
                     {isRefreshingAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
-                    {isRefreshingAll ? "Refreshing..." : "Refresh All Data"}
+                    {isRefreshingAll ? t('pharmacy.refreshButton.loading') : t('pharmacy.refreshButton')}
                 </Button>
             </CardFooter>
           </Card>
@@ -343,30 +346,30 @@ export default function DrugDispensingPage() {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-6 w-6 text-primary"/> Daily Dispensing Report
+                    <FileText className="h-6 w-6 text-primary"/> {t('pharmacy.dailyReport.title')}
                 </CardTitle>
-                 <CardDescription>Summary of today's dispensing activities.</CardDescription>
+                 <CardDescription>{t('pharmacy.dailyReport.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                  {isLoadingSummary ? (
                    <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary mr-2"/> Loading summary...
+                    <Loader2 className="h-5 w-5 animate-spin text-primary mr-2"/> {t('pharmacy.dailyReport.loading')}
                   </div>
                 ) : (
                   <>
                     <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                        <span className="text-sm font-medium">Prescriptions Dispensed:</span>
+                        <span className="text-sm font-medium">{t('pharmacy.dailyReport.dispensedToday')}</span>
                         <Badge variant="secondary" className="text-base">{dailySummary.prescriptionsDispensedToday}</Badge>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                        <span className="text-sm font-medium">Prescriptions Pending:</span>
+                        <span className="text-sm font-medium">{t('pharmacy.dailyReport.pending')}</span>
                         <Badge className="text-base">{dailySummary.prescriptionsPending}</Badge>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                        <span className="text-sm font-medium">Low Stock Items:</span>
+                        <span className="text-sm font-medium">{t('pharmacy.dailyReport.lowStock')}</span>
                         <Badge variant={dailySummary.lowStockItemsCount > 0 ? "destructive": "default"} className="text-base">{dailySummary.lowStockItemsCount}</Badge>
                     </div>
-                    <Button className="w-full mt-2" variant="outline" disabled>View Full Report</Button>
+                    <Button className="w-full mt-2" variant="outline" disabled>{t('pharmacy.dailyReport.viewFullButton')}</Button>
                   </>
                 )}
               </CardContent>
@@ -375,22 +378,22 @@ export default function DrugDispensingPage() {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Layers className="h-6 w-6 text-primary" /> Pharmacy Stock Levels
+                  <Layers className="h-6 w-6 text-primary" /> {t('pharmacy.stock.title')}
                 </CardTitle>
-                <CardDescription>Overview of current medication inventory.</CardDescription>
+                <CardDescription>{t('pharmacy.stock.description')}</CardDescription>
               </CardHeader>
               <CardContent className="max-h-[300px] overflow-y-auto pr-1">
                 {isLoadingStock ? (
                    <div className="flex items-center justify-center py-6">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary mr-2"/> Loading stock...
+                    <Loader2 className="h-6 w-6 animate-spin text-primary mr-2"/> {t('pharmacy.stock.loading')}
                   </div>
                 ) : stockLevels.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Medication</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
+                      <TableHead>{t('pharmacy.stock.table.medication')}</TableHead>
+                      <TableHead>{t('pharmacy.stock.table.stock')}</TableHead>
+                      <TableHead className="text-right">{t('pharmacy.stock.table.action')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -404,7 +407,7 @@ export default function DrugDispensingPage() {
                           <TableCell className="font-medium">{item.name}</TableCell>
                           <TableCell>
                             {item.currentStock} <span className="text-xs text-muted-foreground">({item.unit})</span>
-                            {isLowStock && <Badge variant="destructive" className="ml-2 text-xs">Low</Badge>}
+                            {isLowStock && <Badge variant="destructive" className="ml-2 text-xs">{t('pharmacy.stock.lowStockBadge')}</Badge>}
                           </TableCell>
                           <TableCell className="text-right">
                             {isLowStock && (
@@ -413,10 +416,10 @@ export default function DrugDispensingPage() {
                                 variant={alreadyPending ? "secondary" : "outline"} 
                                 onClick={() => !alreadyPending && handleRequisitionStock(item)} 
                                 disabled={isRequisitioningItemId === item.id || isRequisitioningAll || alreadyPending}
-                                title={alreadyPending ? "Requisition for this item is already pending." : "Requisition more stock"}
+                                title={alreadyPending ? t('pharmacy.toast.requisition.alreadyPending.desc', {itemName: item.name}) : t('pharmacy.stock.requisitionButton')}
                               >
                                 {isRequisitioningItemId === item.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin"/> : <BellDot className="mr-1 h-3 w-3"/>}
-                                {isRequisitioningItemId === item.id ? "Requesting..." : (alreadyPending ? "Pending Req." : "Requisition")}
+                                {isRequisitioningItemId === item.id ? t('pharmacy.stock.requisitionButton.loading') : (alreadyPending ? t('pharmacy.stock.requisitionButton.pending') : t('pharmacy.stock.requisitionButton'))}
                               </Button>
                             )}
                           </TableCell>
@@ -426,23 +429,23 @@ export default function DrugDispensingPage() {
                   </TableBody>
                 </Table>
                 ) : (
-                  <p className="text-center py-6 text-muted-foreground">No stock data available.</p>
+                  <p className="text-center py-6 text-muted-foreground">{t('pharmacy.stock.empty')}</p>
                 )}
               </CardContent>
                <CardFooter className="pt-4 flex-col gap-2 items-stretch">
                 <Button 
                     onClick={handleRequisitionAllLowStock} 
                     disabled={isLoadingStock || isRequisitioningAll || eligibleLowStockItemsCount === 0}
-                    title={eligibleLowStockItemsCount === 0 ? "No eligible low stock items to requisition." : "Requisition all eligible low stock items."}
+                    title={eligibleLowStockItemsCount === 0 ? t('pharmacy.toast.requisition.bulk.none.desc') : t('pharmacy.stock.requisitionAllButton', {count: eligibleLowStockItemsCount.toString()}) }
                 >
                     {isRequisitioningAll ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BellDot className="mr-2 h-4 w-4" />}
-                    Requisition All Low Stock ({eligibleLowStockItemsCount})
+                    {isRequisitioningAll ? t('pharmacy.stock.requisitionAllButton.loading') : t('pharmacy.stock.requisitionAllButton', {count: eligibleLowStockItemsCount.toString()}) }
                 </Button>
                  <Alert variant="default" className="border-primary/50 mt-2">
                     <AlertTriangle className="h-4 w-4 text-primary" />
-                    <AlertTitle className="text-sm">System Note</AlertTitle>
+                    <AlertTitle className="text-sm">{t('pharmacy.stock.systemNote.title')}</AlertTitle>
                     <AlertDescription className="text-xs">
-                        Automated stock requisition from the Main Warehouse occurs daily at midnight for items below threshold. Real-time warehouse link is a backend integration.
+                        {t('pharmacy.stock.systemNote.description')}
                     </AlertDescription>
                 </Alert>
                </CardFooter>
@@ -453,25 +456,25 @@ export default function DrugDispensingPage() {
         <Card className="shadow-sm">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <ListOrdered className="h-6 w-6 text-primary"/> Requisition History
+                    <ListOrdered className="h-6 w-6 text-primary"/> {t('pharmacy.requisitionHistory.title')}
                 </CardTitle>
-                <CardDescription>Log of recent stock requisitions submitted by this pharmacy.</CardDescription>
+                <CardDescription>{t('pharmacy.requisitionHistory.description')}</CardDescription>
             </CardHeader>
             <CardContent>
                 {isLoadingRequisitionLog ? (
                     <div className="flex items-center justify-center py-10">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="ml-2 text-muted-foreground">Loading requisition history...</p>
+                        <p className="ml-2 text-muted-foreground">{t('pharmacy.requisitionHistory.loading')}</p>
                     </div>
                 ) : requisitionLog.length > 0 ? (
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Requisition ID</TableHead>
-                                <TableHead>Items Summary</TableHead>
-                                <TableHead>Date Submitted</TableHead>
-                                <TableHead>Submitted By</TableHead>
-                                <TableHead>Status</TableHead>
+                                <TableHead>{t('pharmacy.requisitionHistory.table.id')}</TableHead>
+                                <TableHead>{t('pharmacy.requisitionHistory.table.items')}</TableHead>
+                                <TableHead>{t('pharmacy.requisitionHistory.table.date')}</TableHead>
+                                <TableHead>{t('pharmacy.requisitionHistory.table.by')}</TableHead>
+                                <TableHead>{t('pharmacy.requisitionHistory.table.status')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -479,7 +482,7 @@ export default function DrugDispensingPage() {
                                 <TableRow key={log.id}>
                                     <TableCell className="font-mono text-xs">{log.id}</TableCell>
                                     <TableCell className="text-xs">{log.requestedItemsSummary}</TableCell>
-                                    <TableCell className="text-xs">{new Date(log.dateSubmitted).toLocaleString()}</TableCell>
+                                    <TableCell className="text-xs">{new Date(log.dateSubmitted).toLocaleString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')}</TableCell>
                                     <TableCell className="text-xs">{log.submittedBy}</TableCell>
                                     <TableCell>
                                         <Badge variant={
@@ -495,13 +498,12 @@ export default function DrugDispensingPage() {
                         </TableBody>
                     </Table>
                 ) : (
-                    <p className="text-center py-10 text-muted-foreground">No requisition history found.</p>
+                    <p className="text-center py-10 text-muted-foreground">{t('pharmacy.requisitionHistory.empty')}</p>
                 )}
             </CardContent>
         </Card>
 
       </div>
-    </AppShell>
   );
 }
 

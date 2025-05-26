@@ -34,6 +34,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useLocale } from '@/context/locale-context';
+import { getTranslator, defaultLocale } from '@/lib/i18n';
 
 interface WardSummary {
   id: string;
@@ -305,6 +307,9 @@ const formatStayDuration = (admissionDateString: string): string => {
 
 
 export default function WardManagementPage() {
+  const { currentLocale } = useLocale();
+  const t = getTranslator(currentLocale);
+
   const [allWardsData, setAllWardsData] = useState<WardSummary[]>([]);
   const [isLoadingAllWards, setIsLoadingAllWards] = useState(true);
 
@@ -363,7 +368,7 @@ export default function WardManagementPage() {
         setAllWardsData(mockWardSummariesData);
       } catch (error) {
         console.error("Error fetching wards:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not load wards list." });
+        toast({ variant: "destructive", title: t('wardManagement.toast.loadWardsError'), description: t('wardManagement.toast.loadWardsError') });
       } finally {
         setIsLoadingAllWards(false);
       }
@@ -377,14 +382,14 @@ export default function WardManagementPage() {
             setHospitalPendingAdmissions(mockHospitalPendingAdmissionsData);
         } catch (error) {
             console.error("Error fetching pending admissions:", error);
-            toast({ variant: "destructive", title: "Error", description: "Could not load pending admissions." });
+            toast({ variant: "destructive", title: t('wardManagement.toast.loadPendingAdmissionsError'), description: t('wardManagement.toast.loadPendingAdmissionsError') });
         } finally {
             setIsLoadingPendingAdmissions(false);
         }
     };
     fetchInitialWardData();
     fetchInitialPendingAdmissions();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (selectedWardId) {
@@ -397,7 +402,7 @@ export default function WardManagementPage() {
         try {
             // Simulate API call: GET /api/v1/wards/{selectedWardId}/details
             await new Promise(resolve => setTimeout(resolve, 600));
-            const details = mockWardDetailsData[selectedWardId]; // Using pre-defined mock
+            const details = mockWardDetailsData[selectedWardId]; 
             if (details) {
                 const occupiedBeds = details.patients.length;
                 const availableBeds = details.totalBeds - occupiedBeds;
@@ -426,11 +431,11 @@ export default function WardManagementPage() {
                 });
             } else {
                 setCurrentWardDetails(null);
-                toast({variant: "destructive", title: "Error", description: `Could not load details for ward ID ${selectedWardId}`});
+                toast({variant: "destructive", title: t('wardManagement.toast.loadWardDetailsError'), description: t('wardManagement.toast.loadWardDetailsError.generic')});
             }
         } catch (error: any) {
              console.error(`Error fetching ward ${selectedWardId} details:`, error);
-             toast({ variant: "destructive", title: "Error", description: error.message || `Could not load details for ward ID ${selectedWardId}.` });
+             toast({ variant: "destructive", title: t('wardManagement.toast.loadWardDetailsError'), description: error.message || t('wardManagement.toast.loadWardDetailsError.generic') });
              setCurrentWardDetails(null);
         } finally {
             setIsLoadingCurrentWardDetails(false);
@@ -443,7 +448,7 @@ export default function WardManagementPage() {
       setCurrentAdmittedPatientFullDetails(null);
       setLongestStayPatients([]);
     }
-  }, [selectedWardId]);
+  }, [selectedWardId, t]);
 
   useEffect(() => {
     if (selectedPatientForDetails) {
@@ -451,7 +456,6 @@ export default function WardManagementPage() {
       setCurrentAdmittedPatientFullDetails(null);
       const fetchPatientFullDetails = async () => {
         try {
-            // Simulate API call: GET /api/v1/admissions/{selectedPatientForDetails.admissionId}
             await new Promise(resolve => setTimeout(resolve, 500));
             const fullDetails = mockAdmittedPatientFullDetailsData[selectedPatientForDetails.admissionId];
             setCurrentAdmittedPatientFullDetails(fullDetails || null);
@@ -481,7 +485,7 @@ export default function WardManagementPage() {
             }
         } catch (error: any) {
              console.error(`Error fetching admission ${selectedPatientForDetails.admissionId} details:`, error);
-             toast({ variant: "destructive", title: "Error", description: error.message || `Could not load details for patient ${selectedPatientForDetails.name}.` });
+             toast({ variant: "destructive", title: t('wardManagement.toast.loadPatientDetailsError'), description: t('wardManagement.toast.loadPatientDetailsError', {patientName: selectedPatientForDetails.name}) });
              setCurrentAdmittedPatientFullDetails(null);
         } finally {
             setIsLoadingSelectedPatientDetails(false);
@@ -496,7 +500,7 @@ export default function WardManagementPage() {
         setBpDisplay(getBloodPressureStatus(""));
         setMedicationScheduleInModal([]);
     }
-  }, [selectedPatientForDetails]);
+  }, [selectedPatientForDetails, t]);
 
   useEffect(() => {
     const w = parseFloat(editableVitals.weightKg || '0');
@@ -535,9 +539,9 @@ export default function WardManagementPage() {
         if(mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]){
             mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].vitals = updatedVitalsWithCalculated;
         }
-        toast({ title: "Vitals Saved (Mock)", description: "Patient vitals updated successfully." });
+        toast({ title: t('wardManagement.toast.vitalsSave.success'), description: t('wardManagement.toast.vitalsSave.success.desc') });
     } catch (error: any) {
-        toast({ variant: "destructive", title: "Error", description: error.message || "Could not save vitals." });
+        toast({ variant: "destructive", title: t('wardManagement.toast.vitalsSave.error'), description: error.message || t('wardManagement.toast.vitalsSave.error.desc') });
     } finally {
         setIsSavingVitals(false);
     }
@@ -546,7 +550,7 @@ export default function WardManagementPage() {
 
   const handleAdmitPatientToWard = async () => {
     if (!selectedWardId || !selectedPendingPatientId || !selectedAvailableBedId || !admissionDoctor.trim() || !admissionDiagnosis.trim()) {
-      toast({ variant: "destructive", title: "Missing Information", description: "Please select a patient, an available bed, and fill in admission details." });
+      toast({ variant: "destructive", title: t('wardManagement.toast.admit.missingInfo'), description: t('wardManagement.toast.admit.missingInfo.desc') });
       return;
     }
     setIsAdmittingPatient(true);
@@ -555,7 +559,7 @@ export default function WardManagementPage() {
     const bedToOccupy = currentWardDetails?.beds.find(b => b.id === selectedAvailableBedId);
 
     if (!patientToAdmit || !bedToOccupy || !currentWardDetails) {
-        toast({ variant: "destructive", title: "Error", description: "Invalid patient or bed selection." });
+        toast({ variant: "destructive", title: t('wardManagement.toast.admit.invalidSelection'), description: t('wardManagement.toast.admit.invalidSelection.desc') });
         setIsAdmittingPatient(false);
         return;
     }
@@ -615,14 +619,14 @@ export default function WardManagementPage() {
         };
 
         setHospitalPendingAdmissions(prev => prev.filter(p => p.id !== selectedPendingPatientId));
-        toast({ title: "Patient Admitted (Mock)", description: `${patientToAdmit.patientName} admitted to ${currentWardDetails.name}, ${bedToOccupy.bedNumber}.` });
+        toast({ title: t('wardManagement.toast.admit.success'), description: t('wardManagement.toast.admit.success.desc', {patientName: patientToAdmit.patientName, wardName: currentWardDetails.name, bedNumber: bedToOccupy.bedNumber}) });
 
         setSelectedPendingPatientId("");
         setSelectedAvailableBedId("");
         setAdmissionDoctor("");
         setAdmissionDiagnosis("");
     } catch (error: any) {
-         toast({ variant: "destructive", title: "Admission Error", description: error.message || "Could not admit patient." });
+         toast({ variant: "destructive", title: t('wardManagement.toast.admit.error'), description: error.message || t('wardManagement.toast.admit.error.desc') });
     } finally {
         setIsAdmittingPatient(false);
     }
@@ -644,10 +648,10 @@ export default function WardManagementPage() {
         if (currentAdmittedPatientFullDetails && mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId]) {
           mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes = [newNoteEntry, ...mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].doctorNotes].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         }
-        toast({title: "Note Saved (Mock)", description: "New doctor's note added."});
+        toast({title: t('wardManagement.toast.noteAdd.success'), description: t('wardManagement.toast.noteAdd.success.desc')});
         setNewDoctorNote("");
     } catch (error: any) {
-         toast({ variant: "destructive", title: "Note Error", description: error.message || "Could not add note." });
+         toast({ variant: "destructive", title: t('wardManagement.toast.noteAdd.error'), description: error.message || t('wardManagement.toast.noteAdd.error.desc') });
     } finally {
         setIsAddingNote(false);
     }
@@ -673,7 +677,7 @@ export default function WardManagementPage() {
   
   const handleAddNewMedicationToModalSchedule = () => {
     if (!newMedName.trim() || !newMedDosage.trim() || !newMedTime.trim()) {
-      toast({ variant: "destructive", title: "Missing Information", description: "Please fill Medication Name, Dosage, and Time." });
+      toast({ variant: "destructive", title: t('wardManagement.toast.medication.addForm.missingInfo'), description: t('wardManagement.toast.medication.addForm.missingInfo.desc') });
       return;
     }
     const newMedItem: MedicationScheduleItem = {
@@ -689,7 +693,7 @@ export default function WardManagementPage() {
     setNewMedDosage("");
     setNewMedTime("");
     setNewMedNotes("");
-    toast({ title: "Medication Added to Schedule", description: `${newMedName} is ready to be saved.` });
+    toast({ title: t('wardManagement.toast.medication.addForm.success'), description: t('wardManagement.toast.medication.addForm.success.desc', {newMedName: newMedName}) });
   };
 
   const handleSaveMedicationUpdates = async () => {
@@ -706,10 +710,10 @@ export default function WardManagementPage() {
             mockAdmittedPatientFullDetailsData[currentAdmittedPatientFullDetails.admissionId].medicationSchedule = medicationScheduleInModal;
         }
 
-        toast({title: "Medication Log Updated (Mock)", description: "Medication schedule has been updated."});
+        toast({title: t('wardManagement.toast.medication.save.success'), description: t('wardManagement.toast.medication.save.success.desc')});
         setIsMedicationModalOpen(false);
     } catch (error: any) {
-        toast({ variant: "destructive", title: "Medication Error", description: error.message || "Could not update medication schedule." });
+        toast({ variant: "destructive", title: t('wardManagement.toast.medication.save.error'), description: error.message || t('wardManagement.toast.medication.save.error.desc') });
     } finally {
         setIsSavingMedicationUpdates(false);
     }
@@ -723,7 +727,7 @@ export default function WardManagementPage() {
     try {
         console.log("Discharging patient (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1500)); 
-        toast({ title: "Patient Discharged (Mock)", description: `${currentAdmittedPatientFullDetails.name} processed for discharge.` });
+        toast({ title: t('wardManagement.toast.discharge.success'), description: t('wardManagement.toast.discharge.success.desc', {patientName: currentAdmittedPatientFullDetails.name}) });
         
         const admissionIdToDischarge = currentAdmittedPatientFullDetails.admissionId;
         const patientIdToClearFromBed = currentAdmittedPatientFullDetails.patientId;
@@ -749,7 +753,7 @@ export default function WardManagementPage() {
             };
         });
     } catch (error: any) {
-        toast({ variant: "destructive", title: "Discharge Error", description: error.message || "Could not discharge patient." });
+        toast({ variant: "destructive", title: t('wardManagement.toast.discharge.error'), description: error.message || t('wardManagement.toast.discharge.error.desc') });
     } finally {
         setIsDischarging(false);
     }
@@ -766,15 +770,15 @@ export default function WardManagementPage() {
 
   const handleConfirmTransfer = async () => {
     if (!currentAdmittedPatientFullDetails || !selectedWardId || !transferType || !transferReason.trim()) {
-        toast({ variant: "destructive", title: "Missing Information", description: "Please select transfer type, destination (if applicable), and provide a reason." });
+        toast({ variant: "destructive", title: t('wardManagement.toast.transfer.missingInfo'), description: t('wardManagement.toast.transfer.missingInfo.desc') });
         return;
     }
     if (transferType === "internal_ward" && !targetInternalWardId) {
-        toast({ variant: "destructive", title: "Missing Destination", description: "Please select a destination ward." });
+        toast({ variant: "destructive", title: t('wardManagement.toast.transfer.missingDestination.ward'), description: t('wardManagement.toast.transfer.missingDestination.ward.desc') });
         return;
     }
     if (transferType === "external_hospital" && !externalHospitalName.trim()) {
-        toast({ variant: "destructive", title: "Missing Destination", description: "Please enter the destination hospital name." });
+        toast({ variant: "destructive", title: t('wardManagement.toast.transfer.missingDestination.hospital'), description: t('wardManagement.toast.transfer.missingDestination.hospital.desc') });
         return;
     }
 
@@ -793,9 +797,9 @@ export default function WardManagementPage() {
         console.log("Transferring patient (mock):", payload);
         await new Promise(resolve => setTimeout(resolve, 1500)); 
         const destinationName = transferType === "internal_ward" 
-            ? allWardsData.find(w => w.id === targetInternalWardId)?.name || "Selected Ward" 
+            ? allWardsData.find(w => w.id === targetInternalWardId)?.name || t('wardManagement.selectedWard')
             : externalHospitalName;
-        toast({ title: "Patient Transfer Initiated (Mock)", description: `Transfer for ${currentAdmittedPatientFullDetails.name} to ${destinationName} initiated.` });
+        toast({ title: t('wardManagement.toast.transfer.success'), description: t('wardManagement.toast.transfer.success.desc', {patientName: currentAdmittedPatientFullDetails.name, destinationName: destinationName}) });
         
         const admissionIdToTransfer = currentAdmittedPatientFullDetails.admissionId;
         const patientIdToClearFromBed = currentAdmittedPatientFullDetails.patientId;
@@ -821,7 +825,7 @@ export default function WardManagementPage() {
         
         setIsTransferModalOpen(false);
     } catch (error: any) {
-        toast({ variant: "destructive", title: "Transfer Error", description: error.message || "Could not initiate transfer." });
+        toast({ variant: "destructive", title: t('wardManagement.toast.transfer.error'), description: error.message || t('wardManagement.toast.transfer.error.desc') });
     } finally {
         setIsProcessingTransfer(false);
     }
@@ -832,29 +836,29 @@ export default function WardManagementPage() {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <BedDouble className="h-8 w-8" /> Ward Management
+            <BedDouble className="h-8 w-8" /> {t('wardManagement.pageTitle')}
           </h1>
         </div>
 
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Hospital className="h-6 w-6 text-primary"/>Select Ward & View Dashboard</CardTitle>
-            <CardDescription>Choose a ward to view its specific occupancy, patient list, and bed status.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Hospital className="h-6 w-6 text-primary"/>{t('wardManagement.selectWardCard.title')}</CardTitle>
+            <CardDescription>{t('wardManagement.selectWardCard.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="max-w-md">
-              <Label htmlFor="selectWard">Select Ward</Label>
+              <Label htmlFor="selectWard">{t('wardManagement.selectWard.label')}</Label>
               <Select 
                 value={selectedWardId} 
                 onValueChange={setSelectedWardId}
                 disabled={isLoadingAllWards || isLoadingCurrentWardDetails || isAdmittingPatient}
               >
                 <SelectTrigger id="selectWard">
-                  <SelectValue placeholder="Select a ward..." />
+                  <SelectValue placeholder={t('wardManagement.selectWard.placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoadingAllWards && <SelectItem value="loading" disabled><Loader2 className="inline mr-2 h-4 w-4 animate-spin"/>Loading wards...</SelectItem>}
-                  {!isLoadingAllWards && allWardsData.length === 0 && <SelectItem value="no-wards" disabled>No wards found.</SelectItem>}
+                  {isLoadingAllWards && <SelectItem value="loading" disabled><Loader2 className="inline mr-2 h-4 w-4 animate-spin"/>{t('wardManagement.selectWard.loading')}</SelectItem>}
+                  {!isLoadingAllWards && allWardsData.length === 0 && <SelectItem value="no-wards" disabled>{t('wardManagement.selectWard.noWards')}</SelectItem>}
                   {!isLoadingAllWards && allWardsData.map(ward => (
                     <SelectItem key={ward.id} value={ward.id}>{ward.name}</SelectItem>
                   ))}
@@ -864,28 +868,28 @@ export default function WardManagementPage() {
 
             {isLoadingCurrentWardDetails && selectedWardId && (
                  <div className="flex items-center justify-center py-6 text-muted-foreground">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" /> Loading details for {allWardsData.find(w => w.id === selectedWardId)?.name || 'selected ward'}...
+                    <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" /> {t('wardManagement.loadingWardDetails', {wardName: allWardsData.find(w => w.id === selectedWardId)?.name || t('wardManagement.selectedWard')})}...
                 </div>
             )}
 
             {currentWardDetails && !isLoadingCurrentWardDetails && (
               <div className="mt-4 p-4 border rounded-lg bg-muted/30 space-y-3">
-                <h3 className="text-lg font-semibold">{currentWardDetails.name} - Dashboard</h3>
-                 <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+                 <h3 className="text-lg font-semibold">{t('wardManagement.dashboard.title', {wardName: currentWardDetails.name})}</h3>
+                <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
                     <div className="lg:w-3/5 space-y-3">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
-                        <div><strong>Total Beds:</strong> {currentWardDetails.totalBeds}</div>
-                        <div><strong>Occupied:</strong> {currentWardDetails.occupiedBeds}</div>
-                        <div><strong>Available:</strong> {currentWardDetails.availableBeds}</div>
-                        <div><strong>Patients in Ward:</strong> {currentWardDetails.patients.length}</div>
+                        <div><strong>{t('wardManagement.dashboard.totalBeds')}</strong> {currentWardDetails.totalBeds}</div>
+                        <div><strong>{t('wardManagement.dashboard.occupied')}</strong> {currentWardDetails.occupiedBeds}</div>
+                        <div><strong>{t('wardManagement.dashboard.available')}</strong> {currentWardDetails.availableBeds}</div>
+                        <div><strong>{t('wardManagement.dashboard.patientsInWard')}</strong> {currentWardDetails.patients.length}</div>
                         </div>
-                        <div className="text-sm"><strong>Occupancy:</strong> {currentWardDetails.occupancyRate.toFixed(1)}%</div>
+                        <div className="text-sm"><strong>{t('wardManagement.dashboard.occupancy')}</strong> {currentWardDetails.occupancyRate.toFixed(1)}%</div>
                         <Progress value={currentWardDetails.occupancyRate} className="h-3 mt-1" />
                     </div>
-                    <div className="lg:w-2/5">
+                     <div className="lg:w-2/5">
                         {longestStayPatients.length > 0 && (
                         <div>
-                            <h4 className="text-sm font-semibold mb-1.5">Longest Stays (Top 5)</h4>
+                            <h4 className="text-sm font-semibold mb-1.5">{t('wardManagement.dashboard.longestStays')}</h4>
                             <ol className="list-decimal list-inside text-xs space-y-1 text-muted-foreground">
                             {longestStayPatients.map(p => (
                                 <li key={p.admissionId}>{p.name} - {p.duration}</li>
@@ -894,7 +898,7 @@ export default function WardManagementPage() {
                         </div>
                         )}
                         {longestStayPatients.length === 0 && !isLoadingCurrentWardDetails && (
-                        <p className="text-xs text-muted-foreground text-center py-2">No patient stay data to display.</p>
+                        <p className="text-xs text-muted-foreground text-center py-2">{t('wardManagement.dashboard.noStayData')}</p>
                         )}
                     </div>
                 </div>
@@ -903,28 +907,28 @@ export default function WardManagementPage() {
              {currentWardDetails && !isLoadingCurrentWardDetails && (
                  <Card className="shadow-sm mt-4">
                     <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center gap-2 text-md"><AlertTriangleIcon className="h-5 w-5 text-orange-500"/> Ward Alerts & Key Tasks</CardTitle>
+                        <CardTitle className="flex items-center gap-2 text-md"><AlertTriangleIcon className="h-5 w-5 text-orange-500"/> {t('wardManagement.alertsCard.title')}</CardTitle>
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-sm">
                         <div className="p-2.5 border rounded-md bg-background text-center shadow-xs">
                             <p className="font-semibold text-lg text-destructive">{currentWardDetails.alerts.criticalLabsPending}</p>
-                            <p className="text-xs text-muted-foreground">Critical Labs Pending</p>
+                            <p className="text-xs text-muted-foreground">{t('wardManagement.alerts.criticalLabs')}</p>
                         </div>
                         <div className="p-2.5 border rounded-md bg-background text-center shadow-xs">
                             <p className="font-semibold text-lg text-amber-600">{currentWardDetails.alerts.medicationsOverdue}</p>
-                            <p className="text-xs text-muted-foreground">Meds Overdue</p>
+                            <p className="text-xs text-muted-foreground">{t('wardManagement.alerts.medsOverdue')}</p>
                         </div>
                         <div className="p-2.5 border rounded-md bg-background text-center shadow-xs">
                             <p className="font-semibold text-lg text-blue-600">{currentWardDetails.alerts.vitalsChecksDue}</p>
-                            <p className="text-xs text-muted-foreground">Vitals Checks Due</p>
+                            <p className="text-xs text-muted-foreground">{t('wardManagement.alerts.vitalsDue')}</p>
                         </div>
                         <div className="p-2.5 border rounded-md bg-background text-center shadow-xs">
                             <p className="font-semibold text-lg text-green-600">{currentWardDetails.alerts.newAdmissionOrders}</p>
-                            <p className="text-xs text-muted-foreground">New Admission Orders</p>
+                            <p className="text-xs text-muted-foreground">{t('wardManagement.alerts.newOrders')}</p>
                         </div>
                          <div className="p-2.5 border rounded-md bg-background text-center shadow-xs">
                             <p className="font-semibold text-lg text-purple-600">{currentWardDetails.alerts.pendingDischarges}</p>
-                            <p className="text-xs text-muted-foreground">Pending Discharges</p>
+                            <p className="text-xs text-muted-foreground">{t('wardManagement.alerts.pendingDischarges')}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -937,24 +941,24 @@ export default function WardManagementPage() {
             <Card className="shadow-sm mt-6">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <PlusCircle className="h-5 w-5 text-primary"/> Admit Patient to {currentWardDetails.name}
+                        <PlusCircle className="h-5 w-5 text-primary"/> {t('wardManagement.admitPatientCard.title', {wardName: currentWardDetails.name})}
                     </CardTitle>
-                    <CardDescription>Select a patient from the hospital's pending admissions list and assign them to an available bed in this ward.</CardDescription>
+                    <CardDescription>{t('wardManagement.admitPatientCard.description')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {isLoadingPendingAdmissions ? (
                         <div className="flex items-center justify-center py-4 text-muted-foreground">
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin"/> Loading pending admissions...
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin"/> {t('wardManagement.admitPatient.loadingPending')}
                         </div>
                     ) : hospitalPendingAdmissions.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center">No patients currently pending hospital admission.</p>
+                        <p className="text-sm text-muted-foreground text-center">{t('wardManagement.admitPatient.noPending')}</p>
                     ) : (
                         <>
                             <div className="space-y-1">
-                                <Label htmlFor="selectPendingPatient">Patient to Admit</Label>
+                                <Label htmlFor="selectPendingPatient">{t('wardManagement.admitPatient.selectPatient.label')}</Label>
                                 <Select value={selectedPendingPatientId} onValueChange={setSelectedPendingPatientId} disabled={isAdmittingPatient}>
                                     <SelectTrigger id="selectPendingPatient">
-                                        <SelectValue placeholder="Select patient..." />
+                                        <SelectValue placeholder={t('wardManagement.admitPatient.selectPatient.placeholder')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {hospitalPendingAdmissions.map(p => (
@@ -966,32 +970,32 @@ export default function WardManagementPage() {
                                 </Select>
                             </div>
                             <div className="space-y-1">
-                                <Label htmlFor="selectAvailableBed">Available Bed</Label>
+                                <Label htmlFor="selectAvailableBed">{t('wardManagement.admitPatient.selectBed.label')}</Label>
                                 <Select value={selectedAvailableBedId} onValueChange={setSelectedAvailableBedId} disabled={isAdmittingPatient}>
                                     <SelectTrigger id="selectAvailableBed">
-                                        <SelectValue placeholder="Select an available bed..." />
+                                        <SelectValue placeholder={t('wardManagement.admitPatient.selectBed.placeholder')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {currentWardDetails.beds.filter(b => b.status === "Available").map(bed => (
                                             <SelectItem key={bed.id} value={bed.id}>{bed.bedNumber}</SelectItem>
                                         ))}
                                         {currentWardDetails.beds.filter(b => b.status === "Available").length === 0 && (
-                                            <SelectItem value="no-beds" disabled>No beds available.</SelectItem>
+                                            <SelectItem value="no-beds" disabled>{t('wardManagement.admitPatient.selectBed.noBeds')}</SelectItem>
                                         )}
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-1">
-                                <Label htmlFor="admissionDoctor">Admitting Doctor</Label>
-                                <Input id="admissionDoctor" value={admissionDoctor} onChange={(e) => setAdmissionDoctor(e.target.value)} placeholder="Doctor's name" disabled={isAdmittingPatient}/>
+                                <Label htmlFor="admissionDoctor">{t('wardManagement.admitPatient.doctor.label')}</Label>
+                                <Input id="admissionDoctor" value={admissionDoctor} onChange={(e) => setAdmissionDoctor(e.target.value)} placeholder={t('wardManagement.admitPatient.doctor.placeholder')} disabled={isAdmittingPatient}/>
                             </div>
                             <div className="space-y-1">
-                                <Label htmlFor="admissionDiagnosis">Primary Diagnosis/Reason for Admission</Label>
+                                <Label htmlFor="admissionDiagnosis">{t('wardManagement.admitPatient.diagnosis.label')}</Label>
                                 <Textarea 
                                     id="admissionDiagnosis" 
                                     value={admissionDiagnosis} 
                                     onChange={(e) => setAdmissionDiagnosis(e.target.value)} 
-                                    placeholder="Enter primary diagnosis" 
+                                    placeholder={t('wardManagement.admitPatient.diagnosis.placeholder')} 
                                     rows={2}
                                     disabled={isAdmittingPatient}
                                 />
@@ -1007,7 +1011,7 @@ export default function WardManagementPage() {
                             className="w-full"
                         >
                             {isAdmittingPatient ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PlusCircle className="mr-2 h-4 w-4"/>}
-                            {isAdmittingPatient ? "Admitting..." : "Admit Patient"}
+                            {isAdmittingPatient ? t('wardManagement.admitPatient.button.loading') : t('wardManagement.admitPatient.button')}
                         </Button>
                     </CardFooter>
                 )}
@@ -1016,19 +1020,19 @@ export default function WardManagementPage() {
             <div className="grid lg:grid-cols-3 gap-6 items-start mt-6">
                 <Card className="shadow-sm lg:col-span-1">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/>Patients in {currentWardDetails.name}</CardTitle>
-                        <CardDescription>Click on a patient to view detailed care information.</CardDescription>
+                        <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/>{t('wardManagement.patientsInWardCard.title', {wardName: currentWardDetails.name})}</CardTitle>
+                        <CardDescription>{t('wardManagement.patientsInWardCard.description')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {currentWardDetails.patients.length > 0 ? (
                         <Table>
                             <TableHeader>
                             <TableRow>
-                                <TableHead>Patient Name</TableHead>
-                                <TableHead>Bed</TableHead>
-                                <TableHead>Stay Duration</TableHead>
-                                <TableHead>Diagnosis</TableHead>
-                                <TableHead>Key Alerts</TableHead>
+                                <TableHead>{t('wardManagement.patientsInWard.table.name')}</TableHead>
+                                <TableHead>{t('wardManagement.patientsInWard.table.bed')}</TableHead>
+                                <TableHead>{t('wardManagement.patientsInWard.table.stay')}</TableHead>
+                                <TableHead>{t('wardManagement.patientsInWard.table.diagnosis')}</TableHead>
+                                <TableHead>{t('wardManagement.patientsInWard.table.alerts')}</TableHead>
                             </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1056,14 +1060,14 @@ export default function WardManagementPage() {
                             </TableBody>
                         </Table>
                         ) : (
-                        <p className="text-center py-6 text-muted-foreground">No patients currently admitted to this ward.</p>
+                        <p className="text-center py-6 text-muted-foreground">{t('wardManagement.patientsInWard.empty')}</p>
                         )}
                     </CardContent>
                 </Card>
                 
-                <Card className="shadow-sm lg:col-span-1">
+                 <Card className="shadow-sm lg:col-span-1">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary"/>Longest Stays in {currentWardDetails.name}</CardTitle>
+                        <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary"/>{t('wardManagement.dashboard.longestStays')} in {currentWardDetails.name}</CardTitle>
                         <CardDescription>Top 5 patients with the longest current admission.</CardDescription>
                     </CardHeader>
                      <CardContent>
@@ -1074,15 +1078,15 @@ export default function WardManagementPage() {
                                 ))}
                             </ol>
                         ) : (
-                            <p className="text-xs text-muted-foreground text-center py-2">No patient stay data to display.</p>
+                            <p className="text-xs text-muted-foreground text-center py-2">{t('wardManagement.dashboard.noStayData')}</p>
                         )}
                     </CardContent>
                 </Card>
 
                 <Card className="shadow-sm lg:col-span-1">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Bed className="h-5 w-5 text-primary"/>Bed Status - {currentWardDetails.name}</CardTitle>
-                        <CardDescription>Overview of all beds in this ward.</CardDescription>
+                        <CardTitle className="flex items-center gap-2"><Bed className="h-5 w-5 text-primary"/>{t('wardManagement.bedStatusCard.title', {wardName: currentWardDetails.name})}</CardTitle>
+                        <CardDescription>{t('wardManagement.bedStatusCard.description')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-80 overflow-y-auto pr-1">
@@ -1118,19 +1122,19 @@ export default function WardManagementPage() {
         {selectedPatientForDetails && (
           <Card className="lg:col-span-full shadow-sm mt-6">
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><UserCheck className="h-6 w-6 text-primary"/>In-Patient Care: {currentAdmittedPatientFullDetails?.name || selectedPatientForDetails.name}</CardTitle>
-                <CardDescription>Details for {currentAdmittedPatientFullDetails?.bedNumber || selectedPatientForDetails.bedNumber} in {currentWardDetails?.name}.</CardDescription>
+                <CardTitle className="flex items-center gap-2"><UserCheck className="h-6 w-6 text-primary"/>{t('wardManagement.patientCareCard.title', {patientName: currentAdmittedPatientFullDetails?.name || selectedPatientForDetails.name})}</CardTitle>
+                <CardDescription>{t('wardManagement.patientCareCard.description', {bedNumber: currentAdmittedPatientFullDetails?.bedNumber || selectedPatientForDetails.bedNumber, wardName: currentWardDetails?.name || ""})}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {isLoadingSelectedPatientDetails && (
                 <div className="flex items-center justify-center py-10 text-muted-foreground">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /> Loading patient care details...
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" /> {t('wardManagement.patientCare.loading')}
                 </div>
               )}
               {!isLoadingSelectedPatientDetails && currentAdmittedPatientFullDetails && (
                 <div className="grid md:grid-cols-3 gap-6 items-start">
                   <div className="md:col-span-1 space-y-4">
-                    <h4 className="text-md font-semibold flex items-center"><HistoryIcon className="mr-2 h-4 w-4 text-primary" /> Recent Visit History (Last 10)</h4>
+                    <h4 className="text-md font-semibold flex items-center"><HistoryIcon className="mr-2 h-4 w-4 text-primary" /> {t('wardManagement.patientCare.visitHistory.title')}</h4>
                     {currentAdmittedPatientFullDetails.visitHistory && currentAdmittedPatientFullDetails.visitHistory.length > 0 ? (
                         <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 border rounded-md p-3 bg-muted/10">
                             {currentAdmittedPatientFullDetails.visitHistory.slice(0, 10).map(visit => (
@@ -1142,30 +1146,30 @@ export default function WardManagementPage() {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-xs text-muted-foreground text-center py-2">No prior visit history available.</p>
+                        <p className="text-xs text-muted-foreground text-center py-2">{t('wardManagement.patientCare.visitHistory.empty')}</p>
                     )}
                   </div>
 
                   <div className="md:col-span-2 space-y-6">
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                         <Card className="shadow-xs">
-                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Allergies</CardTitle></CardHeader>
+                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">{t('wardManagement.patientCare.allergies.title')}</CardTitle></CardHeader>
                         <CardContent>
                             {currentAdmittedPatientFullDetails.allergies && currentAdmittedPatientFullDetails.allergies.length > 0 ? 
                             currentAdmittedPatientFullDetails.allergies.map(a => <Badge key={a} variant="destructive" className="mr-1 mb-1 text-xs">{a}</Badge>) : 
-                            <p className="text-muted-foreground text-xs">None reported</p>}
+                            <p className="text-muted-foreground text-xs">{t('wardManagement.patientCare.allergies.none')}</p>}
                         </CardContent>
                         </Card>
                         <Card className="shadow-xs">
-                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Chronic Conditions</CardTitle></CardHeader>
+                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">{t('wardManagement.patientCare.chronicConditions.title')}</CardTitle></CardHeader>
                         <CardContent>
                             {currentAdmittedPatientFullDetails.chronicConditions && currentAdmittedPatientFullDetails.chronicConditions.length > 0 ? 
                             currentAdmittedPatientFullDetails.chronicConditions.map(c => <Badge key={c} variant="outline" className="mr-1 mb-1 text-xs">{c}</Badge>) : 
-                            <p className="text-muted-foreground text-xs">None reported</p>}
+                            <p className="text-muted-foreground text-xs">{t('wardManagement.patientCare.chronicConditions.none')}</p>}
                         </CardContent>
                         </Card>
                         <Card className="shadow-xs">
-                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Code Status</CardTitle></CardHeader>
+                        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">{t('wardManagement.patientCare.codeStatus.title')}</CardTitle></CardHeader>
                         <CardContent>
                             <Badge variant={currentAdmittedPatientFullDetails.codeStatus === "DNR" ? "destructive" : "secondary"} className="text-xs">
                                 {currentAdmittedPatientFullDetails.codeStatus || "N/A"}
@@ -1176,26 +1180,26 @@ export default function WardManagementPage() {
                     <Separator/>
 
                     <div className="space-y-3 p-4 border rounded-md bg-muted/20">
-                        <h4 className="text-md font-semibold mb-2 flex items-center"><Activity className="mr-2 h-4 w-4 text-primary" /> Current Vitals</h4>
+                        <h4 className="text-md font-semibold mb-2 flex items-center"><Activity className="mr-2 h-4 w-4 text-primary" /> {t('wardManagement.patientCare.vitals.title')}</h4>
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                             <div className="space-y-1">
-                                <Label htmlFor="wardBodyTemperature" className="flex items-center text-xs"><Thermometer className="mr-1.5 h-3 w-3" />Temp (°C)</Label>
-                                <Input id="wardBodyTemperature" value={editableVitals.bodyTemperature || ""} onChange={(e) => handleEditableVitalsChange("bodyTemperature", e.target.value)} placeholder="e.g., 37.5" disabled={isSavingVitals} />
+                                <Label htmlFor="wardBodyTemperature" className="flex items-center text-xs"><Thermometer className="mr-1.5 h-3 w-3" />{t('wardManagement.patientCare.vitals.temp.label')}</Label>
+                                <Input id="wardBodyTemperature" value={editableVitals.bodyTemperature || ""} onChange={(e) => handleEditableVitalsChange("bodyTemperature", e.target.value)} placeholder={t('wardManagement.patientCare.vitals.temp.placeholder')} disabled={isSavingVitals} />
                             </div>
                             <div className="space-y-1">
-                                <Label htmlFor="wardWeight" className="flex items-center text-xs"><Weight className="mr-1.5 h-3 w-3" />Weight (kg)</Label>
-                                <Input id="wardWeight" value={editableVitals.weightKg || ""} onChange={(e) => handleEditableVitalsChange("weightKg", e.target.value)} placeholder="e.g., 70" disabled={isSavingVitals} />
+                                <Label htmlFor="wardWeight" className="flex items-center text-xs"><Weight className="mr-1.5 h-3 w-3" />{t('wardManagement.patientCare.vitals.weight.label')}</Label>
+                                <Input id="wardWeight" value={editableVitals.weightKg || ""} onChange={(e) => handleEditableVitalsChange("weightKg", e.target.value)} placeholder={t('wardManagement.patientCare.vitals.weight.placeholder')} disabled={isSavingVitals} />
                             </div>
                             <div className="space-y-1">
-                                <Label htmlFor="wardHeight" className="flex items-center text-xs"><Ruler className="mr-1.5 h-3 w-3" />Height (cm)</Label>
-                                <Input id="wardHeight" value={editableVitals.heightCm || ""} onChange={(e) => handleEditableVitalsChange("heightCm", e.target.value)} placeholder="e.g., 175" disabled={isSavingVitals} />
+                                <Label htmlFor="wardHeight" className="flex items-center text-xs"><Ruler className="mr-1.5 h-3 w-3" />{t('wardManagement.patientCare.vitals.height.label')}</Label>
+                                <Input id="wardHeight" value={editableVitals.heightCm || ""} onChange={(e) => handleEditableVitalsChange("heightCm", e.target.value)} placeholder={t('wardManagement.patientCare.vitals.height.placeholder')} disabled={isSavingVitals} />
                             </div>
                             <div className="space-y-1">
-                                <Label htmlFor="wardBloodPressure" className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />BP (mmHg)</Label>
-                                <Input id="wardBloodPressure" value={editableVitals.bloodPressure || ""} onChange={(e) => handleEditableVitalsChange("bloodPressure", e.target.value)} placeholder="e.g., 120/80" disabled={isSavingVitals} />
+                                <Label htmlFor="wardBloodPressure" className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />{t('wardManagement.patientCare.vitals.bp.label')}</Label>
+                                <Input id="wardBloodPressure" value={editableVitals.bloodPressure || ""} onChange={(e) => handleEditableVitalsChange("bloodPressure", e.target.value)} placeholder={t('wardManagement.patientCare.vitals.bp.placeholder')} disabled={isSavingVitals} />
                             </div>
                             <div className="space-y-1">
-                                <Label className="flex items-center text-xs"><Sigma className="mr-1.5 h-3 w-3" />BMI (kg/m²)</Label>
+                                <Label className="flex items-center text-xs"><Sigma className="mr-1.5 h-3 w-3" />{t('wardManagement.patientCare.vitals.bmi.label')}</Label>
                                 <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-background min-w-[150px]">
                                     <span className="text-sm font-medium">{calculatedBmi || "N/A"}</span>
                                     {bmiDisplay && bmiDisplay.status !== "N/A" && (
@@ -1204,7 +1208,7 @@ export default function WardManagementPage() {
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <Label className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />BP Status</Label>
+                                <Label className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />{t('wardManagement.patientCare.vitals.bpStatus.label')}</Label>
                                 <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-background min-w-[150px]">
                                     {bpDisplay && bpDisplay.status !== "N/A" && bpDisplay.status !== "Invalid" && (
                                         <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", bpDisplay.colorClass, bpDisplay.textColorClass)}>{bpDisplay.status}</Badge>
@@ -1217,43 +1221,43 @@ export default function WardManagementPage() {
                         </div>
                         <Button size="sm" onClick={handleSaveVitals} disabled={isSavingVitals || !currentAdmittedPatientFullDetails} className="mt-2">
                             {isSavingVitals ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
-                            Save Vitals
+                            {t('wardManagement.patientCare.vitals.saveButton')}
                         </Button>
                     </div>
                     <Separator />
                     
                     <div className="grid md:grid-cols-2 gap-6">
                         <div>
-                            <h4 className="text-md font-semibold mb-2 flex items-center"><ClipboardCheck className="mr-2 h-4 w-4 text-primary" /> Recent Key Lab Summary</h4>
-                            <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md min-h-[60px] whitespace-pre-wrap">{currentAdmittedPatientFullDetails.recentLabSummary || "No recent lab summary available."}</p>
+                            <h4 className="text-md font-semibold mb-2 flex items-center"><ClipboardCheck className="mr-2 h-4 w-4 text-primary" /> {t('wardManagement.patientCare.labSummary.title')}</h4>
+                            <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md min-h-[60px] whitespace-pre-wrap">{currentAdmittedPatientFullDetails.recentLabSummary || t('wardManagement.patientCare.labSummary.empty')}</p>
                         </div>
                         <div>
-                            <h4 className="text-md font-semibold mb-2 flex items-center"><Layers className="mr-2 h-4 w-4 text-primary" /> Recent Key Imaging Summary</h4>
-                            <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md min-h-[60px] whitespace-pre-wrap">{currentAdmittedPatientFullDetails.recentImagingSummary || "No recent imaging summary available."}</p>
+                            <h4 className="text-md font-semibold mb-2 flex items-center"><Layers className="mr-2 h-4 w-4 text-primary" /> {t('wardManagement.patientCare.imagingSummary.title')}</h4>
+                            <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md min-h-[60px] whitespace-pre-wrap">{currentAdmittedPatientFullDetails.recentImagingSummary || t('wardManagement.patientCare.imagingSummary.empty')}</p>
                         </div>
                     </div>
                     <Separator />
 
                     <div>
-                        <h4 className="text-md font-semibold mb-2 flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" /> Treatment Plan Summary</h4>
+                        <h4 className="text-md font-semibold mb-2 flex items-center"><FileText className="mr-2 h-4 w-4 text-primary" /> {t('wardManagement.patientCare.treatmentPlan.title')}</h4>
                         <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md whitespace-pre-wrap">{currentAdmittedPatientFullDetails.treatmentPlan}</p>
                     </div>
                     <Separator />
 
                     <div>
                         <div className="flex justify-between items-center mb-2">
-                            <h4 className="text-md font-semibold flex items-center"><Pill className="mr-2 h-4 w-4 text-primary" /> Medication Schedule</h4>
+                            <h4 className="text-md font-semibold flex items-center"><Pill className="mr-2 h-4 w-4 text-primary" /> {t('wardManagement.patientCare.medication.title')}</h4>
                             <Dialog open={isMedicationModalOpen} onOpenChange={(open) => { if(!open) {setNewMedName(""); setNewMedDosage(""); setNewMedTime(""); setNewMedNotes("");} setIsMedicationModalOpen(open);}}>
                                 <DialogTrigger asChild>
                                     <Button variant="outline" size="sm" onClick={handleOpenMedicationModal} disabled={isSavingMedicationUpdates || isDischarging || isProcessingTransfer || isAddingNote || isSavingVitals}>
-                                    <Edit className="mr-2 h-3 w-3" /> Manage Medication Log
+                                    <Edit className="mr-2 h-3 w-3" /> {t('wardManagement.patientCare.medication.manageButton')}
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-2xl"> 
                                     <DialogHeader>
-                                    <DialogTitle>Manage Medication Log for {currentAdmittedPatientFullDetails.name}</DialogTitle>
+                                    <DialogTitle>{t('wardManagement.patientCare.medicationModal.title', {patientName: currentAdmittedPatientFullDetails.name})}</DialogTitle>
                                     <DialogDescription>
-                                        Update status, edit details, or add new medications to the schedule.
+                                        {t('wardManagement.patientCare.medicationModal.description')}
                                     </DialogDescription>
                                     </DialogHeader>
                                     <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
@@ -1261,77 +1265,77 @@ export default function WardManagementPage() {
                                             <div key={med.medicationItemId} className="p-3 border rounded-md space-y-3 bg-background shadow-sm">
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                     <div className="space-y-1">
-                                                        <Label htmlFor={`medName-${index}`} className="text-xs">Medication</Label>
+                                                        <Label htmlFor={`medName-${index}`} className="text-xs">{t('wardManagement.patientCare.medicationModal.medication.label')}</Label>
                                                         <Input id={`medName-${index}`} value={med.medication} onChange={(e) => handleMedicationItemChangeInModal(index, "medication", e.target.value)} disabled={isSavingMedicationUpdates} />
                                                     </div>
                                                     <div className="space-y-1">
-                                                        <Label htmlFor={`medDosage-${index}`} className="text-xs">Dosage</Label>
+                                                        <Label htmlFor={`medDosage-${index}`} className="text-xs">{t('wardManagement.patientCare.medicationModal.dosage.label')}</Label>
                                                         <Input id={`medDosage-${index}`} value={med.dosage} onChange={(e) => handleMedicationItemChangeInModal(index, "dosage", e.target.value)} disabled={isSavingMedicationUpdates} />
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end"> 
                                                     <div className="space-y-1">
-                                                        <Label htmlFor={`medTime-${index}`} className="text-xs">Time</Label>
+                                                        <Label htmlFor={`medTime-${index}`} className="text-xs">{t('wardManagement.patientCare.medicationModal.time.label')}</Label>
                                                         <Input id={`medTime-${index}`} value={med.time} onChange={(e) => handleMedicationItemChangeInModal(index, "time", e.target.value)} disabled={isSavingMedicationUpdates} />
                                                     </div>
                                                     <div className="space-y-1">
-                                                        <Label htmlFor={`medStatus-${index}`} className="text-xs">Status</Label>
+                                                        <Label htmlFor={`medStatus-${index}`} className="text-xs">{t('wardManagement.patientCare.medicationModal.status.label')}</Label>
                                                         <Select
                                                             value={med.status}
                                                             onValueChange={(value) => handleMedicationItemChangeInModal(index, "status", value as MedicationScheduleItem["status"])}
                                                             disabled={isSavingMedicationUpdates}
                                                         >
                                                             <SelectTrigger id={`medStatus-${index}`} className="h-10 text-sm">
-                                                                <SelectValue placeholder="Status" />
+                                                                <SelectValue placeholder={t('wardManagement.patientCare.medicationModal.status.placeholder')} />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="Pending">Pending</SelectItem>
-                                                                <SelectItem value="Administered">Administered</SelectItem>
-                                                                <SelectItem value="Skipped">Skipped</SelectItem>
+                                                                <SelectItem value="Pending">{t('wardManagement.patientCare.medicationModal.status.pending')}</SelectItem>
+                                                                <SelectItem value="Administered">{t('wardManagement.patientCare.medicationModal.status.administered')}</SelectItem>
+                                                                <SelectItem value="Skipped">{t('wardManagement.patientCare.medicationModal.status.skipped')}</SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <Label htmlFor={`medNotes-${index}`} className="text-xs">Notes/Reason for Change</Label>
-                                                    <Textarea id={`medNotes-${index}`} value={med.notes || ""} onChange={(e) => handleMedicationItemChangeInModal(index, "notes", e.target.value)} placeholder="e.g., Administered by Nurse Jane, Patient refused..." rows={2} disabled={isSavingMedicationUpdates} />
+                                                    <Label htmlFor={`medNotes-${index}`} className="text-xs">{t('wardManagement.patientCare.medicationModal.notes.label')}</Label>
+                                                    <Textarea id={`medNotes-${index}`} value={med.notes || ""} onChange={(e) => handleMedicationItemChangeInModal(index, "notes", e.target.value)} placeholder={t('wardManagement.patientCare.medicationModal.notes.placeholder')} rows={2} disabled={isSavingMedicationUpdates} />
                                                 </div>
                                             </div>
                                         ))}
-                                        {medicationScheduleInModal.length === 0 && <p className="text-sm text-muted-foreground text-center">No medications currently scheduled.</p>}
+                                        {medicationScheduleInModal.length === 0 && <p className="text-sm text-muted-foreground text-center">{t('wardManagement.patientCare.medicationModal.empty')}</p>}
                                         
                                         <Separator className="my-4" />
                                         
                                         <div className="p-3 border rounded-md space-y-3 bg-muted/30">
-                                            <h5 className="font-semibold text-md flex items-center gap-2"><PlusCircle className="h-5 w-5 text-primary" />Add New Medication to Schedule</h5>
+                                            <h5 className="font-semibold text-md flex items-center gap-2"><PlusCircle className="h-5 w-5 text-primary" />{t('wardManagement.patientCare.medicationModal.addNew.title')}</h5>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 <div className="space-y-1">
-                                                    <Label htmlFor="newMedName" className="text-xs">Medication Name <span className="text-destructive">*</span></Label>
-                                                    <Input id="newMedName" value={newMedName} onChange={(e) => setNewMedName(e.target.value)} placeholder="e.g., Amoxicillin" disabled={isSavingMedicationUpdates}/>
+                                                    <Label htmlFor="newMedName" className="text-xs">{t('wardManagement.patientCare.medicationModal.addNew.name.label')} <span className="text-destructive">*</span></Label>
+                                                    <Input id="newMedName" value={newMedName} onChange={(e) => setNewMedName(e.target.value)} placeholder={t('wardManagement.patientCare.medicationModal.addNew.name.placeholder')} disabled={isSavingMedicationUpdates}/>
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <Label htmlFor="newMedDosage" className="text-xs">Dosage <span className="text-destructive">*</span></Label>
-                                                    <Input id="newMedDosage" value={newMedDosage} onChange={(e) => setNewMedDosage(e.target.value)} placeholder="e.g., 500mg PO" disabled={isSavingMedicationUpdates}/>
+                                                    <Label htmlFor="newMedDosage" className="text-xs">{t('wardManagement.patientCare.medicationModal.addNew.dosage.label')} <span className="text-destructive">*</span></Label>
+                                                    <Input id="newMedDosage" value={newMedDosage} onChange={(e) => setNewMedDosage(e.target.value)} placeholder={t('wardManagement.patientCare.medicationModal.addNew.dosage.placeholder')} disabled={isSavingMedicationUpdates}/>
                                                 </div>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label htmlFor="newMedTime" className="text-xs">Time <span className="text-destructive">*</span></Label>
-                                                <Input id="newMedTime" value={newMedTime} onChange={(e) => setNewMedTime(e.target.value)} placeholder="e.g., 08:00, TID, PRN" disabled={isSavingMedicationUpdates}/>
+                                                <Label htmlFor="newMedTime" className="text-xs">{t('wardManagement.patientCare.medicationModal.addNew.time.label')} <span className="text-destructive">*</span></Label>
+                                                <Input id="newMedTime" value={newMedTime} onChange={(e) => setNewMedTime(e.target.value)} placeholder={t('wardManagement.patientCare.medicationModal.addNew.time.placeholder')} disabled={isSavingMedicationUpdates}/>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label htmlFor="newMedNotes" className="text-xs">Notes/Reason for Addition</Label>
-                                                <Textarea id="newMedNotes" value={newMedNotes} onChange={(e) => setNewMedNotes(e.target.value)} placeholder="e.g., Started for new infection" rows={2} disabled={isSavingMedicationUpdates}/>
+                                                <Label htmlFor="newMedNotes" className="text-xs">{t('wardManagement.patientCare.medicationModal.addNew.notes.label')}</Label>
+                                                <Textarea id="newMedNotes" value={newMedNotes} onChange={(e) => setNewMedNotes(e.target.value)} placeholder={t('wardManagement.patientCare.medicationModal.addNew.notes.placeholder')} rows={2} disabled={isSavingMedicationUpdates}/>
                                             </div>
                                             <Button type="button" size="sm" variant="outline" onClick={handleAddNewMedicationToModalSchedule} disabled={isSavingMedicationUpdates || !newMedName.trim() || !newMedDosage.trim() || !newMedTime.trim()}>
-                                                <PlusCircle className="mr-2 h-4 w-4"/> Add to Current Schedule
+                                                <PlusCircle className="mr-2 h-4 w-4"/> {t('wardManagement.patientCare.medicationModal.addNew.addButton')}
                                             </Button>
                                         </div>
                                     </div>
                                     <DialogFooter>
-                                    <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingMedicationUpdates}>Cancel</Button></DialogClose>
+                                    <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingMedicationUpdates}>{t('patientRegistration.quickRegModal.cancelButton')}</Button></DialogClose>
                                     <Button onClick={handleSaveMedicationUpdates} disabled={isSavingMedicationUpdates}>
                                         {isSavingMedicationUpdates ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                        Save All Changes to Medication Log
+                                        {t('wardManagement.patientCare.medicationModal.saveButton')}
                                     </Button>
                                     </DialogFooter>
                                 </DialogContent>
@@ -1341,9 +1345,9 @@ export default function WardManagementPage() {
                             <Table>
                             <TableHeader>
                                 <TableRow>
-                                <TableHead className="text-xs">Medication</TableHead>
-                                <TableHead className="text-xs">Time</TableHead>
-                                <TableHead className="text-xs text-right">Status</TableHead>
+                                <TableHead className="text-xs">{t('wardManagement.patientCare.medication.table.medication')}</TableHead>
+                                <TableHead className="text-xs">{t('wardManagement.patientCare.medication.table.time')}</TableHead>
+                                <TableHead className="text-xs text-right">{t('wardManagement.patientCare.medication.table.status')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1361,102 +1365,102 @@ export default function WardManagementPage() {
                             </TableBody>
                             </Table>
                         ) : (
-                            <p className="text-xs text-muted-foreground text-center py-2">No medication schedule found.</p>
+                            <p className="text-xs text-muted-foreground text-center py-2">{t('wardManagement.patientCare.medication.empty')}</p>
                         )}
                     </div>
                     <Separator />
                     
                     <div>
-                        <h4 className="text-md font-semibold mb-2 flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-primary" /> Doctor's Notes</h4>
+                        <h4 className="text-md font-semibold mb-2 flex items-center"><MessageSquare className="mr-2 h-4 w-4 text-primary" /> {t('wardManagement.patientCare.doctorNotes.title')}</h4>
                         <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
                         {currentAdmittedPatientFullDetails.doctorNotes.length > 0 ? (
                             currentAdmittedPatientFullDetails.doctorNotes.map((note) => (
                                 <div key={note.noteId} className="text-xs p-2 border rounded-md bg-muted/30">
-                                <p className="font-medium">{note.doctor} - <span className="text-muted-foreground">{new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span></p>
+                                <p className="font-medium">{note.doctor} - <span className="text-muted-foreground">{new Date(note.date).toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')} {new Date(note.date).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</span></p>
                                 <p className="mt-0.5 whitespace-pre-wrap">{note.note}</p>
                                 </div>
                             ))
                         ) : (
-                            <p className="text-xs text-muted-foreground text-center py-2">No notes recorded yet.</p>
+                            <p className="text-xs text-muted-foreground text-center py-2">{t('wardManagement.patientCare.doctorNotes.empty')}</p>
                         )}
                         </div>
-                        <Textarea placeholder="Add new note..." className="mt-2 text-xs" rows={2} value={newDoctorNote} onChange={(e) => setNewDoctorNote(e.target.value)} disabled={isAddingNote}/>
+                        <Textarea placeholder={t('wardManagement.patientCare.doctorNotes.placeholder')} className="mt-2 text-xs" rows={2} value={newDoctorNote} onChange={(e) => setNewDoctorNote(e.target.value)} disabled={isAddingNote}/>
                         <Button variant="outline" size="sm" className="mt-2 w-full" onClick={handleAddNote} disabled={isAddingNote || !newDoctorNote.trim() || isDischarging || isProcessingTransfer || isSavingMedicationUpdates || isSavingVitals}>
                         {isAddingNote ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                        {isAddingNote ? "Adding..." : "Add Note"}
+                        {isAddingNote ? t('wardManagement.patientCare.doctorNotes.addButton.loading') : t('wardManagement.patientCare.doctorNotes.addButton')}
                         </Button>
                     </div>
                   </div>
                 </div>
               )}
               {!isLoadingSelectedPatientDetails && !currentAdmittedPatientFullDetails && selectedPatientForDetails && (
-                 <p className="text-center py-6 text-muted-foreground">Could not load full details for this patient.</p>
+                 <p className="text-center py-6 text-muted-foreground">{t('wardManagement.patientCareCard.errorLoading')}</p>
               )}
             </CardContent>
             {currentAdmittedPatientFullDetails && (
                 <CardFooter className="border-t pt-4 flex-col sm:flex-row gap-2">
                     <Button variant="outline" className="w-full sm:w-auto" onClick={handleDischarge} disabled={isDischarging || isProcessingTransfer || isAddingNote || isSavingMedicationUpdates || isSavingVitals}>
                         {isDischarging ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogOutIcon className="mr-2 h-4 w-4" />}
-                        {isDischarging ? "Discharging..." : `Discharge ${currentAdmittedPatientFullDetails.name.split(' ')[0]}`}
+                        {isDischarging ? t('wardManagement.patientCare.dischargeButton.loading') : t('wardManagement.patientCare.dischargeButton', {patientName: currentAdmittedPatientFullDetails.name.split(' ')[0]})}
                     </Button>
                     
                     <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
                         <DialogTrigger asChild>
                             <Button variant="outline" className="w-full sm:w-auto" onClick={handleOpenTransferModal} disabled={isDischarging || isProcessingTransfer || isAddingNote || isSavingMedicationUpdates || isSavingVitals}>
-                                <ArrowRightLeft className="mr-2 h-4 w-4" /> Transfer {currentAdmittedPatientFullDetails.name.split(' ')[0]}
+                                <ArrowRightLeft className="mr-2 h-4 w-4" /> {t('wardManagement.patientCare.transferButton', {patientName: currentAdmittedPatientFullDetails.name.split(' ')[0]})}
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
-                                <DialogTitle>Transfer Patient: {currentAdmittedPatientFullDetails.name}</DialogTitle>
-                                <DialogDescription>Specify transfer details for the patient.</DialogDescription>
+                                <DialogTitle>{t('wardManagement.patientCare.transferModal.title', {patientName: currentAdmittedPatientFullDetails.name})}</DialogTitle>
+                                <DialogDescription>{t('wardManagement.patientCare.transferModal.description')}</DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="space-y-2">
-                                    <Label>Transfer Type <span className="text-destructive">*</span></Label>
+                                    <Label>{t('wardManagement.patientCare.transferModal.type.label')} <span className="text-destructive">*</span></Label>
                                     <RadioGroup value={transferType} onValueChange={(value) => setTransferType(value as any)} className="flex space-x-4">
                                         <div className="flex items-center space-x-2">
                                             <RadioGroupItem value="internal_ward" id="internal_ward" />
-                                            <Label htmlFor="internal_ward" className="font-normal">Internal Ward</Label>
+                                            <Label htmlFor="internal_ward" className="font-normal">{t('wardManagement.patientCare.transferModal.type.internal')}</Label>
                                         </div>
                                         <div className="flex items-center space-x-2">
                                             <RadioGroupItem value="external_hospital" id="external_hospital" />
-                                            <Label htmlFor="external_hospital" className="font-normal">External Hospital</Label>
+                                            <Label htmlFor="external_hospital" className="font-normal">{t('wardManagement.patientCare.transferModal.type.external')}</Label>
                                         </div>
                                     </RadioGroup>
                                 </div>
                                 {transferType === "internal_ward" && (
                                     <div className="space-y-2">
-                                        <Label htmlFor="targetInternalWard">Destination Ward <span className="text-destructive">*</span></Label>
+                                        <Label htmlFor="targetInternalWard">{t('wardManagement.patientCare.transferModal.destinationWard.label')} <span className="text-destructive">*</span></Label>
                                         <Select value={targetInternalWardId} onValueChange={setTargetInternalWardId} disabled={isLoadingAllWards || isProcessingTransfer}>
                                             <SelectTrigger id="targetInternalWard">
-                                                <SelectValue placeholder="Select destination ward" />
+                                                <SelectValue placeholder={t('wardManagement.patientCare.transferModal.destinationWard.placeholder')} />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {allWardsData.filter(ward => ward.id !== selectedWardId).map(ward => (
                                                     <SelectItem key={ward.id} value={ward.id}>{ward.name}</SelectItem>
                                                 ))}
-                                                {allWardsData.filter(ward => ward.id !== selectedWardId).length === 0 && <SelectItem value="no-other-wards" disabled>No other wards available</SelectItem>}
+                                                {allWardsData.filter(ward => ward.id !== selectedWardId).length === 0 && <SelectItem value="no-other-wards" disabled>{t('wardManagement.patientCare.transferModal.destinationWard.noOther')}</SelectItem>}
                                             </SelectContent>
                                         </Select>
                                     </div>
                                 )}
                                 {transferType === "external_hospital" && (
                                     <div className="space-y-2">
-                                        <Label htmlFor="externalHospitalName">Destination Hospital Name <span className="text-destructive">*</span></Label>
-                                        <Input id="externalHospitalName" value={externalHospitalName} onChange={(e) => setExternalHospitalName(e.target.value)} placeholder="Enter hospital name" disabled={isProcessingTransfer}/>
+                                        <Label htmlFor="externalHospitalName">{t('wardManagement.patientCare.transferModal.externalHospital.label')} <span className="text-destructive">*</span></Label>
+                                        <Input id="externalHospitalName" value={externalHospitalName} onChange={(e) => setExternalHospitalName(e.target.value)} placeholder={t('wardManagement.patientCare.transferModal.externalHospital.placeholder')} disabled={isProcessingTransfer}/>
                                     </div>
                                 )}
                                 <div className="space-y-2">
-                                    <Label htmlFor="transferReason">Reason for Transfer <span className="text-destructive">*</span></Label>
-                                    <Textarea id="transferReason" value={transferReason} onChange={(e) => setTransferReason(e.target.value)} placeholder="Detailed reason for transfer..." disabled={isProcessingTransfer}/>
+                                    <Label htmlFor="transferReason">{t('wardManagement.patientCare.transferModal.reason.label')} <span className="text-destructive">*</span></Label>
+                                    <Textarea id="transferReason" value={transferReason} onChange={(e) => setTransferReason(e.target.value)} placeholder={t('wardManagement.patientCare.transferModal.reason.placeholder')} disabled={isProcessingTransfer}/>
                                 </div>
                             </div>
                             <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="outline" disabled={isProcessingTransfer}>Cancel</Button></DialogClose>
+                                <DialogClose asChild><Button type="button" variant="outline" disabled={isProcessingTransfer}>{t('patientRegistration.quickRegModal.cancelButton')}</Button></DialogClose>
                                 <Button onClick={handleConfirmTransfer} disabled={isProcessingTransfer || !transferType || !transferReason.trim() || (transferType === 'internal_ward' && !targetInternalWardId) || (transferType === 'external_hospital' && !externalHospitalName.trim())}>
                                     {isProcessingTransfer ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                    Confirm Transfer
+                                    {t('wardManagement.patientCare.transferModal.confirmButton')}
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
@@ -1469,14 +1473,14 @@ export default function WardManagementPage() {
         {!selectedWardId && !isLoadingAllWards && allWardsData.length > 0 &&(
             <Card className="shadow-sm">
                 <CardContent className="py-10">
-                    <p className="text-center text-muted-foreground">Please select a ward to view its details and manage patients.</p>
+                    <p className="text-center text-muted-foreground">{t('wardManagement.noWardSelected')}</p>
                 </CardContent>
             </Card>
         )}
          {!isLoadingAllWards && allWardsData.length === 0 && ( 
             <Card className="shadow-sm">
                 <CardContent className="py-10">
-                    <p className="text-center text-muted-foreground">No wards available. Please configure wards in the system.</p>
+                    <p className="text-center text-muted-foreground">{t('wardManagement.noWardsAvailable')}</p>
                 </CardContent>
             </Card>
         )}
@@ -1484,3 +1488,5 @@ export default function WardManagementPage() {
   );
 }
 
+
+    

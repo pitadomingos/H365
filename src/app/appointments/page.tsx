@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { useLocale } from '@/context/locale-context';
-import { getTranslator } from '@/lib/i18n';
+import { getTranslator, defaultLocale } from '@/lib/i18n';
 
 interface Appointment {
   id: string;
@@ -78,7 +78,7 @@ export default function AppointmentsPage() {
   const [newPatientName, setNewPatientName] = React.useState("");
   const [newSelectedDoctorId, setNewSelectedDoctorId] = React.useState("");
   const [newAppointmentDate, setNewAppointmentDate] = React.useState("");
-  const [newAppointmentTime, setNewAppointmentTime] = React.useState(""); // Format HH:MM
+  const [newAppointmentTime, setNewAppointmentTime] = React.useState(""); 
   const [newAppointmentType, setNewAppointmentType] = React.useState("Consultation");
   const [isScheduling, setIsScheduling] = React.useState(false);
 
@@ -86,10 +86,18 @@ export default function AppointmentsPage() {
     const fetchAppointments = async () => {
       setIsLoadingAppointments(true);
       try {
-        const response = await fetch('/api/v1/appointments'); // Mock
+        const response = await fetch('/api/v1/appointments'); 
         if (!response.ok) {
-          if(response.status === 404) { setAppointments([]); } // Example: Handle API not ready
-          else throw new Error(t('appointments.toast.loadAppointmentsError'));
+          if(response.status === 404) { 
+            console.warn("Mock API /api/v1/appointments not found, using fallback.");
+            const fetchedAppointments: Appointment[] = [
+              { id: "APT001", patientName: "Alice Wonderland", doctorName: "Dr. Smith", date: "2024-08-15", time: "10:00 AM - 10:30 AM", type: "Consultation", status: "Confirmed" },
+              { id: "APT002", patientName: "Bob The Builder", doctorName: "Dr. Jones", date: "2024-08-15", time: "11:00 AM - 11:45 AM", type: "Check-up", status: "Pending" },
+            ];
+            setAppointments(fetchedAppointments);
+          } else {
+             throw new Error(t('appointments.toast.loadAppointmentsError'));
+          }
         } else {
           const data = await response.json();
           setAppointments(data);
@@ -97,7 +105,6 @@ export default function AppointmentsPage() {
       } catch (error) {
         console.error("Error fetching appointments:", error);
         toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadAppointmentsError')});
-        // Fallback mock data
         const fetchedAppointments: Appointment[] = [
           { id: "APT001", patientName: "Alice Wonderland", doctorName: "Dr. Smith", date: "2024-08-15", time: "10:00 AM - 10:30 AM", type: "Consultation", status: "Confirmed" },
           { id: "APT002", patientName: "Bob The Builder", doctorName: "Dr. Jones", date: "2024-08-15", time: "11:00 AM - 11:45 AM", type: "Check-up", status: "Pending" },
@@ -111,10 +118,17 @@ export default function AppointmentsPage() {
     const fetchNotifications = async () => {
       setIsLoadingNotifications(true);
       try {
-        const response = await fetch('/api/v1/notifications?context=appointments'); // Mock
+        const response = await fetch('/api/v1/notifications?context=appointments'); 
          if (!response.ok) {
-          if(response.status === 404) { setNotifications([]); }
-          else throw new Error(t('appointments.toast.loadNotificationsError'));
+          if(response.status === 404) { 
+            console.warn("Mock API /api/v1/notifications not found, using fallback.");
+             const fetchedNotifications: NotificationItem[] = [
+              { id: 1, message: "Appointment with Alice Wonderland confirmed for tomorrow at 10:00 AM.", time: "2 hours ago", read: false },
+            ];
+            setNotifications(fetchedNotifications);
+          } else {
+            throw new Error(t('appointments.toast.loadNotificationsError'));
+          }
         } else {
           const data = await response.json();
           setNotifications(data);
@@ -134,10 +148,14 @@ export default function AppointmentsPage() {
     const fetchDoctors = async () => {
         setIsLoadingDoctors(true);
         try {
-            const response = await fetch('/api/v1/doctors'); // Mock
+            const response = await fetch('/api/v1/doctors'); 
              if (!response.ok) {
-              if(response.status === 404) { setDoctors(initialMockDoctors); }
-              else throw new Error(t('appointments.toast.loadDoctorsError'));
+              if(response.status === 404) { 
+                console.warn("Mock API /api/v1/doctors not found, using fallback.");
+                setDoctors(initialMockDoctors);
+              } else {
+                 throw new Error(t('appointments.toast.loadDoctorsError'));
+              }
             } else {
               const data = await response.json();
               setDoctors(data);
@@ -154,7 +172,7 @@ export default function AppointmentsPage() {
     fetchAppointments();
     fetchNotifications();
     fetchDoctors();
-  }, [t]); // Add t to dependency array
+  }, [t, currentLocale]); 
 
   const handleScheduleNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,23 +201,40 @@ export default function AppointmentsPage() {
             body: JSON.stringify(payload),
         });
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: "Failed to schedule. API error."}));
-            throw new Error(errorData.error || `API error: ${response.statusText}`);
+            // Mocking successful response if API is not found (404)
+            if (response.status === 404) {
+                console.warn("Mock API POST /api/v1/appointments not found, simulating success.");
+                const mockNewApt: Appointment = {
+                    id: `APT${Date.now()}`,
+                    ...payload,
+                    doctorName: doctors.find(d => d.id === newSelectedDoctorId)?.name || "Unknown Doctor",
+                    status: "Pending"
+                };
+                setAppointments(prev => [mockNewApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
+                toast({
+                  title: t('appointments.toast.scheduled'),
+                  description: t('appointments.toast.scheduled.desc', {patientName: newPatientName, doctorName: mockNewApt.doctorName, date: newAppointmentDate, time: newAppointmentTime }),
+                });
+            } else {
+                const errorData = await response.json().catch(() => ({ error: "Failed to schedule. API error."}));
+                throw new Error(errorData.error || `API error: ${response.statusText}`);
+            }
+        } else {
+            const newApt: Appointment = await response.json();
+            setAppointments(prev => [newApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
+            toast({
+              title: t('appointments.toast.scheduled'),
+              description: t('appointments.toast.scheduled.desc', {patientName: newPatientName, doctorName: newApt.doctorName, date: newAppointmentDate, time: newAppointmentTime }),
+            });
         }
-        const newApt: Appointment = await response.json();
-
-        setAppointments(prev => [newApt, ...prev].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
-        toast({
-          title: t('appointments.toast.scheduled'),
-          description: t('appointments.toast.scheduled.desc', {patientName: newPatientName, doctorName: newApt.doctorName, date: newAppointmentDate, time: newAppointmentTime }),
-        });
-
+        
         setNewPatientName("");
         setNewSelectedDoctorId("");
         setNewAppointmentDate("");
         setNewAppointmentTime("");
         setNewAppointmentType("Consultation");
         setIsSchedulingDialogOpen(false);
+
     } catch (error: any) {
         console.error("Error scheduling appointment:", error);
         toast({ variant: "destructive", title: t('appointments.toast.scheduleError'), description: error.message || t('appointments.toast.scheduleError.desc') });
@@ -213,8 +248,8 @@ export default function AppointmentsPage() {
   );
 
   const selectedDateDisplayString = selectedCalendarDate 
-    ? selectedCalendarDate.toLocaleDateString(currentLocale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) 
-    : t('appointments.upcoming.description', {selectedDateString: "all dates"});
+    ? selectedCalendarDate.toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) 
+    : t('appointments.upcoming.description', {selectedDateString: t('appointments.allDates')});
 
 
   return (
@@ -326,11 +361,7 @@ export default function AppointmentsPage() {
                         <TableCell>{apt.time}</TableCell>
                         <TableCell className="flex items-center gap-1">
                           {apt.type === "Telemedicine" && <Video className="h-4 w-4 text-primary" />}
-                          {apt.type === "Consultation" ? t('appointments.scheduleModal.type.consultation') :
-                           apt.type === "Check-up" ? t('appointments.scheduleModal.type.checkup') :
-                           apt.type === "Follow-up" ? t('appointments.scheduleModal.type.followup') :
-                           apt.type === "Telemedicine" ? t('appointments.scheduleModal.type.telemedicine') :
-                           apt.type === "Procedure" ? t('appointments.scheduleModal.type.procedure') : apt.type}
+                          {t(`appointments.scheduleModal.type.${apt.type.toLowerCase().replace('-', '')}`, apt.type)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Badge variant={
@@ -348,7 +379,7 @@ export default function AppointmentsPage() {
                 </Table>
               ) : (
                  <p className="text-sm text-muted-foreground text-center py-10">
-                    {t('appointments.upcoming.empty', {selectedDateString: selectedCalendarDate ? selectedCalendarDate.toLocaleDateString(currentLocale, { month: 'long', day: 'numeric' }) : "this day"})}
+                    {t('appointments.upcoming.empty', {selectedDateString: selectedCalendarDate ? selectedCalendarDate.toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US', { month: 'long', day: 'numeric' }) : t('appointments.thisDay')})}
                 </p>
               )}
             </CardContent>

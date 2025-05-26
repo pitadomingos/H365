@@ -32,6 +32,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useLocale } from '@/context/locale-context';
+import { getTranslator, defaultLocale } from '@/lib/i18n';
 
 // --- Data Structures ---
 interface TestDetail {
@@ -138,6 +140,9 @@ const initialLabRequisitionLogData: LabRequisitionLogItem[] = [
 
 
 export default function LaboratoryManagementPage() {
+  const { currentLocale } = useLocale();
+  const t = getTranslator(currentLocale);
+
   const [labRequests, setLabRequests] = useState<LabRequest[]>([]);
   const [isLoadingLabRequests, setIsLoadingLabRequests] = useState(true);
   const [reagents, setReagents] = useState<Reagent[]>([]);
@@ -162,7 +167,7 @@ export default function LaboratoryManagementPage() {
   const [malfunctionInstrumentName, setMalfunctionInstrumentName] = useState("");
   const [malfunctionProblemDescription, setMalfunctionProblemDescription] = useState("");
   const [isSubmittingMalfunction, setIsSubmittingMalfunction] = useState(false);
-  const [labInstruments, setLabInstruments] = useState<LabInstrument[]>(MOCK_LAB_INSTRUMENTS); // Using mock for now
+  const [labInstruments, setLabInstruments] = useState<LabInstrument[]>(MOCK_LAB_INSTRUMENTS); 
 
   useEffect(() => {
     setClientTime(new Date()); 
@@ -177,11 +182,11 @@ export default function LaboratoryManagementPage() {
   useEffect(() => {
     if (malfunctionAssetNumber) {
       const foundInstrument = labInstruments.find(inst => inst.assetNumber.toLowerCase() === malfunctionAssetNumber.toLowerCase());
-      setMalfunctionInstrumentName(foundInstrument ? foundInstrument.name : "Instrument not found");
+      setMalfunctionInstrumentName(foundInstrument ? foundInstrument.name : t('labManagement.equipment.modal.instrumentName.notFound'));
     } else {
       setMalfunctionInstrumentName("");
     }
-  }, [malfunctionAssetNumber, labInstruments]);
+  }, [malfunctionAssetNumber, labInstruments, t]);
 
 
   const fetchAllLabData = async () => {
@@ -190,25 +195,16 @@ export default function LaboratoryManagementPage() {
     setIsLoadingRequisitionLog(true);
     
     // Simulate fetching lab requests
-    // const reqResponse = await fetch('/api/v1/lab/requests');
-    // const reqData = await reqResponse.json();
-    // setLabRequests(reqData);
     await new Promise(resolve => setTimeout(resolve, 1200));
     setLabRequests(initialLabRequestsData);
     setIsLoadingLabRequests(false);
 
     // Simulate fetching reagents
-    // const reagentResponse = await fetch('/api/v1/lab/reagents');
-    // const reagentData = await reagentResponse.json();
-    // setReagents(reagentData);
     await new Promise(resolve => setTimeout(resolve, 500));
     setReagents(initialReagentsData);
     setIsLoadingReagents(false);
 
     // Simulate fetching requisition log
-    // const logResponse = await fetch('/api/v1/lab/reagents/requisitions/log');
-    // const logData = await logResponse.json();
-    // setRequisitionLog(logData);
     await new Promise(resolve => setTimeout(resolve, 300));
     setRequisitionLog(initialLabRequisitionLogData);
     setIsLoadingRequisitionLog(false);
@@ -221,7 +217,7 @@ export default function LaboratoryManagementPage() {
   const handleRefreshAll = async () => {
     setIsRefreshingList(true);
     await fetchAllLabData();
-    toast({ title: "Lab Data Refreshed", description: "Request list, reagent inventory, and requisition log updated (mock)." });
+    toast({ title: t('labManagement.toast.dataRefreshed'), description: t('labManagement.toast.dataRefreshed.desc') });
     setIsRefreshingList(false);
   };
 
@@ -230,31 +226,28 @@ export default function LaboratoryManagementPage() {
   const criticalReagentAlerts = reagents.filter(r => r.currentStock < r.threshold).length;
 
   const handleUpdateStatus = async (requestId: string, newStatus: LabRequest["status"]) => {
-    // Simulate API call: PUT /api/v1/lab/requests/{requestId}/status
-    // const response = await fetch(`/api/v1/lab/requests/${requestId}/status`, { method: 'PUT', body: JSON.stringify({ status: newStatus }), headers: {'Content-Type': 'application/json'} });
-    // if (!response.ok) { /* handle error */ }
     await new Promise(resolve => setTimeout(resolve, 500));
     setLabRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req));
-    toast({ title: "Status Updated", description: `Request ${requestId} status changed to ${newStatus}.` });
+    toast({ title: t('labManagement.toast.statusUpdated'), description: t('labManagement.toast.statusUpdated.desc', {requestId: requestId, newStatus: newStatus}) });
   };
 
   const interpretNumericResult = (valueStr: string, testDef: TestDetail): string => {
-    if (!testDef.isNumeric || valueStr === "") return "N/A";
+    if (!testDef.isNumeric || valueStr === "") return t('labManagement.interpretation.na');
     const value = parseFloat(valueStr);
-    if (isNaN(value)) return "Invalid Input";
+    if (isNaN(value)) return t('labManagement.interpretation.invalid');
 
     const { normalRangeMin, normalRangeMax, interpretRanges } = testDef;
 
     if (interpretRanges) {
-        if (interpretRanges.veryLow !== undefined && value < interpretRanges.veryLow) return "Very Low";
-        if (interpretRanges.low !== undefined && value < (interpretRanges.low ?? normalRangeMin ?? -Infinity)) return "Low";
-        if (interpretRanges.veryHigh !== undefined && value > interpretRanges.veryHigh) return "Very High";
-        if (interpretRanges.high !== undefined && value > (interpretRanges.high ?? normalRangeMax ?? Infinity)) return "High";
+        if (interpretRanges.veryLow !== undefined && value < interpretRanges.veryLow) return t('labManagement.interpretation.veryLow');
+        if (interpretRanges.low !== undefined && value < (interpretRanges.low ?? normalRangeMin ?? -Infinity)) return t('labManagement.interpretation.low');
+        if (interpretRanges.veryHigh !== undefined && value > interpretRanges.veryHigh) return t('labManagement.interpretation.veryHigh');
+        if (interpretRanges.high !== undefined && value > (interpretRanges.high ?? normalRangeMax ?? Infinity)) return t('labManagement.interpretation.high');
     } else { 
-        if (normalRangeMin !== undefined && value < normalRangeMin) return "Low";
-        if (normalRangeMax !== undefined && value > normalRangeMax) return "High";
+        if (normalRangeMin !== undefined && value < normalRangeMin) return t('labManagement.interpretation.low');
+        if (normalRangeMax !== undefined && value > normalRangeMax) return t('labManagement.interpretation.high');
     }
-    return "Normal";
+    return t('labManagement.interpretation.normal');
   };
 
   const handleOpenResultModal = (request: LabRequest) => {
@@ -264,7 +257,7 @@ export default function LaboratoryManagementPage() {
                       Object.values(MOCK_TEST_DEFINITIONS).find(def => def.name === testIdOrName);
       
       let existingResultValue = "";
-      let existingInterpretation = "N/A";
+      let existingInterpretation = t('labManagement.interpretation.na');
 
       if (Array.isArray(request.results)) {
         const foundResult = request.results.find(r => r.testId === testIdOrName || r.testName === testIdOrName);
@@ -292,8 +285,8 @@ export default function LaboratoryManagementPage() {
         testName: testIdOrName, 
         value: existingResultValue,
         unit: "",
-        normalRangeDisplay: "N/A",
-        interpretation: "N/A",
+        normalRangeDisplay: t('labManagement.interpretation.na'),
+        interpretation: t('labManagement.interpretation.na'),
         isNumeric: false, 
       };
     });
@@ -308,7 +301,7 @@ export default function LaboratoryManagementPage() {
           const testDef = MOCK_TEST_DEFINITIONS[input.testId];
           const interpretation = testDef && testDef.isNumeric 
             ? interpretNumericResult(newValue, testDef) 
-            : (input.isNumeric ? "N/A" : "See Report"); 
+            : (input.isNumeric ? t('labManagement.interpretation.na') : t('labManagement.interpretation.seeReport')); 
           return { ...input, value: newValue, interpretation };
         }
         return input;
@@ -325,13 +318,7 @@ export default function LaboratoryManagementPage() {
         labTechnicianComments: (document.getElementById('labTechComments') as HTMLTextAreaElement)?.value || ""
     };
     console.log("Saving lab results (mock):", payload);
-    // const response = await fetch(`/api/v1/lab/requests/${selectedRequestForResults.id}/results`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(payload),
-    // });
-    // if (!response.ok) { /* handle error */ setIsSavingResults(false); return; }
-
+    
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     setLabRequests(prevReqs => prevReqs.map(req => 
@@ -340,16 +327,13 @@ export default function LaboratoryManagementPage() {
         : req
     ));
 
-    // Simulate reagent consumption
-    let consumedReagentsMessages: string[] = [];
+    let tempReagents = [...reagents];
     const reagentConsumptionMap: Record<string, { reagentName: string, amount: number }> = {
         "glucose_random": { reagentName: "Glucose Test Strips", amount: 1 },
         "hemoglobin": { reagentName: "Hematology Reagent Pack", amount: 0.1 },
         "wbc_count": { reagentName: "Hematology Reagent Pack", amount: 0.1 },
         "platelet_count": { reagentName: "Hematology Reagent Pack", amount: 0.1 },
     };
-
-    let tempReagents = [...reagents];
     selectedRequestForResults.testsRequested.forEach(testId => {
         const consumption = reagentConsumptionMap[testId];
         if (consumption) {
@@ -359,13 +343,12 @@ export default function LaboratoryManagementPage() {
                     ...tempReagents[reagentIndex],
                     currentStock: Math.max(0, tempReagents[reagentIndex].currentStock - consumption.amount)
                 };
-                // consumedReagentsMessages.push(`${consumption.amount} unit(s) of ${consumption.reagentName} consumed.`);
             }
         }
     });
     setReagents(tempReagents);
     
-    toast({ title: "Results Saved (Mock)", description: `Results for ${selectedRequestForResults.patientName} saved and (mock) sent to consultation. Reagent stock levels updated based on tests processed.` });
+    toast({ title: t('labManagement.toast.resultsSaved'), description: t('labManagement.toast.resultsSaved.desc', {patientName: selectedRequestForResults.patientName}) });
     setIsResultModalOpen(false);
     setSelectedRequestForResults(null);
     setCurrentResultInputs([]);
@@ -381,13 +364,13 @@ export default function LaboratoryManagementPage() {
 
   const handleRequisitionReagent = async (reagent: Reagent) => {
     if (isReagentPendingRequisition(reagent.id)) {
-      toast({ variant: "default", title: "Already Requested", description: `${reagent.name} has a pending requisition.` });
+      toast({ variant: "default", title: t('labManagement.toast.requisition.alreadyPending'), description: t('labManagement.toast.requisition.alreadyPending.desc', {reagentName: reagent.name}) });
       return;
     }
     setIsRequisitioningReagentId(reagent.id);
     const requestedQuantity = Math.max(0, reagent.threshold * 2 - reagent.currentStock);
      if (requestedQuantity === 0) {
-        toast({variant: "default", title: "Sufficient Stock", description: `${reagent.name} does not need immediate requisition.`});
+        toast({variant: "default", title: t('labManagement.toast.requisition.sufficientStock'), description: t('labManagement.toast.requisition.sufficientStock.desc', {reagentName: reagent.name})});
         setIsRequisitioningReagentId(null);
         return;
     }
@@ -397,10 +380,7 @@ export default function LaboratoryManagementPage() {
       notes: `Low stock for ${reagent.name}. Automatic requisition.`
     };
     console.log("Submitting reagent requisition (mock):", payload);
-    // const response = await fetch('/api/v1/lab/reagents/requisitions', { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'}});
-    // if (!response.ok) { /* handle error */ setIsRequisitioningReagentId(null); return; }
-    // const newLogData = await response.json(); // Assuming backend returns the new log entry
-
+    
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     const newLogEntry: LabRequisitionLogItem = {
@@ -411,7 +391,7 @@ export default function LaboratoryManagementPage() {
         status: "Pending"
     };
     setRequisitionLog(prev => [newLogEntry, ...prev]);
-    toast({title: "Reagent Requisition Submitted (Mock)", description: `Requisition for ${reagent.name} sent to central stores.`});
+    toast({title: t('labManagement.toast.requisition.submitted'), description: t('labManagement.toast.requisition.submitted.desc', {reagentName: reagent.name})});
     setIsRequisitioningReagentId(null);
   };
 
@@ -424,7 +404,7 @@ export default function LaboratoryManagementPage() {
     );
 
     if (reagentsToRequisition.length === 0) {
-      toast({ title: "No Reagents to Requisition", description: "All low stock reagents either have sufficient stock or are already pending requisition." });
+      toast({ title: t('labManagement.toast.requisition.bulk.none'), description: t('labManagement.toast.requisition.bulk.none.desc') });
       setIsRequisitioningAllReagents(false);
       return;
     }
@@ -442,10 +422,7 @@ export default function LaboratoryManagementPage() {
       notes: `Bulk requisition for all eligible low stock reagents.`
     };
     console.log("Submitting bulk reagent requisition (mock):", payload);
-    // const response = await fetch('/api/v1/lab/reagents/requisitions', { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'}});
-    // if (!response.ok) { /* handle error */ setIsRequisitioningAllReagents(false); return; }
-    // const newLogData = await response.json(); // Backend might return a single log entry for bulk or multiple
-
+    
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     const summary = reagentsToRequisition.length > 1 ? `${reagentsToRequisition.length} low stock reagents` : `${reagentsToRequisition[0].name}`;
@@ -460,12 +437,12 @@ export default function LaboratoryManagementPage() {
 
     toast({
       variant: "default",
-      title: "Bulk Reagent Requisition Submitted (Mock)",
-      description: `Requisition for ${reagentsToRequisition.length} eligible low stock reagent(s) sent.`,
+      title: t('labManagement.toast.requisition.bulk.submitted'),
+      description: t('labManagement.toast.requisition.bulk.submitted.desc', {count: reagentsToRequisition.length.toString()}),
     });
     setIsRequisitioningAllReagents(false);
   };
-
+  
   const eligibleLowStockReagentsCount = reagents.filter(r => 
     r.currentStock < r.threshold && 
     !isReagentPendingRequisition(r.id) &&
@@ -474,7 +451,7 @@ export default function LaboratoryManagementPage() {
 
   const handleReportLabMalfunctionSubmit = async () => {
     if (!malfunctionAssetNumber.trim() || !malfunctionProblemDescription.trim()) {
-      toast({ variant: "destructive", title: "Missing Information", description: "Please provide Asset Number and Problem Description." });
+      toast({ variant: "destructive", title: t('labManagement.toast.malfunction.missingInfo'), description: t('labManagement.toast.malfunction.missingInfo.desc') });
       return;
     }
     setIsSubmittingMalfunction(true);
@@ -487,11 +464,9 @@ export default function LaboratoryManagementPage() {
       department: "Laboratory"
     };
     console.log("Submitting Lab Equipment Malfunction Report (Mock):", payload);
-    // const response = await fetch('/api/v1/equipment/malfunctions', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } });
-    // if (!response.ok) { /* handle error */ setIsSubmittingMalfunction(false); return; }
 
     await new Promise(resolve => setTimeout(resolve, 1500));
-    toast({ title: "Malfunction Reported (Mock)", description: `Report for ${malfunctionInstrumentName || malfunctionAssetNumber} submitted.` });
+    toast({ title: t('labManagement.toast.malfunction.reported'), description: t('labManagement.toast.malfunction.reported.desc', {instrumentName: (malfunctionInstrumentName || malfunctionAssetNumber)})});
     setIsMalfunctionModalOpen(false);
     setMalfunctionAssetNumber("");
     setMalfunctionInstrumentName("");
@@ -504,13 +479,13 @@ export default function LaboratoryManagementPage() {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Microscope className="h-8 w-8" /> Laboratory Information & Management
+            <Microscope className="h-8 w-8" /> {t('labManagement.pageTitle')}
           </h1>
            <div className="text-sm text-muted-foreground">
             {clientTime ? (
-              `${clientTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${clientTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              `${clientTime.toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${clientTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
             ) : (
-              "\u00A0" 
+              t('labManagement.currentTime.loading')
             )}
           </div>
         </div>
@@ -519,26 +494,26 @@ export default function LaboratoryManagementPage() {
           <Card className="lg:col-span-2 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ClipboardList className="h-6 w-6 text-primary" /> Incoming Lab Requests
+                <ClipboardList className="h-6 w-6 text-primary" /> {t('labManagement.requests.title')}
               </CardTitle>
-              <CardDescription>Manage and process pending laboratory test requests.</CardDescription>
+              <CardDescription>{t('labManagement.requests.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingLabRequests ? (
                  <div className="flex items-center justify-center py-10">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="ml-2 text-muted-foreground">Loading lab requests...</p>
+                    <p className="ml-2 text-muted-foreground">{t('labManagement.requests.loading')}</p>
                   </div>
               ) : labRequests.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Patient</TableHead>
-                      <TableHead>Tests</TableHead>
-                      <TableHead>Doctor</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t('labManagement.requests.table.patient')}</TableHead>
+                      <TableHead>{t('labManagement.requests.table.tests')}</TableHead>
+                      <TableHead>{t('labManagement.requests.table.doctor')}</TableHead>
+                      <TableHead>{t('labManagement.requests.table.date')}</TableHead>
+                      <TableHead>{t('labManagement.requests.table.status')}</TableHead>
+                      <TableHead className="text-right">{t('labManagement.requests.table.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -552,7 +527,7 @@ export default function LaboratoryManagementPage() {
                           {req.testsRequested.map(testId => MOCK_TEST_DEFINITIONS[testId]?.name || testId).join(', ')}
                         </TableCell>
                         <TableCell>{req.orderingDoctor}</TableCell>
-                        <TableCell>{new Date(req.requestDate + 'T00:00:00').toLocaleDateString()}</TableCell>
+                        <TableCell>{new Date(req.requestDate + 'T00:00:00').toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')}</TableCell>
                         <TableCell>
                           <Select 
                               value={req.status} 
@@ -560,20 +535,20 @@ export default function LaboratoryManagementPage() {
                               disabled={isSavingResults}
                           >
                               <SelectTrigger className="h-8 text-xs w-[150px]">
-                                  <SelectValue placeholder="Update Status" />
+                                  <SelectValue placeholder={t('labManagement.requests.status.placeholder')} />
                               </SelectTrigger>
                               <SelectContent>
-                                  <SelectItem value="Sample Pending">Sample Pending</SelectItem>
-                                  <SelectItem value="Sample Collected">Sample Collected</SelectItem>
-                                  <SelectItem value="Processing">Processing</SelectItem>
-                                  <SelectItem value="Results Ready">Results Ready</SelectItem>
-                                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                  <SelectItem value="Sample Pending">{t('labManagement.requests.status.samplePending')}</SelectItem>
+                                  <SelectItem value="Sample Collected">{t('labManagement.requests.status.sampleCollected')}</SelectItem>
+                                  <SelectItem value="Processing">{t('labManagement.requests.status.processing')}</SelectItem>
+                                  <SelectItem value="Results Ready">{t('labManagement.requests.status.resultsReady')}</SelectItem>
+                                  <SelectItem value="Cancelled">{t('labManagement.requests.status.cancelled')}</SelectItem>
                               </SelectContent>
                           </Select>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button size="sm" variant="outline" onClick={() => handleOpenResultModal(req)} disabled={isSavingResults}>
-                            <Edit3 className="mr-1 h-3 w-3" /> {req.status === "Results Ready" ? "View/Edit" : "Enter"} Results
+                            <Edit3 className="mr-1 h-3 w-3" /> {req.status === "Results Ready" ? t('labManagement.requests.actions.viewEditResults') : t('labManagement.requests.actions.enterResults')}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -581,13 +556,13 @@ export default function LaboratoryManagementPage() {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-center py-10 text-muted-foreground">No lab requests found.</p>
+                <p className="text-center py-10 text-muted-foreground">{t('labManagement.requests.empty')}</p>
               )}
             </CardContent>
              <CardFooter>
                 <Button variant="outline" onClick={handleRefreshAll} disabled={isRefreshingList || isLoadingLabRequests || isLoadingReagents || isLoadingRequisitionLog}>
                     {isRefreshingList ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
-                    {isRefreshingList ? "Refreshing..." : "Refresh All Lab Data"}
+                    {isRefreshingList ? t('labManagement.requests.refreshButton.loading') : t('labManagement.requests.refreshButton')}
                 </Button>
             </CardFooter>
           </Card>
@@ -596,30 +571,30 @@ export default function LaboratoryManagementPage() {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-6 w-6 text-primary"/> Daily Lab Report
+                    <FileText className="h-6 w-6 text-primary"/> {t('labManagement.dailyReport.title')}
                 </CardTitle>
-                 <CardDescription>Summary of today's lab activities.</CardDescription>
+                 <CardDescription>{t('labManagement.dailyReport.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                {isLoadingLabRequests || isLoadingReagents ? (
                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary mr-2"/> Loading summary...
+                    <Loader2 className="h-5 w-5 animate-spin text-primary mr-2"/> {t('labManagement.dailyReport.loading')}
                   </div>
                ) : (
                 <>
                   <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                      <span className="text-sm font-medium">Samples Processed:</span>
+                      <span className="text-sm font-medium">{t('labManagement.dailyReport.samplesProcessed')}</span>
                       <Badge variant="secondary" className="text-base">{samplesProcessedToday}</Badge>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                      <span className="text-sm font-medium">Pending Results:</span>
+                      <span className="text-sm font-medium">{t('labManagement.dailyReport.pendingResults')}</span>
                       <Badge className="text-base">{pendingResults}</Badge>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                      <span className="text-sm font-medium">Critical Reagent Alerts:</span>
+                      <span className="text-sm font-medium">{t('labManagement.dailyReport.criticalAlerts')}</span>
                       <Badge variant={criticalReagentAlerts > 0 ? "destructive" : "default"} className="text-base">{criticalReagentAlerts}</Badge>
                   </div>
-                  <Button className="w-full mt-2" variant="outline" disabled>View Full Daily Report</Button>
+                  <Button className="w-full mt-2" variant="outline" disabled>{t('labManagement.dailyReport.viewFullButton')}</Button>
                 </>
                )}
               </CardContent>
@@ -628,22 +603,22 @@ export default function LaboratoryManagementPage() {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Layers className="h-6 w-6 text-primary" /> Reagent Inventory
+                  <Layers className="h-6 w-6 text-primary" /> {t('labManagement.reagents.title')}
                 </CardTitle>
-                <CardDescription>Overview of lab reagent stock levels.</CardDescription>
+                <CardDescription>{t('labManagement.reagents.description')}</CardDescription>
               </CardHeader>
               <CardContent className="max-h-[300px] overflow-y-auto pr-1">
                 {isLoadingReagents ? (
                   <div className="flex items-center justify-center py-6">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary mr-2"/> Loading reagents...
+                      <Loader2 className="h-6 w-6 animate-spin text-primary mr-2"/> {t('labManagement.reagents.loading')}
                   </div>
                 ) : reagents.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Reagent Name</TableHead>
-                        <TableHead>Stock</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
+                        <TableHead>{t('labManagement.reagents.table.name')}</TableHead>
+                        <TableHead>{t('labManagement.reagents.table.stock')}</TableHead>
+                        <TableHead className="text-right">{t('labManagement.reagents.table.action')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -657,7 +632,7 @@ export default function LaboratoryManagementPage() {
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell>
                               {item.currentStock} <span className="text-xs text-muted-foreground">({item.unit})</span>
-                              {isLowStock && <Badge variant="destructive" className="ml-2 text-xs">Low</Badge>}
+                              {isLowStock && <Badge variant="destructive" className="ml-2 text-xs">{t('labManagement.reagents.lowStockBadge')}</Badge>}
                             </TableCell>
                             <TableCell className="text-right">
                               {isLowStock && (
@@ -666,10 +641,10 @@ export default function LaboratoryManagementPage() {
                                   variant={alreadyPending ? "secondary" : "outline"} 
                                   onClick={() => !alreadyPending && handleRequisitionReagent(item)}
                                   disabled={isRequisitioningReagentId === item.id || isRequisitioningAllReagents || alreadyPending}
-                                  title={alreadyPending ? "Requisition for this reagent is already pending." : "Requisition more stock"}
+                                  title={alreadyPending ? t('labManagement.toast.requisition.alreadyPending.desc', {reagentName: item.name}) : t('labManagement.reagents.requisitionButton')}
                                 >
                                   {isRequisitioningReagentId === item.id ? <Loader2 className="mr-1 h-3 w-3 animate-spin"/> : <BellDot className="mr-1 h-3 w-3"/>}
-                                  {isRequisitioningReagentId === item.id ? "Requesting..." : (alreadyPending ? "Pending Req." : "Requisition")}
+                                  {isRequisitioningReagentId === item.id ? t('labManagement.reagents.requisitionButton.loading') : (alreadyPending ? t('labManagement.reagents.requisitionButton.pending') : t('labManagement.reagents.requisitionButton'))}
                                 </Button>
                               )}
                             </TableCell>
@@ -679,23 +654,23 @@ export default function LaboratoryManagementPage() {
                     </TableBody>
                   </Table>
                 ) : (
-                   <p className="text-center py-6 text-muted-foreground">No reagent data available.</p>
+                   <p className="text-center py-6 text-muted-foreground">{t('labManagement.reagents.empty')}</p>
                 )}
               </CardContent>
                <CardFooter className="pt-4 flex-col gap-2 items-stretch">
                  <Button 
                     onClick={handleRequisitionAllLowStockReagents} 
                     disabled={isLoadingReagents || isRequisitioningAllReagents || eligibleLowStockReagentsCount === 0}
-                    title={eligibleLowStockReagentsCount === 0 ? "No eligible low stock reagents to requisition." : "Requisition all eligible low stock reagents."}
+                    title={eligibleLowStockReagentsCount === 0 ? t('labManagement.toast.requisition.bulk.none.desc') : t('labManagement.reagents.requisitionAllButton', {count: eligibleLowStockReagentsCount.toString()})}
                 >
                     {isRequisitioningAllReagents ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BellDot className="mr-2 h-4 w-4" />}
-                    Requisition All Low Stock Reagents ({eligibleLowStockReagentsCount})
+                    {isRequisitioningAllReagents ? t('labManagement.reagents.requisitionAllButton.loading') : t('labManagement.reagents.requisitionAllButton', {count: eligibleLowStockReagentsCount.toString()})}
                 </Button>
                  <Alert variant="default" className="border-primary/50 mt-2">
                     <AlertTriangleIcon className="h-4 w-4 text-primary" />
-                    <AlertTitle className="text-sm">System Note</AlertTitle>
+                    <AlertTitle className="text-sm">{t('labManagement.reagents.systemNote.title')}</AlertTitle>
                     <AlertDescription className="text-xs">
-                        Automated reagent requisition from central stores is a backend process.
+                        {t('labManagement.reagents.systemNote.description')}
                     </AlertDescription>
                 </Alert>
                </CardFooter>
@@ -704,9 +679,9 @@ export default function LaboratoryManagementPage() {
             <Card className="shadow-sm">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Wrench className="h-5 w-5 text-primary"/> Lab Equipment Actions
+                        <Wrench className="h-5 w-5 text-primary"/> {t('labManagement.equipment.title')}
                     </CardTitle>
-                    <CardDescription className="text-xs">Report equipment malfunctions.</CardDescription>
+                    <CardDescription className="text-xs">{t('labManagement.equipment.description')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Dialog open={isMalfunctionModalOpen} onOpenChange={(open) => {
@@ -719,35 +694,35 @@ export default function LaboratoryManagementPage() {
                     }}>
                         <DialogTrigger asChild>
                             <Button variant="outline" className="w-full">
-                                <AlertTriangleIcon className="mr-2 h-4 w-4"/> Report Malfunction
+                                <AlertTriangleIcon className="mr-2 h-4 w-4"/> {t('labManagement.equipment.reportButton')}
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
-                                <DialogTitle>Report Lab Equipment Malfunction</DialogTitle>
+                                <DialogTitle>{t('labManagement.equipment.modal.title')}</DialogTitle>
                                 <DialogDescription>
-                                    Fill in the details for the malfunctioning equipment.
+                                    {t('labManagement.equipment.modal.description')}
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="space-y-1">
-                                    <Label htmlFor="malfunctionAssetNumber">Asset Number <span className="text-destructive">*</span></Label>
-                                    <Input id="malfunctionAssetNumber" value={malfunctionAssetNumber} onChange={(e) => setMalfunctionAssetNumber(e.target.value)} placeholder="e.g., LAB-CENT-001" disabled={isSubmittingMalfunction}/>
+                                    <Label htmlFor="malfunctionAssetNumber">{t('labManagement.equipment.modal.assetNumber.label')} <span className="text-destructive">*</span></Label>
+                                    <Input id="malfunctionAssetNumber" value={malfunctionAssetNumber} onChange={(e) => setMalfunctionAssetNumber(e.target.value)} placeholder={t('labManagement.equipment.modal.assetNumber.placeholder')} disabled={isSubmittingMalfunction}/>
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="malfunctionInstrumentName">Instrument Name</Label>
-                                    <Input id="malfunctionInstrumentName" value={malfunctionInstrumentName} readOnly disabled placeholder="Auto-populated from Asset Number"/>
+                                    <Label htmlFor="malfunctionInstrumentName">{t('labManagement.equipment.modal.instrumentName.label')}</Label>
+                                    <Input id="malfunctionInstrumentName" value={malfunctionInstrumentName} readOnly disabled placeholder={t('labManagement.equipment.modal.instrumentName.placeholder')}/>
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="malfunctionProblemDescription">Problem Description <span className="text-destructive">*</span></Label>
-                                    <Textarea id="malfunctionProblemDescription" value={malfunctionProblemDescription} onChange={(e) => setMalfunctionProblemDescription(e.target.value)} placeholder="Describe the issue..." rows={3} disabled={isSubmittingMalfunction}/>
+                                    <Label htmlFor="malfunctionProblemDescription">{t('labManagement.equipment.modal.problem.label')} <span className="text-destructive">*</span></Label>
+                                    <Textarea id="malfunctionProblemDescription" value={malfunctionProblemDescription} onChange={(e) => setMalfunctionProblemDescription(e.target.value)} placeholder={t('labManagement.equipment.modal.problem.placeholder')} rows={3} disabled={isSubmittingMalfunction}/>
                                 </div>
                             </div>
                             <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingMalfunction}>Cancel</Button></DialogClose>
+                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingMalfunction}>{t('labManagement.equipment.modal.cancelButton')}</Button></DialogClose>
                                 <Button onClick={handleReportLabMalfunctionSubmit} disabled={isSubmittingMalfunction || !malfunctionAssetNumber.trim() || !malfunctionProblemDescription.trim()}>
                                     {isSubmittingMalfunction ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                    {isSubmittingMalfunction ? "Submitting..." : "Submit Report"}
+                                    {isSubmittingMalfunction ? t('labManagement.equipment.modal.submitButton.loading') : t('labManagement.equipment.modal.submitButton')}
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
@@ -761,25 +736,25 @@ export default function LaboratoryManagementPage() {
         <Card className="shadow-sm">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <ListOrdered className="h-6 w-6 text-primary"/> Reagent Requisition History
+                    <ListOrdered className="h-6 w-6 text-primary"/> {t('labManagement.requisitionHistory.title')}
                 </CardTitle>
-                <CardDescription>Log of recent reagent requisitions submitted by this laboratory.</CardDescription>
+                <CardDescription>{t('labManagement.requisitionHistory.description')}</CardDescription>
             </CardHeader>
             <CardContent>
                 {isLoadingRequisitionLog ? (
                     <div className="flex items-center justify-center py-10">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="ml-2 text-muted-foreground">Loading requisition history...</p>
+                        <p className="ml-2 text-muted-foreground">{t('labManagement.requisitionHistory.loading')}</p>
                     </div>
                 ) : requisitionLog.length > 0 ? (
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Requisition ID</TableHead>
-                                <TableHead>Items Summary</TableHead>
-                                <TableHead>Date Submitted</TableHead>
-                                <TableHead>Submitted By</TableHead>
-                                <TableHead>Status</TableHead>
+                                <TableHead>{t('labManagement.requisitionHistory.table.id')}</TableHead>
+                                <TableHead>{t('labManagement.requisitionHistory.table.items')}</TableHead>
+                                <TableHead>{t('labManagement.requisitionHistory.table.date')}</TableHead>
+                                <TableHead>{t('labManagement.requisitionHistory.table.by')}</TableHead>
+                                <TableHead>{t('labManagement.requisitionHistory.table.status')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -787,7 +762,7 @@ export default function LaboratoryManagementPage() {
                                 <TableRow key={log.id}>
                                     <TableCell className="font-mono text-xs">{log.id}</TableCell>
                                     <TableCell className="text-xs">{log.requestedItemsSummary}</TableCell>
-                                    <TableCell className="text-xs">{new Date(log.dateSubmitted).toLocaleString()}</TableCell>
+                                    <TableCell className="text-xs">{new Date(log.dateSubmitted).toLocaleString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')}</TableCell>
                                     <TableCell className="text-xs">{log.submittedBy}</TableCell>
                                     <TableCell>
                                         <Badge variant={
@@ -803,7 +778,7 @@ export default function LaboratoryManagementPage() {
                         </TableBody>
                     </Table>
                 ) : (
-                    <p className="text-center py-10 text-muted-foreground">No reagent requisition history found.</p>
+                    <p className="text-center py-10 text-muted-foreground">{t('labManagement.requisitionHistory.empty')}</p>
                 )}
             </CardContent>
         </Card>
@@ -811,9 +786,9 @@ export default function LaboratoryManagementPage() {
         <Dialog open={isResultModalOpen} onOpenChange={setIsResultModalOpen}>
             <DialogContent className="sm:max-w-2xl"> 
                 <DialogHeader>
-                    <DialogTitle>Enter/Edit Lab Results for {selectedRequestForResults?.patientName}</DialogTitle>
+                    <DialogTitle>{t('labManagement.resultsModal.title', {patientName: selectedRequestForResults?.patientName || ""})}</DialogTitle>
                     <DialogDescription>
-                        Request ID: {selectedRequestForResults?.id} | Tests: {selectedRequestForResults?.testsRequested.map(testId => MOCK_TEST_DEFINITIONS[testId]?.name || testId).join(", ")}
+                        {t('labManagement.resultsModal.description', {requestId: selectedRequestForResults?.id || "", tests: selectedRequestForResults?.testsRequested.map(testId => MOCK_TEST_DEFINITIONS[testId]?.name || testId).join(", ") || ""})}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
@@ -828,24 +803,24 @@ export default function LaboratoryManagementPage() {
                                         step="any"
                                         value={inputItem.value}
                                         onChange={(e) => handleResultInputChange(index, e.target.value)}
-                                        placeholder="Enter result"
+                                        placeholder={t('labManagement.resultsModal.value.placeholder')}
                                         className="sm:col-span-1"
                                         disabled={isSavingResults}
                                     />
                                     <span className="text-xs text-muted-foreground sm:col-span-1">{inputItem.unit}</span>
                                     <span className="text-xs text-muted-foreground sm:col-span-1">
-                                        Range: {inputItem.normalRangeDisplay}
+                                        {t('labManagement.resultsModal.range.label')} {inputItem.normalRangeDisplay}
                                     </span>
                                      <Badge 
                                         variant={
-                                            inputItem.interpretation === "Normal" ? "default" : 
-                                            inputItem.interpretation === "N/A" || inputItem.interpretation === "Invalid Input" ? "outline" :
+                                            inputItem.interpretation === t('labManagement.interpretation.normal') ? "default" : 
+                                            inputItem.interpretation === t('labManagement.interpretation.na') || inputItem.interpretation === t('labManagement.interpretation.invalid') ? "outline" :
                                             "secondary" 
                                         }
                                         className={cn("text-xs sm:col-span-1 justify-center", {
-                                            "bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300": inputItem.interpretation === "Normal",
-                                            "bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300": inputItem.interpretation === "Low" || inputItem.interpretation === "High",
-                                            "bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300": inputItem.interpretation === "Very Low" || inputItem.interpretation === "Very High",
+                                            "bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-300": inputItem.interpretation === t('labManagement.interpretation.normal'),
+                                            "bg-yellow-100 text-yellow-800 dark:bg-yellow-800/30 dark:text-yellow-300": inputItem.interpretation === t('labManagement.interpretation.low') || inputItem.interpretation === t('labManagement.interpretation.high'),
+                                            "bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-300": inputItem.interpretation === t('labManagement.interpretation.veryLow') || inputItem.interpretation === t('labManagement.interpretation.veryHigh'),
                                         })}
                                     >
                                         {inputItem.interpretation}
@@ -856,7 +831,7 @@ export default function LaboratoryManagementPage() {
                                     id={`result-${inputItem.testId}`}
                                     value={inputItem.value}
                                     onChange={(e) => handleResultInputChange(index, e.target.value)}
-                                    placeholder="Enter qualitative results, comments, or panel summary..."
+                                    placeholder={t('labManagement.resultsModal.qualitative.placeholder')}
                                     className="min-h-[60px]"
                                     disabled={isSavingResults}
                                 />
@@ -865,20 +840,20 @@ export default function LaboratoryManagementPage() {
                     ))}
                     <Separator className="my-3"/>
                     <div className="space-y-2">
-                        <Label htmlFor="labTechComments">Overall Lab Technician Comments (Optional)</Label>
+                        <Label htmlFor="labTechComments">{t('labManagement.resultsModal.comments.label')}</Label>
                         <Textarea
                         id="labTechComments"
-                        placeholder="Any comments on sample quality, overall findings, etc."
+                        placeholder={t('labManagement.resultsModal.comments.placeholder')}
                         className="min-h-[80px]"
                         disabled={isSavingResults}
                         />
                     </div>
                 </div>
                 <DialogFooter>
-                <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingResults}>Cancel</Button></DialogClose>
-                <Button type="button" onClick={handleSaveResults} disabled={isSavingResults}>
+                <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingResults}>{t('labManagement.resultsModal.cancelButton')}</Button></DialogClose>
+                <Button type="button" onClick={handleSaveResults} disabled={isSavingResults || currentResultInputs.some(input => input.value.trim() === '')}>
                     {isSavingResults ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {isSavingResults ? "Saving..." : "Save Results"}
+                    {isSavingResults ? t('labManagement.resultsModal.saveButton.loading') : t('labManagement.resultsModal.saveButton')}
                 </Button>
                 </DialogFooter>
             </DialogContent>

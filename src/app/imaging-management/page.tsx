@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLocale } from '@/context/locale-context';
+import { getTranslator, defaultLocale } from '@/lib/i18n';
 
 interface ImagingRequest {
   id: string;
@@ -64,6 +66,9 @@ const initialImagingRequests: ImagingRequest[] = [
 ];
 
 export default function ImagingManagementPage() {
+  const { currentLocale } = useLocale();
+  const t = getTranslator(currentLocale);
+
   const [imagingRequests, setImagingRequests] = useState<ImagingRequest[]>([]);
   const [isLoadingImagingRequests, setIsLoadingImagingRequests] = useState(true);
 
@@ -92,7 +97,6 @@ export default function ImagingManagementPage() {
 
   useEffect(() => {
     setIsLoadingImagingRequests(true);
-    // Simulate API call: GET /api/v1/imaging/requests
     setTimeout(() => {
       setImagingRequests(initialImagingRequests);
       setIsLoadingImagingRequests(false);
@@ -102,21 +106,18 @@ export default function ImagingManagementPage() {
   useEffect(() => {
     if (malfunctionAssetNumber) {
       const foundInstrument = imagingInstruments.find(inst => inst.assetNumber.toLowerCase() === malfunctionAssetNumber.toLowerCase());
-      setMalfunctionInstrumentName(foundInstrument ? foundInstrument.name : "Instrument not found");
+      setMalfunctionInstrumentName(foundInstrument ? foundInstrument.name : t('imagingManagement.equipment.modal.instrumentName.notFound'));
     } else {
       setMalfunctionInstrumentName("");
     }
-  }, [malfunctionAssetNumber, imagingInstruments]);
+  }, [malfunctionAssetNumber, imagingInstruments, t]);
 
   const fetchImagingRequests = async () => {
     setIsRefreshingList(true);
     setIsLoadingImagingRequests(true);
-    // const response = await fetch('/api/v1/imaging/requests');
-    // const data = await response.json();
-    // setImagingRequests(data);
     await new Promise(resolve => setTimeout(resolve, 1000));
-    setImagingRequests([...initialImagingRequests].sort(() => 0.5 - Math.random())); // Mock refresh
-    toast({ title: "Imaging Request List Refreshed", description: "List updated with latest requests (mock)." });
+    setImagingRequests([...initialImagingRequests].sort(() => 0.5 - Math.random())); 
+    toast({ title: t('imagingManagement.toast.listRefreshed'), description: t('imagingManagement.toast.listRefreshed.desc') });
     setIsLoadingImagingRequests(false);
     setIsRefreshingList(false);
   };
@@ -125,12 +126,9 @@ export default function ImagingManagementPage() {
   const pendingReports = imagingRequests.filter(r => r.status === "Scan Complete - Awaiting Report").length;
 
   const handleUpdateStatus = async (requestId: string, newStatus: ImagingRequest["status"]) => {
-    // Simulate API call: PUT /api/v1/imaging/requests/{requestId}/status
-    // const response = await fetch(`/api/v1/imaging/requests/${requestId}/status`, {method: 'PUT', body: JSON.stringify({status: newStatus}), headers: {'Content-Type': 'application/json'}});
-    // if(!response.ok) { /* handle error */ return; }
     await new Promise(resolve => setTimeout(resolve, 500));
     setImagingRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: newStatus } : req));
-    toast({ title: "Status Updated", description: `Request ${requestId} status changed to ${newStatus}.` });
+    toast({ title: t('imagingManagement.toast.statusUpdated'), description: t('imagingManagement.toast.statusUpdated.desc', {requestId: requestId, newStatus: newStatus})});
   };
 
   const handleOpenReportModal = (request: ImagingRequest) => {
@@ -149,14 +147,11 @@ export default function ImagingManagementPage() {
         impression: impressionInput
       };
       console.log("Saving report (mock):", payload);
-      // Simulate API call: POST /api/v1/imaging/requests/{selectedRequest.id}/report
-      // const response = await fetch(`/api/v1/imaging/requests/${selectedRequest.id}/report`, { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'} });
-      // if(!response.ok) { /* handle error */ setIsSavingReport(false); return; }
       await new Promise(resolve => setTimeout(resolve, 1500));
       setImagingRequests(prev => prev.map(req => 
         req.id === selectedRequest.id ? { ...req, report: reportInput, impression: impressionInput, status: "Report Ready" } : req
       ));
-      toast({ title: "Report Saved (Mock)", description: `Report for ${selectedRequest.patientName} (ID: ${selectedRequest.id}) saved.` });
+      toast({ title: t('imagingManagement.toast.reportSaved'), description: t('imagingManagement.toast.reportSaved.desc', {patientName: selectedRequest.patientName, requestId: selectedRequest.id}) });
       setIsReportModalOpen(false);
       setSelectedRequest(null);
       setReportInput("");
@@ -167,7 +162,7 @@ export default function ImagingManagementPage() {
 
   const handleReportImagingMalfunctionSubmit = async () => {
     if (!malfunctionAssetNumber.trim() || !malfunctionProblemDescription.trim()) {
-      toast({ variant: "destructive", title: "Missing Information", description: "Please provide Asset Number and Problem Description." });
+      toast({ variant: "destructive", title: t('imagingManagement.toast.malfunction.missingInfo'), description: t('imagingManagement.toast.malfunction.missingInfo.desc') });
       return;
     }
     setIsSubmittingMalfunction(true);
@@ -180,11 +175,9 @@ export default function ImagingManagementPage() {
       department: "Imaging/Radiology"
     };
     console.log("Submitting Imaging Equipment Malfunction Report (Mock):", payload);
-    // const response = await fetch('/api/v1/equipment/malfunctions', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } });
-    // if (!response.ok) { /* handle error */ setIsSubmittingMalfunction(false); return; }
     
     await new Promise(resolve => setTimeout(resolve, 1500));
-    toast({ title: "Malfunction Reported (Mock)", description: `Report for ${malfunctionInstrumentName || malfunctionAssetNumber} submitted.` });
+    toast({ title: t('imagingManagement.toast.malfunction.reported'), description: t('imagingManagement.toast.malfunction.reported.desc', {instrumentName: (malfunctionInstrumentName || malfunctionAssetNumber)})});
     setIsMalfunctionModalOpen(false);
     setMalfunctionAssetNumber("");
     setMalfunctionInstrumentName("");
@@ -196,13 +189,13 @@ export default function ImagingManagementPage() {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <MonitorPlay className="h-8 w-8" /> Imaging & Radiology Management
+            <MonitorPlay className="h-8 w-8" /> {t('imagingManagement.pageTitle')}
           </h1>
            <div className="text-sm text-muted-foreground">
             {clientTime ? (
-              `${clientTime.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${clientTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+              `${clientTime.toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} ${clientTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
             ) : (
-              "\u00A0" 
+              t('imagingManagement.currentTime.loading')
             )}
           </div>
         </div>
@@ -211,26 +204,26 @@ export default function ImagingManagementPage() {
           <Card className="lg:col-span-2 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <ClipboardList className="h-6 w-6 text-primary" /> Incoming Imaging Requests
+                <ClipboardList className="h-6 w-6 text-primary" /> {t('imagingManagement.requests.title')}
               </CardTitle>
-              <CardDescription>Manage and process pending imaging study requests.</CardDescription>
+              <CardDescription>{t('imagingManagement.requests.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoadingImagingRequests ? (
                 <div className="flex items-center justify-center py-10">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="ml-2 text-muted-foreground">Loading imaging requests...</p>
+                  <p className="ml-2 text-muted-foreground">{t('imagingManagement.requests.loading')}</p>
                 </div>
               ) : imagingRequests.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Patient</TableHead>
-                      <TableHead>Study Requested</TableHead>
-                      <TableHead>Doctor</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t('imagingManagement.requests.table.patient')}</TableHead>
+                      <TableHead>{t('imagingManagement.requests.table.study')}</TableHead>
+                      <TableHead>{t('imagingManagement.requests.table.doctor')}</TableHead>
+                      <TableHead>{t('imagingManagement.requests.table.date')}</TableHead>
+                      <TableHead>{t('imagingManagement.requests.table.status')}</TableHead>
+                      <TableHead className="text-right">{t('imagingManagement.requests.table.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -242,7 +235,7 @@ export default function ImagingManagementPage() {
                         </TableCell>
                         <TableCell className="text-xs">{req.studyRequested}</TableCell>
                         <TableCell>{req.orderingDoctor}</TableCell>
-                        <TableCell>{new Date(req.requestDate + 'T00:00:00').toLocaleDateString()}</TableCell>
+                        <TableCell>{new Date(req.requestDate + 'T00:00:00').toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')}</TableCell>
                         <TableCell>
                           <Select 
                               value={req.status} 
@@ -250,20 +243,20 @@ export default function ImagingManagementPage() {
                               disabled={isSavingReport || isSubmittingMalfunction}
                           >
                               <SelectTrigger className="h-8 text-xs w-[180px]">
-                                  <SelectValue placeholder="Update Status" />
+                                  <SelectValue placeholder={t('imagingManagement.requests.status.placeholder')} />
                               </SelectTrigger>
                               <SelectContent>
-                                  <SelectItem value="Scheduled">Scheduled</SelectItem>
-                                  <SelectItem value="Pending Scan">Pending Scan</SelectItem>
-                                  <SelectItem value="Scan Complete - Awaiting Report">Scan Complete - Awaiting Report</SelectItem>
-                                  <SelectItem value="Report Ready">Report Ready</SelectItem>
-                                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                  <SelectItem value="Scheduled">{t('imagingManagement.requests.status.scheduled')}</SelectItem>
+                                  <SelectItem value="Pending Scan">{t('imagingManagement.requests.status.pendingScan')}</SelectItem>
+                                  <SelectItem value="Scan Complete - Awaiting Report">{t('imagingManagement.requests.status.scanComplete')}</SelectItem>
+                                  <SelectItem value="Report Ready">{t('imagingManagement.requests.status.reportReady')}</SelectItem>
+                                  <SelectItem value="Cancelled">{t('imagingManagement.requests.status.cancelled')}</SelectItem>
                               </SelectContent>
                           </Select>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button size="sm" variant="outline" onClick={() => handleOpenReportModal(req)} disabled={isSavingReport || isSubmittingMalfunction}>
-                            <Edit3 className="mr-1 h-3 w-3" /> {req.status === "Report Ready" ? "View/Edit" : "Enter"} Report
+                            <Edit3 className="mr-1 h-3 w-3" /> {req.status === "Report Ready" ? t('imagingManagement.requests.actions.viewEditReport') : t('imagingManagement.requests.actions.enterReport')}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -271,13 +264,13 @@ export default function ImagingManagementPage() {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-center py-10 text-muted-foreground">No imaging requests found.</p>
+                <p className="text-center py-10 text-muted-foreground">{t('imagingManagement.requests.empty')}</p>
               )}
             </CardContent>
              <CardFooter>
                 <Button variant="outline" onClick={fetchImagingRequests} disabled={isRefreshingList || isLoadingImagingRequests || isSubmittingMalfunction}>
                     {isRefreshingList ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
-                    {isRefreshingList ? "Refreshing..." : "Refresh Request List"}
+                    {isRefreshingList ? t('imagingManagement.requests.refreshButton.loading') : t('imagingManagement.requests.refreshButton')}
                 </Button>
             </CardFooter>
           </Card>
@@ -286,26 +279,26 @@ export default function ImagingManagementPage() {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-6 w-6 text-primary"/> Daily Imaging Summary
+                    <FileText className="h-6 w-6 text-primary"/> {t('imagingManagement.dailySummary.title')}
                 </CardTitle>
-                 <CardDescription>Summary of today's imaging activities.</CardDescription>
+                 <CardDescription>{t('imagingManagement.dailySummary.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {isLoadingImagingRequests ? (
                    <div className="flex items-center justify-center py-4">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary mr-2"/> Loading summary...
+                    <Loader2 className="h-5 w-5 animate-spin text-primary mr-2"/> {t('imagingManagement.dailySummary.loading')}
                   </div>
                 ) : (
                 <>
                   <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                      <span className="text-sm font-medium">Scans Performed:</span>
+                      <span className="text-sm font-medium">{t('imagingManagement.dailySummary.scansPerformed')}</span>
                       <Badge variant="secondary" className="text-base">{scansPerformedToday}</Badge>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                      <span className="text-sm font-medium">Pending Reports:</span>
+                      <span className="text-sm font-medium">{t('imagingManagement.dailySummary.pendingReports')}</span>
                       <Badge className="text-base">{pendingReports}</Badge>
                   </div>
-                  <Button className="w-full mt-2" variant="outline" disabled>View Full Daily Report</Button>
+                  <Button className="w-full mt-2" variant="outline" disabled>{t('imagingManagement.dailySummary.viewFullButton')}</Button>
                 </>
                 )}
               </CardContent>
@@ -314,16 +307,16 @@ export default function ImagingManagementPage() {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ScanSearch className="h-6 w-6 text-primary" /> Equipment Status & Actions
+                  <ScanSearch className="h-6 w-6 text-primary" /> {t('imagingManagement.equipment.title')}
                 </CardTitle>
-                <CardDescription>Overview of imaging equipment and malfunction reporting.</CardDescription>
+                <CardDescription>{t('imagingManagement.equipment.description')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Alert variant="default" className="border-primary/50">
                     <AlertTriangleIcon className="h-4 w-4 text-primary" />
-                    <AlertTitle className="text-sm">System Note</AlertTitle>
+                    <AlertTitle className="text-sm">{t('imagingManagement.equipment.systemNote.title')}</AlertTitle>
                     <AlertDescription className="text-xs">
-                        Full equipment status, maintenance schedules, and fault reporting will be managed by the Biomedical Engineering module (planned for future development). Use the button below for interim malfunction reporting.
+                        {t('imagingManagement.equipment.systemNote.description')}
                     </AlertDescription>
                 </Alert>
                  <Dialog open={isMalfunctionModalOpen} onOpenChange={(open) => {
@@ -336,35 +329,35 @@ export default function ImagingManagementPage() {
                     }}>
                         <DialogTrigger asChild>
                             <Button variant="outline" className="w-full">
-                                <Wrench className="mr-2 h-4 w-4"/> Report Equipment Malfunction
+                                <Wrench className="mr-2 h-4 w-4"/> {t('imagingManagement.equipment.reportButton')}
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md">
                             <DialogHeader>
-                                <DialogTitle>Report Imaging Equipment Malfunction</DialogTitle>
+                                <DialogTitle>{t('imagingManagement.equipment.modal.title')}</DialogTitle>
                                 <DialogDescription>
-                                    Fill in the details for the malfunctioning imaging equipment.
+                                    {t('imagingManagement.equipment.modal.description')}
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="space-y-1">
-                                    <Label htmlFor="imgMalfunctionAssetNumber">Asset Number <span className="text-destructive">*</span></Label>
-                                    <Input id="imgMalfunctionAssetNumber" value={malfunctionAssetNumber} onChange={(e) => setMalfunctionAssetNumber(e.target.value)} placeholder="e.g., IMG-XRAY-001" disabled={isSubmittingMalfunction}/>
+                                    <Label htmlFor="imgMalfunctionAssetNumber">{t('imagingManagement.equipment.modal.assetNumber.label')} <span className="text-destructive">*</span></Label>
+                                    <Input id="imgMalfunctionAssetNumber" value={malfunctionAssetNumber} onChange={(e) => setMalfunctionAssetNumber(e.target.value)} placeholder={t('imagingManagement.equipment.modal.assetNumber.placeholder')} disabled={isSubmittingMalfunction}/>
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="imgMalfunctionInstrumentName">Instrument Name</Label>
-                                    <Input id="imgMalfunctionInstrumentName" value={malfunctionInstrumentName} readOnly disabled placeholder="Auto-populated from Asset Number"/>
+                                    <Label htmlFor="imgMalfunctionInstrumentName">{t('imagingManagement.equipment.modal.instrumentName.label')}</Label>
+                                    <Input id="imgMalfunctionInstrumentName" value={malfunctionInstrumentName} readOnly disabled placeholder={t('imagingManagement.equipment.modal.instrumentName.placeholder')}/>
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="imgMalfunctionProblemDescription">Problem Description <span className="text-destructive">*</span></Label>
-                                    <Textarea id="imgMalfunctionProblemDescription" value={malfunctionProblemDescription} onChange={(e) => setMalfunctionProblemDescription(e.target.value)} placeholder="Describe the issue..." rows={3} disabled={isSubmittingMalfunction}/>
+                                    <Label htmlFor="imgMalfunctionProblemDescription">{t('imagingManagement.equipment.modal.problem.label')} <span className="text-destructive">*</span></Label>
+                                    <Textarea id="imgMalfunctionProblemDescription" value={malfunctionProblemDescription} onChange={(e) => setMalfunctionProblemDescription(e.target.value)} placeholder={t('imagingManagement.equipment.modal.problem.placeholder')} rows={3} disabled={isSubmittingMalfunction}/>
                                 </div>
                             </div>
                             <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingMalfunction}>Cancel</Button></DialogClose>
+                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingMalfunction}>{t('imagingManagement.equipment.modal.cancelButton')}</Button></DialogClose>
                                 <Button onClick={handleReportImagingMalfunctionSubmit} disabled={isSubmittingMalfunction || !malfunctionAssetNumber.trim() || !malfunctionProblemDescription.trim()}>
                                     {isSubmittingMalfunction ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                    {isSubmittingMalfunction ? "Submitting..." : "Submit Report"}
+                                    {isSubmittingMalfunction ? t('imagingManagement.equipment.modal.submitButton.loading') : t('imagingManagement.equipment.modal.submitButton')}
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
@@ -374,44 +367,43 @@ export default function ImagingManagementPage() {
           </div>
         </div>
 
-        {/* Report Entry Modal */}
         <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>Enter/Edit Imaging Report for {selectedRequest?.patientName}</DialogTitle>
+              <DialogTitle>{t('imagingManagement.reportModal.title', {patientName: selectedRequest?.patientName || ""})}</DialogTitle>
               <DialogDescription>
-                Request ID: {selectedRequest?.id} | Study: {selectedRequest?.studyRequested}
+                {t('imagingManagement.reportModal.description', {requestId: selectedRequest?.id || "", studyRequested: selectedRequest?.studyRequested || ""})}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="reportInput">Radiologist's Report</Label>
+                <Label htmlFor="reportInput">{t('imagingManagement.reportModal.radiologistReport.label')}</Label>
                 <Textarea
                   id="reportInput"
                   value={reportInput}
                   onChange={(e) => setReportInput(e.target.value)}
-                  placeholder="Enter detailed imaging report here. Include findings, impressions, and conclusions."
+                  placeholder={t('imagingManagement.reportModal.radiologistReport.placeholder')}
                   className="min-h-[250px]"
                   disabled={isSavingReport}
                 />
               </div>
                <div className="space-y-2">
-                <Label htmlFor="impressionInput">Key Findings / Impression (Optional)</Label>
+                <Label htmlFor="impressionInput">{t('imagingManagement.reportModal.keyFindings.label')}</Label>
                 <Textarea
                   id="impressionInput"
                   value={impressionInput}
                   onChange={(e) => setImpressionInput(e.target.value)}
-                  placeholder="Summarize key findings or clinical impression."
+                  placeholder={t('imagingManagement.reportModal.keyFindings.placeholder')}
                   className="min-h-[80px]"
                   disabled={isSavingReport}
                 />
               </div>
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingReport}>Cancel</Button></DialogClose>
+              <DialogClose asChild><Button type="button" variant="outline" disabled={isSavingReport}>{t('imagingManagement.reportModal.cancelButton')}</Button></DialogClose>
               <Button type="button" onClick={handleSaveReport} disabled={isSavingReport || !reportInput.trim()}>
                 {isSavingReport ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {isSavingReport ? "Saving..." : "Save Report"}
+                {isSavingReport ? t('imagingManagement.reportModal.saveButton.loading') : t('imagingManagement.reportModal.saveButton')}
               </Button>
             </DialogFooter>
           </DialogContent>

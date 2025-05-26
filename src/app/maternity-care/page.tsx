@@ -38,6 +38,8 @@ import { format, addWeeks, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { COMMON_ORDERABLE_LAB_TESTS, type OrderableLabTest } from '@/lib/constants';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useLocale } from '@/context/locale-context';
+import { getTranslator, defaultLocale } from '@/lib/i18n';
 
 
 interface AntenatalVisit {
@@ -72,7 +74,7 @@ interface MaternityPatient {
   bloodGroup: string;
   rhFactor: string;
   allergies: string[];
-  chronicConditions: string[]; // Renamed from existingConditions
+  chronicConditions: string[]; 
   riskFactors: string[];
   antenatalVisits: AntenatalVisit[];
 }
@@ -93,7 +95,7 @@ const mockPatientsList: MaternityPatient[] = [
     bloodGroup: "O+",
     rhFactor: "Positive",
     allergies: ["Penicillin"],
-    chronicConditions: ["Mild Asthma"], // Updated
+    chronicConditions: ["Mild Asthma"],
     riskFactors: ["None Identified"],
     antenatalVisits: [
       { id: "AV001", date: "2024-05-10", gestationalAge: "10w 1d", weightKg: "60", bp: "110/70", fhrBpm: "150", fundalHeightCm: "N/A", notes: "First visit, all good.", nextAppointment: "2024-06-10", bodyTemperature: "36.8", heightCm: "165", bmi: "22.0", bmiStatus: "Normal weight", bpStatus: "Normal" },
@@ -115,7 +117,7 @@ const mockPatientsList: MaternityPatient[] = [
     bloodGroup: "A-",
     rhFactor: "Negative",
     allergies: [],
-    chronicConditions: ["Gestational Diabetes (Previous Pregnancy)"], // Updated
+    chronicConditions: ["Gestational Diabetes (Previous Pregnancy)"], 
     riskFactors: ["Advanced Maternal Age", "History of GDM"],
     antenatalVisits: [
       { id: "AV003", date: "2024-07-20", gestationalAge: "9w 2d", weightKg: "70", bp: "120/80", fhrBpm: "160", fundalHeightCm: "N/A", notes: "Booking visit. GTT scheduled.", nextAppointment: "2024-08-20", bodyTemperature: "37.1", heightCm: "160", bmi: "27.3", bmiStatus: "Overweight", bpStatus: "Elevated"},
@@ -148,7 +150,7 @@ interface MaternityIntakeFormState {
     bloodGroup: string;
     rhFactor: string;
     allergies: string; 
-    chronicConditions: string; // Updated from existingConditions
+    chronicConditions: string; 
 }
 
 const getBmiStatusAndColor = (bmi: number | null): { status: string; colorClass: string; textColorClass: string; } => {
@@ -200,6 +202,9 @@ const getBloodPressureStatus = (bp: string): { status: string; colorClass: strin
 
 
 export default function MaternityCarePage() {
+  const { currentLocale } = useLocale();
+  const t = getTranslator(currentLocale);
+
   const [searchNationalId, setSearchNationalId] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<MaternityPatient | null>(null);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
@@ -226,7 +231,7 @@ export default function MaternityCarePage() {
 
   const [isMaternityIntakeModalOpen, setIsMaternityIntakeModalOpen] = useState(false);
   const [maternityIntakeForm, setMaternityIntakeForm] = useState<MaternityIntakeFormState>({
-    nationalId: "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", chronicConditions: "" // updated
+    nationalId: "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", chronicConditions: "" 
   });
   const [isSubmittingIntake, setIsSubmittingIntake] = useState(false);
   const [allMaternityPatients, setAllMaternityPatients] = useState<MaternityPatient[]>(mockPatientsList);
@@ -272,23 +277,22 @@ export default function MaternityCarePage() {
 
   const handleSearch = async () => {
     if (!searchNationalId) {
-      toast({ variant: "destructive", title: "Error", description: "Please enter a National ID." });
+      toast({ variant: "destructive", title: t('maternity.generalError'), description: t('maternity.toast.search.error') });
       return;
     }
     setIsLoadingSearch(true);
     setSelectedPatient(null);
     setPatientNotFound(false);
-    // Simulate API call
-    // In a real app: const response = await fetch(`/api/v1/maternity/patients/search?nationalId=${searchNationalId}`);
+    
     console.log(`Mock searching for maternity patient with ID: ${searchNationalId}`);
     await new Promise(resolve => setTimeout(resolve, 1000));
     const found = allMaternityPatients.find(p => p.nationalId === searchNationalId);
     if (found) {
       setSelectedPatient(found);
-      toast({ title: "Patient Found", description: `${found.fullName}'s maternity record loaded.` });
+      toast({ title: t('maternity.toast.search.found'), description: t('maternity.toast.search.found.desc', {fullName: found.fullName}) });
     } else {
       setPatientNotFound(true);
-      toast({ variant: "default", title: "Not Found", description: "No maternity record found for this National ID. You can register them for maternity care." });
+      toast({ variant: "default", title: t('maternity.toast.search.notFound'), description: t('maternity.toast.search.notFound.desc')});
     }
     setIsLoadingSearch(false);
   };
@@ -312,17 +316,15 @@ export default function MaternityCarePage() {
     };
 
     console.log("Submitting Maternity Lab Order (mock):", payload);
-    // In a real app: const response = await fetch('/api/v1/maternity/lab-orders', { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'} });
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({
-      title: "Lab Order Submitted (Mock)", 
-      description:`Lab tests ordered for ${selectedPatient?.fullName}: ${orderedTestLabels.length > 0 ? orderedTestLabels.join(', ') : 'No specific tests selected.'}`
+      title: t('maternity.toast.labOrder.submitted'), 
+      description:t('maternity.toast.labOrder.submitted.desc', {patientName: selectedPatient.fullName, testLabels: (orderedTestLabels.length > 0 ? orderedTestLabels.join(', ') : t('maternity.noSpecificTests')) })
     });
     setSelectedLabTests({});
     const notesEl = document.getElementById('maternityLabClinicalNotes') as HTMLTextAreaElement;
     if (notesEl) notesEl.value = "";
     setIsOrderingLabs(false);
-    // Consider closing the dialog here if needed.
   }
 
   const handleSubmitImagingOrder = async () => {
@@ -338,7 +340,7 @@ export default function MaternityCarePage() {
     };
     console.log("Submitting Maternity Imaging Order (mock):", payload);
     await new Promise(resolve => setTimeout(resolve, 1500));
-    toast({title: "Imaging Order Submitted (Mock)", description:`Imaging study ordered for ${selectedPatient?.fullName}. Details: ${payload.imagingType} - ${payload.regionDetails}`});
+    toast({title: t('maternity.toast.imagingOrder.submitted'), description:t('maternity.toast.imagingOrder.submitted.desc', {patientName: selectedPatient.fullName, imagingType: payload.imagingType, regionDetails: payload.regionDetails})});
     
     const typeEl = document.getElementById('maternityImagingType') as HTMLSelectElement;
     const regionEl = document.getElementById('maternityImagingRegionDetails') as HTMLTextAreaElement;
@@ -347,7 +349,6 @@ export default function MaternityCarePage() {
     if (regionEl) regionEl.value = "";
     if (notesEl) notesEl.value = "";
     setIsOrderingImaging(false);
-     // Consider closing the dialog here
   }
 
   const handleNewVisitFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -358,7 +359,7 @@ export default function MaternityCarePage() {
   const handleLogNewVisitSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPatient || !newVisitForm.visitDate) {
-        toast({ variant: "destructive", title: "Missing Information", description: "Visit date is required." });
+        toast({ variant: "destructive", title: t('maternity.toast.newVisit.missingInfo'), description: t('maternity.toast.newVisit.missingInfo.desc') });
         return;
     }
     setIsLoggingVisit(true);
@@ -380,8 +381,6 @@ export default function MaternityCarePage() {
         bpStatus: newVisitBpDisplay?.status,
     };
     console.log("Submitting new antenatal visit (mock):", payload);
-    // In a real app: const response = await fetch(`/api/v1/maternity/patients/${selectedPatient.id}/antenatal-visits`, { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'} });
-    // const savedVisit = await response.json();
     await new Promise(resolve => setTimeout(resolve, 1500));
     const savedVisit: AntenatalVisit = { 
         id: `AV${Date.now()}`,
@@ -392,7 +391,7 @@ export default function MaternityCarePage() {
     setAllMaternityPatients(prevPatients => prevPatients.map(p => p.id === selectedPatient.id ? {...p, antenatalVisits: [savedVisit, ...(p.antenatalVisits || [])].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())} : p));
 
 
-    toast({ title: "New Antenatal Visit Logged", description: `Visit on ${savedVisit.date} for ${selectedPatient.fullName} saved.`});
+    toast({ title: t('maternity.toast.newVisit.logged'), description: t('maternity.toast.newVisit.logged.desc', {date: savedVisit.date, patientName: selectedPatient.fullName})});
     setIsNewVisitModalOpen(false);
     setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", bodyTemperature: "", heightCm: "", nextAppointmentDate: undefined }); 
     setNewVisitBmi(null);
@@ -403,7 +402,7 @@ export default function MaternityCarePage() {
   
   const handleScheduleNextVisitSubmit = async () => {
     if (!selectedPatient || !nextScheduledDate) {
-        toast({ variant: "destructive", title: "Missing Date", description: "Please select a date for the next appointment." });
+        toast({ variant: "destructive", title: t('maternity.toast.scheduleNextVisit.missingDate'), description: t('maternity.toast.scheduleNextVisit.missingDate.desc') });
         return;
     }
     setIsSchedulingNextVisit(true);
@@ -413,9 +412,8 @@ export default function MaternityCarePage() {
         notes: nextScheduledNotes,
     };
     console.log("Scheduling next ANC visit (mock):", payload);
-    // In a real app: const response = await fetch('/api/v1/maternity/schedule-next-visit', { method: 'POST', ... });
     await new Promise(resolve => setTimeout(resolve, 1500));
-    toast({ title: "Next Visit Scheduled (Mock)", description: `Next ANC visit for ${selectedPatient.fullName} scheduled for ${format(nextScheduledDate, "PPP")}. Notes: ${nextScheduledNotes}`});
+    toast({ title: t('maternity.toast.scheduleNextVisit.success'), description: t('maternity.toast.scheduleNextVisit.success.desc', {patientName: selectedPatient.fullName, date: format(nextScheduledDate, "PPP"), notes: nextScheduledNotes})});
     setIsScheduleNextVisitModalOpen(false);
     setNextScheduledDate(undefined);
     setNextScheduledNotes("");
@@ -431,11 +429,10 @@ export default function MaternityCarePage() {
     e.preventDefault();
     const { nationalId, fullName, dob, gender, lmp, edd, gravida, para } = maternityIntakeForm;
     if (!nationalId || !fullName || !dob || !gender || !lmp || !edd || !gravida || !para) {
-        toast({ variant: "destructive", title: "Missing Required Fields", description: "Please fill all required fields in the intake form." });
+        toast({ variant: "destructive", title: t('maternity.toast.intake.missingInfo'), description: t('maternity.toast.intake.missingInfo.desc') });
         return;
     }
     setIsSubmittingIntake(true);
-    // In a real app: const response = await fetch('/api/v1/maternity/patients', { method: 'POST', ... });
     console.log("Submitting maternity intake (mock):", maternityIntakeForm);
     await new Promise(resolve => setTimeout(resolve, 1500));
 
@@ -454,16 +451,16 @@ export default function MaternityCarePage() {
         bloodGroup: maternityIntakeForm.bloodGroup,
         rhFactor: maternityIntakeForm.rhFactor,
         allergies: maternityIntakeForm.allergies.split(',').map(s => s.trim()).filter(Boolean),
-        chronicConditions: maternityIntakeForm.chronicConditions.split(',').map(s => s.trim()).filter(Boolean), // Updated
+        chronicConditions: maternityIntakeForm.chronicConditions.split(',').map(s => s.trim()).filter(Boolean), 
         riskFactors: [], 
         antenatalVisits: [], 
     };
 
     setAllMaternityPatients(prev => [...prev, newMaternityPatient]);
     setSelectedPatient(newMaternityPatient); 
-    toast({ title: "Maternity Care Initiated", description: `${newMaternityPatient.fullName} registered for maternity care.` });
+    toast({ title: t('maternity.toast.intake.success'), description: t('maternity.toast.intake.success.desc', {fullName: newMaternityPatient.fullName}) });
     setIsMaternityIntakeModalOpen(false);
-    setMaternityIntakeForm({ nationalId: "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", chronicConditions: "" }); // Updated
+    setMaternityIntakeForm({ nationalId: "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", chronicConditions: "" }); 
     setPatientNotFound(false); 
     setSearchNationalId(newMaternityPatient.nationalId); 
     setIsSubmittingIntake(false);
@@ -476,20 +473,20 @@ export default function MaternityCarePage() {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Baby className="h-8 w-8" /> Maternity Care Management
+            <Baby className="h-8 w-8" /> {t('maternity.pageTitle')}
           </h1>
         </div>
 
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle>Maternity Patient Record</CardTitle>
-            <CardDescription>Enter patient's National ID to load their maternity care details or register a new patient for maternity care.</CardDescription>
+            <CardTitle>{t('maternity.searchCard.title')}</CardTitle>
+            <CardDescription>{t('maternity.searchCard.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
               <Input
                 id="searchNationalId"
-                placeholder="Enter National ID (e.g., 112233445)"
+                placeholder={t('maternity.search.placeholder')}
                 value={searchNationalId}
                 onChange={(e) => setSearchNationalId(e.target.value)}
                 className="max-w-xs"
@@ -497,11 +494,11 @@ export default function MaternityCarePage() {
               />
               <Button onClick={handleSearch} disabled={isLoadingSearch || !searchNationalId.trim()}>
                 {isLoadingSearch ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                {isLoadingSearch ? "Searching..." : "Search"}
+                {isLoadingSearch ? t('maternity.search.button.loading') : t('maternity.search.button')}
               </Button>
                <Dialog open={isMaternityIntakeModalOpen} onOpenChange={(open) => {
                     if (!open) {
-                        setMaternityIntakeForm({ nationalId: searchNationalId || "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", chronicConditions: "" }); // Updated
+                        setMaternityIntakeForm({ nationalId: searchNationalId || "", fullName: "", gender: "", gravida: "", para: "", bloodGroup: "", rhFactor: "", allergies: "", chronicConditions: "" }); 
                     } else {
                         setMaternityIntakeForm(prev => ({ ...prev, nationalId: searchNationalId || ""}));
                     }
@@ -509,108 +506,107 @@ export default function MaternityCarePage() {
                 }}>
                     <DialogTrigger asChild>
                         <Button variant="default" className="mt-2 sm:mt-0 w-full sm:w-auto">
-                            <UserPlus className="mr-2 h-4 w-4"/> Register New Maternity Patient / Initiate Care
+                            <UserPlus className="mr-2 h-4 w-4"/> {t('maternity.registerButton')}
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-2xl">
                         <form onSubmit={handleMaternityIntakeSubmit}>
                             <DialogHeader>
-                                <DialogTitle>Maternity Intake Form</DialogTitle>
+                                <DialogTitle>{t('maternity.intakeModal.title')}</DialogTitle>
                                 <DialogDescription>
-                                    Enter details for a new maternity patient or to initiate care for an existing patient.
-                                    Fields marked <span className="text-destructive">*</span> are required.
+                                    {t('maternity.intakeModal.description')}
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
                                 <Separator/>
-                                <h3 className="font-semibold text-md">Patient Demographics</h3>
+                                <h3 className="font-semibold text-md">{t('maternity.intakeModal.demographics.title')}</h3>
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div className="space-y-1">
-                                        <Label htmlFor="intakeNationalId">National ID <span className="text-destructive">*</span></Label>
-                                        <Input id="intakeNationalId" name="nationalId" value={maternityIntakeForm.nationalId} onChange={handleIntakeFormChange} placeholder="Patient's National ID" required disabled={isSubmittingIntake}/>
+                                        <Label htmlFor="intakeNationalId">{t('maternity.intakeModal.nationalId.label')} <span className="text-destructive">*</span></Label>
+                                        <Input id="intakeNationalId" name="nationalId" value={maternityIntakeForm.nationalId} onChange={handleIntakeFormChange} placeholder={t('maternity.intakeModal.nationalId.placeholder')} required disabled={isSubmittingIntake}/>
                                     </div>
                                     <div className="space-y-1">
-                                        <Label htmlFor="intakeFullName">Full Name <span className="text-destructive">*</span></Label>
-                                        <Input id="intakeFullName" name="fullName" value={maternityIntakeForm.fullName} onChange={handleIntakeFormChange} placeholder="Patient's Full Name" required disabled={isSubmittingIntake}/>
+                                        <Label htmlFor="intakeFullName">{t('maternity.intakeModal.fullName.label')} <span className="text-destructive">*</span></Label>
+                                        <Input id="intakeFullName" name="fullName" value={maternityIntakeForm.fullName} onChange={handleIntakeFormChange} placeholder={t('maternity.intakeModal.fullName.placeholder')} required disabled={isSubmittingIntake}/>
                                     </div>
                                     <div className="space-y-1">
-                                        <Label htmlFor="intakeDob">Date of Birth <span className="text-destructive">*</span></Label>
+                                        <Label htmlFor="intakeDob">{t('maternity.intakeModal.dob.label')} <span className="text-destructive">*</span></Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
                                             <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !maternityIntakeForm.dob && "text-muted-foreground")} disabled={isSubmittingIntake}>
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {maternityIntakeForm.dob ? format(maternityIntakeForm.dob, "PPP") : <span>Pick a date</span>}
+                                                {maternityIntakeForm.dob ? format(maternityIntakeForm.dob, "PPP") : <span>{t('maternity.intakeModal.dob.placeholder')}</span>}
                                             </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
-                                            <Calendar mode="single" selected={maternityIntakeForm.dob} onSelect={(date) => setMaternityIntakeForm(prev => ({...prev, dob: date}))} initialFocus captionLayout="dropdown-buttons" fromYear={1950} toYear={new Date().getFullYear()} />
+                                            <Calendar locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} mode="single" selected={maternityIntakeForm.dob} onSelect={(date) => setMaternityIntakeForm(prev => ({...prev, dob: date}))} initialFocus captionLayout="dropdown-buttons" fromYear={1950} toYear={new Date().getFullYear()} />
                                             </PopoverContent>
                                         </Popover>
                                     </div>
                                     <div className="space-y-1">
-                                        <Label htmlFor="intakeGender">Gender <span className="text-destructive">*</span></Label>
+                                        <Label htmlFor="intakeGender">{t('maternity.intakeModal.gender.label')} <span className="text-destructive">*</span></Label>
                                         <Select name="gender" value={maternityIntakeForm.gender} onValueChange={(val) => setMaternityIntakeForm(prev => ({...prev, gender: val as MaternityIntakeFormState["gender"]}))} required disabled={isSubmittingIntake}>
-                                            <SelectTrigger id="intakeGender"><SelectValue placeholder="Select Gender" /></SelectTrigger>
+                                            <SelectTrigger id="intakeGender"><SelectValue placeholder={t('maternity.intakeModal.gender.placeholder')} /></SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="Female">Female</SelectItem>
+                                                <SelectItem value="Female">{t('patientRegistration.gender.female')}</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
                                 </div>
                                 <Separator/>
-                                <h3 className="font-semibold text-md">Maternity Information</h3>
+                                <h3 className="font-semibold text-md">{t('maternity.intakeModal.maternityInfo.title')}</h3>
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div className="space-y-1">
-                                        <Label htmlFor="intakeLmp">Last Menstrual Period (LMP) <span className="text-destructive">*</span></Label>
+                                        <Label htmlFor="intakeLmp">{t('maternity.intakeModal.lmp.label')} <span className="text-destructive">*</span></Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
                                             <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !maternityIntakeForm.lmp && "text-muted-foreground")} disabled={isSubmittingIntake}>
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {maternityIntakeForm.lmp ? format(maternityIntakeForm.lmp, "PPP") : <span>Pick LMP date</span>}
+                                                {maternityIntakeForm.lmp ? format(maternityIntakeForm.lmp, "PPP") : <span>{t('maternity.intakeModal.lmp.placeholder')}</span>}
                                             </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
-                                            <Calendar mode="single" selected={maternityIntakeForm.lmp} onSelect={(date) => setMaternityIntakeForm(prev => ({...prev, lmp: date}))} initialFocus />
+                                            <Calendar locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} mode="single" selected={maternityIntakeForm.lmp} onSelect={(date) => setMaternityIntakeForm(prev => ({...prev, lmp: date}))} initialFocus />
                                             </PopoverContent>
                                         </Popover>
                                     </div>
                                     <div className="space-y-1">
-                                        <Label htmlFor="intakeEdd">Estimated Due Date (EDD)</Label>
-                                        <Input id="intakeEdd" value={maternityIntakeForm.edd ? format(maternityIntakeForm.edd, "PPP") : "Auto-calculated"} readOnly disabled className="bg-muted/50" />
+                                        <Label htmlFor="intakeEdd">{t('maternity.intakeModal.edd.label')}</Label>
+                                        <Input id="intakeEdd" value={maternityIntakeForm.edd ? format(maternityIntakeForm.edd, "PPP") : t('maternity.intakeModal.edd.autoCalculated')} readOnly disabled className="bg-muted/50" />
                                     </div>
                                     <div className="space-y-1">
-                                        <Label htmlFor="intakeGravida">Gravida <span className="text-destructive">*</span></Label>
-                                        <Input id="intakeGravida" name="gravida" type="number" value={maternityIntakeForm.gravida} onChange={handleIntakeFormChange} placeholder="e.g., 1" required disabled={isSubmittingIntake}/>
+                                        <Label htmlFor="intakeGravida">{t('maternity.intakeModal.gravida.label')} <span className="text-destructive">*</span></Label>
+                                        <Input id="intakeGravida" name="gravida" type="number" value={maternityIntakeForm.gravida} onChange={handleIntakeFormChange} placeholder={t('maternity.intakeModal.gravida.placeholder')} required disabled={isSubmittingIntake}/>
                                     </div>
                                     <div className="space-y-1">
-                                        <Label htmlFor="intakePara">Para <span className="text-destructive">*</span></Label>
-                                        <Input id="intakePara" name="para" type="number" value={maternityIntakeForm.para} onChange={handleIntakeFormChange} placeholder="e.g., 0" required disabled={isSubmittingIntake}/>
+                                        <Label htmlFor="intakePara">{t('maternity.intakeModal.para.label')} <span className="text-destructive">*</span></Label>
+                                        <Input id="intakePara" name="para" type="number" value={maternityIntakeForm.para} onChange={handleIntakeFormChange} placeholder={t('maternity.intakeModal.para.placeholder')} required disabled={isSubmittingIntake}/>
                                     </div>
                                     <div className="space-y-1">
-                                        <Label htmlFor="intakeBloodGroup">Blood Group</Label>
-                                        <Input id="intakeBloodGroup" name="bloodGroup" value={maternityIntakeForm.bloodGroup} onChange={handleIntakeFormChange} placeholder="e.g., O+" disabled={isSubmittingIntake}/>
+                                        <Label htmlFor="intakeBloodGroup">{t('maternity.intakeModal.bloodGroup.label')}</Label>
+                                        <Input id="intakeBloodGroup" name="bloodGroup" value={maternityIntakeForm.bloodGroup} onChange={handleIntakeFormChange} placeholder={t('maternity.intakeModal.bloodGroup.placeholder')} disabled={isSubmittingIntake}/>
                                     </div>
                                     <div className="space-y-1">
-                                        <Label htmlFor="intakeRhFactor">Rh Factor</Label>
-                                        <Input id="intakeRhFactor" name="rhFactor" value={maternityIntakeForm.rhFactor} onChange={handleIntakeFormChange} placeholder="e.g., Positive" disabled={isSubmittingIntake}/>
+                                        <Label htmlFor="intakeRhFactor">{t('maternity.intakeModal.rhFactor.label')}</Label>
+                                        <Input id="intakeRhFactor" name="rhFactor" value={maternityIntakeForm.rhFactor} onChange={handleIntakeFormChange} placeholder={t('maternity.intakeModal.rhFactor.placeholder')} disabled={isSubmittingIntake}/>
                                     </div>
                                 </div>
                                 <Separator/>
-                                <h3 className="font-semibold text-md">Medical History (Optional)</h3>
+                                <h3 className="font-semibold text-md">{t('maternity.intakeModal.medicalHistory.title')}</h3>
                                 <div className="space-y-1">
-                                    <Label htmlFor="intakeAllergies">Allergies (comma-separated)</Label>
-                                    <Textarea id="intakeAllergies" name="allergies" value={maternityIntakeForm.allergies} onChange={handleIntakeFormChange} placeholder="e.g., Penicillin, Sulfa drugs" disabled={isSubmittingIntake}/>
+                                    <Label htmlFor="intakeAllergies">{t('maternity.intakeModal.allergies.label')}</Label>
+                                    <Textarea id="intakeAllergies" name="allergies" value={maternityIntakeForm.allergies} onChange={handleIntakeFormChange} placeholder={t('maternity.intakeModal.allergies.placeholder')} disabled={isSubmittingIntake}/>
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="intakeChronicConditions">Chronic Conditions (comma-separated)</Label>
-                                    <Textarea id="intakeChronicConditions" name="chronicConditions" value={maternityIntakeForm.chronicConditions} onChange={handleIntakeFormChange} placeholder="e.g., Hypertension, Diabetes" disabled={isSubmittingIntake}/>
+                                    <Label htmlFor="intakeChronicConditions">{t('maternity.intakeModal.chronicConditions.label')}</Label>
+                                    <Textarea id="intakeChronicConditions" name="chronicConditions" value={maternityIntakeForm.chronicConditions} onChange={handleIntakeFormChange} placeholder={t('maternity.intakeModal.chronicConditions.placeholder')} disabled={isSubmittingIntake}/>
                                 </div>
                             </div>
                             <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingIntake}>Cancel</Button></DialogClose>
+                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSubmittingIntake}>{t('maternity.intakeModal.cancelButton')}</Button></DialogClose>
                                 <Button type="submit" disabled={isSubmittingIntake}>
                                     {isSubmittingIntake ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                    {isSubmittingIntake ? "Saving..." : "Save & Start Maternity Care"}
+                                    {isSubmittingIntake ? t('maternity.intakeModal.submitButton.loading') : t('maternity.intakeModal.submitButton')}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -620,9 +616,9 @@ export default function MaternityCarePage() {
             {patientNotFound && (
                  <Alert variant="default" className="border-primary/50">
                     <Info className="h-5 w-5 text-primary" />
-                    <AlertTitle>Patient Not Found for Maternity Care</AlertTitle>
+                    <AlertTitle>{t('maternity.patientNotFound.title')}</AlertTitle>
                     <AlertDescription>
-                    No active maternity record found for National ID: {searchNationalId}. You can register them using the button above.
+                    {t('maternity.patientNotFound.description', {searchNationalId: searchNationalId})}
                     </AlertDescription>
                 </Alert>
             )}
@@ -644,39 +640,39 @@ export default function MaternityCarePage() {
                     />
                     <div className="flex-1">
                         <CardTitle>{selectedPatient.fullName}</CardTitle>
-                        <CardDescription>ID: {selectedPatient.nationalId} | Age: {selectedPatient.age} | Gender: {selectedPatient.gender}</CardDescription>
+                        <CardDescription>ID: {selectedPatient.nationalId} | Age: {selectedPatient.age} | Gender: {t(`patientRegistration.gender.${selectedPatient.gender.toLowerCase()}` as any)}</CardDescription>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
-                  <p><strong>LMP:</strong> {selectedPatient.lmp ? new Date(selectedPatient.lmp + "T00:00:00").toLocaleDateString() : "N/A"}</p>
-                  <p><strong>EDD:</strong> {new Date(selectedPatient.edd + "T00:00:00").toLocaleDateString()} ({selectedPatient.gestationalAge})</p>
-                  <p><strong>Gravida/Para:</strong> G{selectedPatient.gravida} P{selectedPatient.para}</p>
-                  <p><strong>Blood Group:</strong> {selectedPatient.bloodGroup} ({selectedPatient.rhFactor})</p>
+                  <p><strong>{t('maternity.patientOverview.lmp')}</strong> {selectedPatient.lmp ? new Date(selectedPatient.lmp + "T00:00:00").toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US') : "N/A"}</p>
+                  <p><strong>{t('maternity.patientOverview.edd')}</strong> {new Date(selectedPatient.edd + "T00:00:00").toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')} ({selectedPatient.gestationalAge})</p>
+                  <p><strong>{t('maternity.patientOverview.gravidaPara')}</strong> G{selectedPatient.gravida} P{selectedPatient.para}</p>
+                  <p><strong>{t('maternity.patientOverview.bloodGroup')}</strong> {selectedPatient.bloodGroup} ({selectedPatient.rhFactor})</p>
                    {latestVisitVitals && (
                     <>
                         <Separator className="my-2"/>
-                        <h4 className="font-medium flex items-center gap-1"><Activity className="h-4 w-4 text-primary"/>Latest Vitals (from {new Date(latestVisitVitals.date+"T00:00:00").toLocaleDateString()}):</h4>
-                        <p>Temp: {latestVisitVitals.bodyTemperature || 'N/A'}°C | BP: {latestVisitVitals.bp || 'N/A'} {latestVisitVitals.bpStatus && <Badge variant="outline" className={cn("ml-1 text-xs", getBloodPressureStatus(latestVisitVitals.bp).colorClass, getBloodPressureStatus(latestVisitVitals.bp).textColorClass )}>{latestVisitVitals.bpStatus}</Badge>}</p>
-                        <p>Wt: {latestVisitVitals.weightKg || 'N/A'}kg | Ht: {latestVisitVitals.heightCm || 'N/A'}cm | BMI: {latestVisitVitals.bmi || 'N/A'} {latestVisitVitals.bmiStatus && <Badge variant="outline" className={cn("ml-1 text-xs", getBmiStatusAndColor(parseFloat(latestVisitVitals.bmi)).colorClass, getBmiStatusAndColor(parseFloat(latestVisitVitals.bmi)).textColorClass )}>{latestVisitVitals.bmiStatus}</Badge>}</p>
+                        <h4 className="font-medium flex items-center gap-1"><Activity className="h-4 w-4 text-primary"/>{t('maternity.patientOverview.latestVitals.title', {date: new Date(latestVisitVitals.date+"T00:00:00").toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')})}:</h4>
+                        <p>{t('maternity.patientOverview.latestVitals.temp')} {latestVisitVitals.bodyTemperature || 'N/A'}°C | {t('maternity.patientOverview.latestVitals.bp')} {latestVisitVitals.bp || 'N/A'} {latestVisitVitals.bpStatus && <Badge variant="outline" className={cn("ml-1 text-xs", getBloodPressureStatus(latestVisitVitals.bp).colorClass, getBloodPressureStatus(latestVisitVitals.bp).textColorClass )}>{latestVisitVitals.bpStatus}</Badge>}</p>
+                        <p>{t('maternity.patientOverview.latestVitals.wt')} {latestVisitVitals.weightKg || 'N/A'}kg | {t('maternity.patientOverview.latestVitals.ht')} {latestVisitVitals.heightCm || 'N/A'}cm | {t('maternity.patientOverview.latestVitals.bmi')} {latestVisitVitals.bmi || 'N/A'} {latestVisitVitals.bmiStatus && <Badge variant="outline" className={cn("ml-1 text-xs", getBmiStatusAndColor(parseFloat(latestVisitVitals.bmi)).colorClass, getBmiStatusAndColor(parseFloat(latestVisitVitals.bmi)).textColorClass )}>{latestVisitVitals.bmiStatus}</Badge>}</p>
                     </>
                   )}
                   <Separator className="my-2"/>
                   <div>
-                    <h4 className="font-medium">Allergies:</h4>
-                    {selectedPatient.allergies.length > 0 ? selectedPatient.allergies.join(', ') : <span className="text-muted-foreground">None reported</span>}
+                    <h4 className="font-medium">{t('maternity.patientOverview.allergies.title')}</h4>
+                    {selectedPatient.allergies.length > 0 ? selectedPatient.allergies.join(', ') : <span className="text-muted-foreground">{t('maternity.patientOverview.allergies.none')}</span>}
                   </div>
                    <div>
-                    <h4 className="font-medium">Chronic Conditions:</h4> {/* Changed from Existing Conditions */}
-                    {selectedPatient.chronicConditions.length > 0 ? selectedPatient.chronicConditions.join(', ') : <span className="text-muted-foreground">None reported</span>}
+                    <h4 className="font-medium">{t('maternity.patientOverview.chronicConditions.title')}</h4>
+                    {selectedPatient.chronicConditions.length > 0 ? selectedPatient.chronicConditions.join(', ') : <span className="text-muted-foreground">{t('maternity.patientOverview.chronicConditions.none')}</span>}
                   </div>
                   <Separator />
                    <div>
-                     <h4 className="font-medium flex items-center gap-1"><ShieldAlert className="h-4 w-4 text-destructive" /> Risk Factors:</h4>
+                     <h4 className="font-medium flex items-center gap-1"><ShieldAlert className="h-4 w-4 text-destructive" /> {t('maternity.patientOverview.riskFactors.title')}</h4>
                     {selectedPatient.riskFactors.length > 0 ? (
                         <ul className="list-disc list-inside text-destructive">
                             {selectedPatient.riskFactors.map(risk => <li key={risk}>{risk}</li>)}
                         </ul>
-                    ): <span className="text-muted-foreground">None identified.</span>}
+                    ): <span className="text-muted-foreground">{t('maternity.patientOverview.riskFactors.none')}</span>}
                   </div>
                 </CardContent>
                  <CardFooter className="flex-col items-start gap-2">
@@ -684,17 +680,17 @@ export default function MaternityCarePage() {
                         <DialogTrigger asChild>
                             <Button variant="outline" className="w-full" disabled={!selectedPatient || isSchedulingNextVisit}>
                                 {isSchedulingNextVisit ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CalendarPlus className="mr-2 h-4 w-4"/>}
-                                {isSchedulingNextVisit ? "Scheduling..." : "Schedule Next ANC Visit"}
+                                {isSchedulingNextVisit ? t('maternity.patientOverview.scheduleNextVisitButton.loading') : t('maternity.patientOverview.scheduleNextVisitButton')}
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Schedule Next ANC Visit for {selectedPatient.fullName}</DialogTitle>
-                                <DialogDescription>Select the date and add any relevant notes for the next visit.</DialogDescription>
+                                <DialogTitle>{t('maternity.scheduleNextVisitModal.title', {patientName: selectedPatient.fullName})}</DialogTitle>
+                                <DialogDescription>{t('maternity.scheduleNextVisitModal.description')}</DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="nextScheduledDate">Next Visit Date</Label>
+                                    <Label htmlFor="nextScheduledDate">{t('maternity.scheduleNextVisitModal.date.label')}</Label>
                                     <Popover>
                                         <PopoverTrigger asChild>
                                         <Button
@@ -703,24 +699,24 @@ export default function MaternityCarePage() {
                                             disabled={isSchedulingNextVisit}
                                         >
                                             <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {nextScheduledDate ? format(nextScheduledDate, "PPP") : <span>Pick a date</span>}
+                                            {nextScheduledDate ? format(nextScheduledDate, "PPP") : <span>{t('maternity.scheduleNextVisitModal.date.placeholder')}</span>}
                                         </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0">
-                                        <Calendar mode="single" selected={nextScheduledDate} onSelect={setNextScheduledDate} initialFocus />
+                                        <Calendar locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} mode="single" selected={nextScheduledDate} onSelect={setNextScheduledDate} initialFocus />
                                         </PopoverContent>
                                     </Popover>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="nextScheduledNotes">Notes (Optional)</Label>
-                                    <Textarea id="nextScheduledNotes" value={nextScheduledNotes} onChange={(e) => setNextScheduledNotes(e.target.value)} placeholder="e.g., Discuss scan results, GTT reminder." disabled={isSchedulingNextVisit}/>
+                                    <Label htmlFor="nextScheduledNotes">{t('maternity.scheduleNextVisitModal.notes.label')}</Label>
+                                    <Textarea id="nextScheduledNotes" value={nextScheduledNotes} onChange={(e) => setNextScheduledNotes(e.target.value)} placeholder={t('maternity.scheduleNextVisitModal.notes.placeholder')} disabled={isSchedulingNextVisit}/>
                                 </div>
                             </div>
                             <DialogFooter>
-                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSchedulingNextVisit}>Cancel</Button></DialogClose>
+                                <DialogClose asChild><Button type="button" variant="outline" disabled={isSchedulingNextVisit}>{t('maternity.scheduleNextVisitModal.cancelButton')}</Button></DialogClose>
                                 <Button onClick={handleScheduleNextVisitSubmit} disabled={isSchedulingNextVisit || !nextScheduledDate}>
                                     {isSchedulingNextVisit ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                    {isSchedulingNextVisit ? "Scheduling..." : "Schedule Visit"}
+                                    {isSchedulingNextVisit ? t('maternity.scheduleNextVisitModal.submitButton.loading') : t('maternity.scheduleNextVisitModal.submitButton')}
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
@@ -732,26 +728,26 @@ export default function MaternityCarePage() {
             <div className="lg:col-span-2 space-y-6">
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle>Antenatal Visit Log</CardTitle>
-                  <CardDescription>Record of all antenatal care visits for {selectedPatient.fullName}.</CardDescription>
+                  <CardTitle>{t('maternity.antenatalLog.title')}</CardTitle>
+                  <CardDescription>{t('maternity.antenatalLog.description', {patientName: selectedPatient.fullName})}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {selectedPatient.antenatalVisits.length > 0 ? (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>GA</TableHead>
-                          <TableHead>Wt(kg)</TableHead>
-                          <TableHead>BP</TableHead>
-                          <TableHead>FHR</TableHead>
-                          <TableHead>Notes</TableHead>
+                          <TableHead>{t('maternity.antenatalLog.table.date')}</TableHead>
+                          <TableHead>{t('maternity.antenatalLog.table.ga')}</TableHead>
+                          <TableHead>{t('maternity.antenatalLog.table.wt')}</TableHead>
+                          <TableHead>{t('maternity.antenatalLog.table.bp')}</TableHead>
+                          <TableHead>{t('maternity.antenatalLog.table.fhr')}</TableHead>
+                          <TableHead>{t('maternity.antenatalLog.table.notes')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedPatient.antenatalVisits.map((visit) => (
                           <TableRow key={visit.id}>
-                            <TableCell>{new Date(visit.date + "T00:00:00").toLocaleDateString()}</TableCell>
+                            <TableCell>{new Date(visit.date + "T00:00:00").toLocaleDateString(currentLocale === 'pt' ? 'pt-BR' : 'en-US')}</TableCell>
                             <TableCell>{visit.gestationalAge}</TableCell>
                             <TableCell>{visit.weightKg}</TableCell>
                             <TableCell>{visit.bp}</TableCell>
@@ -762,61 +758,61 @@ export default function MaternityCarePage() {
                       </TableBody>
                     </Table>
                   ) : (
-                    <p className="text-muted-foreground text-center py-4">No antenatal visits logged yet.</p>
+                    <p className="text-muted-foreground text-center py-4">{t('maternity.antenatalLog.empty')}</p>
                   )}
                 </CardContent>
                 <CardFooter>
-                    <Dialog open={isNewVisitModalOpen} onOpenChange={setIsNewVisitModalOpen}>
+                    <Dialog open={isNewVisitModalOpen} onOpenChange={(open) => { if(!open) { setNewVisitForm({ visitDate: undefined, gestationalAge: "", weightKg: "", bp: "", fhrBpm: "", fundalHeightCm: "", notes: "", bodyTemperature: "", heightCm: "", nextAppointmentDate: undefined }); setNewVisitBmi(null); setNewVisitBmiDisplay(null); setNewVisitBpDisplay(null); } setIsNewVisitModalOpen(open);}}>
                         <DialogTrigger asChild>
                             <Button disabled={!selectedPatient || isLoggingVisit}>
                                 {isLoggingVisit ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CalendarPlus className="mr-2 h-4 w-4" />}
-                                {isLoggingVisit ? "Logging..." : "Log New Visit"}
+                                {isLoggingVisit ? t('maternity.antenatalLog.logNewVisitButton.loading') : t('maternity.antenatalLog.logNewVisitButton')}
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-2xl"> 
                             <form onSubmit={handleLogNewVisitSubmit}>
                                 <DialogHeader>
-                                    <DialogTitle>Log New Antenatal Visit for {selectedPatient.fullName}</DialogTitle>
-                                    <DialogDescription>Enter details for the current antenatal visit.</DialogDescription>
+                                    <DialogTitle>{t('maternity.newVisitModal.title', {patientName: selectedPatient.fullName})}</DialogTitle>
+                                    <DialogDescription>{t('maternity.newVisitModal.description')}</DialogDescription>
                                 </DialogHeader>
                                 <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
                                     <div className="space-y-2">
-                                        <Label htmlFor="visitDate">Visit Date <span className="text-destructive">*</span></Label>
+                                        <Label htmlFor="visitDate">{t('maternity.newVisitModal.visitDate.label')} <span className="text-destructive">*</span></Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
                                             <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal",!newVisitForm.visitDate && "text-muted-foreground")} disabled={isLoggingVisit}>
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {newVisitForm.visitDate ? format(newVisitForm.visitDate, "PPP") : <span>Pick a date</span>}
+                                                {newVisitForm.visitDate ? format(newVisitForm.visitDate, "PPP") : <span>{t('patientRegistration.dob.placeholder')}</span>}
                                             </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
-                                            <Calendar mode="single" selected={newVisitForm.visitDate} onSelect={(date) => setNewVisitForm(prev => ({...prev, visitDate: date}))} initialFocus />
+                                            <Calendar locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} mode="single" selected={newVisitForm.visitDate} onSelect={(date) => setNewVisitForm(prev => ({...prev, visitDate: date}))} initialFocus />
                                             </PopoverContent>
                                         </Popover>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="gestationalAge">Gestational Age (weeks+days)</Label>
-                                            <Input id="gestationalAge" name="gestationalAge" value={newVisitForm.gestationalAge} onChange={handleNewVisitFormChange} placeholder="e.g., 12w 3d" disabled={isLoggingVisit}/>
+                                            <Label htmlFor="gestationalAge">{t('maternity.newVisitModal.ga.label')}</Label>
+                                            <Input id="gestationalAge" name="gestationalAge" value={newVisitForm.gestationalAge} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.ga.placeholder')} disabled={isLoggingVisit}/>
                                         </div>
                                          <div className="space-y-2">
-                                            <Label htmlFor="bodyTemperature" className="flex items-center"><Thermometer className="mr-1.5 h-4 w-4 text-primary" />Temp (°C)</Label>
-                                            <Input id="bodyTemperature" name="bodyTemperature" value={newVisitForm.bodyTemperature || ""} onChange={handleNewVisitFormChange} placeholder="e.g., 37.5" disabled={isLoggingVisit}/>
+                                            <Label htmlFor="bodyTemperature" className="flex items-center"><Thermometer className="mr-1.5 h-4 w-4 text-primary" />{t('maternity.newVisitModal.temp.label')}</Label>
+                                            <Input id="bodyTemperature" name="bodyTemperature" value={newVisitForm.bodyTemperature || ""} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.temp.placeholder')} disabled={isLoggingVisit}/>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="weightKg" className="flex items-center"><Weight className="mr-1.5 h-4 w-4 text-primary" />Weight (kg)</Label>
-                                            <Input id="weightKg" name="weightKg" type="number" step="0.1" value={newVisitForm.weightKg} onChange={handleNewVisitFormChange} placeholder="e.g., 65.5" disabled={isLoggingVisit}/>
+                                            <Label htmlFor="weightKg" className="flex items-center"><Weight className="mr-1.5 h-4 w-4 text-primary" />{t('maternity.newVisitModal.weight.label')}</Label>
+                                            <Input id="weightKg" name="weightKg" type="number" step="0.1" value={newVisitForm.weightKg} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.weight.placeholder')} disabled={isLoggingVisit}/>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="heightCm" className="flex items-center"><Ruler className="mr-1.5 h-4 w-4 text-primary" />Height (cm)</Label>
-                                            <Input id="heightCm" name="heightCm" type="number" value={newVisitForm.heightCm || ""} onChange={handleNewVisitFormChange} placeholder="e.g., 165" disabled={isLoggingVisit}/>
+                                            <Label htmlFor="heightCm" className="flex items-center"><Ruler className="mr-1.5 h-4 w-4 text-primary" />{t('maternity.newVisitModal.height.label')}</Label>
+                                            <Input id="heightCm" name="heightCm" type="number" value={newVisitForm.heightCm || ""} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.height.placeholder')} disabled={isLoggingVisit}/>
                                         </div>
                                     </div>
                                      <div className="grid grid-cols-2 gap-4 items-center">
                                         <div className="space-y-1">
-                                            <Label className="flex items-center text-xs"><Sigma className="mr-1.5 h-3 w-3" />BMI (kg/m²)</Label>
+                                            <Label className="flex items-center text-xs"><Sigma className="mr-1.5 h-3 w-3" />{t('maternity.newVisitModal.bmi.label')}</Label>
                                             <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-muted/50 min-w-[150px]">
                                                 <span className="text-sm font-medium">{newVisitBmi || "N/A"}</span>
                                                 {newVisitBmiDisplay && newVisitBmiDisplay.status !== "N/A" && (
@@ -825,7 +821,7 @@ export default function MaternityCarePage() {
                                             </div>
                                         </div>
                                         <div className="space-y-1">
-                                            <Label className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />BP Status</Label>
+                                            <Label className="flex items-center text-xs"><BloodPressureIcon className="mr-1.5 h-3 w-3" />{t('maternity.newVisitModal.bpStatus.label')}</Label>
                                             <div className="flex items-center gap-2 p-2 h-10 rounded-md border border-input bg-muted/50 min-w-[150px]">
                                                 {newVisitBpDisplay && newVisitBpDisplay.status !== "N/A" && newVisitBpDisplay.status !== "Invalid" && (
                                                     <Badge className={cn("border-transparent text-xs px-1.5 py-0.5", newVisitBpDisplay.colorClass, newVisitBpDisplay.textColorClass)}>{newVisitBpDisplay.status}</Badge>
@@ -838,24 +834,24 @@ export default function MaternityCarePage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="bp" className="flex items-center"><BloodPressureIcon className="mr-1.5 h-4 w-4 text-primary" />Blood Pressure (mmHg)</Label>
-                                            <Input id="bp" name="bp" value={newVisitForm.bp} onChange={handleNewVisitFormChange} placeholder="e.g., 120/80" disabled={isLoggingVisit}/>
+                                            <Label htmlFor="bp" className="flex items-center"><BloodPressureIcon className="mr-1.5 h-4 w-4 text-primary" />{t('maternity.newVisitModal.bp.label')}</Label>
+                                            <Input id="bp" name="bp" value={newVisitForm.bp} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.bp.placeholder')} disabled={isLoggingVisit}/>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="fhrBpm">Fetal Heart Rate (bpm)</Label>
-                                            <Input id="fhrBpm" name="fhrBpm" type="number" value={newVisitForm.fhrBpm} onChange={handleNewVisitFormChange} placeholder="e.g., 140" disabled={isLoggingVisit}/>
+                                            <Label htmlFor="fhrBpm">{t('maternity.newVisitModal.fhr.label')}</Label>
+                                            <Input id="fhrBpm" name="fhrBpm" type="number" value={newVisitForm.fhrBpm} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.fhr.placeholder')} disabled={isLoggingVisit}/>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="fundalHeightCm">Fundal Height (cm)</Label>
-                                        <Input id="fundalHeightCm" name="fundalHeightCm" type="number" value={newVisitForm.fundalHeightCm} onChange={handleNewVisitFormChange} placeholder="e.g., 20" disabled={isLoggingVisit}/>
+                                        <Label htmlFor="fundalHeightCm">{t('maternity.newVisitModal.fundalHeight.label')}</Label>
+                                        <Input id="fundalHeightCm" name="fundalHeightCm" type="number" value={newVisitForm.fundalHeightCm} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.fundalHeight.placeholder')} disabled={isLoggingVisit}/>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="notes">Clinical Notes</Label>
-                                        <Textarea id="notes" name="notes" value={newVisitForm.notes} onChange={handleNewVisitFormChange} placeholder="Observations, advice given, etc." disabled={isLoggingVisit}/>
+                                        <Label htmlFor="notes">{t('maternity.newVisitModal.notes.label')}</Label>
+                                        <Textarea id="notes" name="notes" value={newVisitForm.notes} onChange={handleNewVisitFormChange} placeholder={t('maternity.newVisitModal.notes.placeholder')} disabled={isLoggingVisit}/>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="nextAppointmentDate">Next Appointment Date (Optional)</Label>
+                                        <Label htmlFor="nextAppointmentDate">{t('maternity.newVisitModal.nextAppointment.label')}</Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
                                             <Button
@@ -864,20 +860,20 @@ export default function MaternityCarePage() {
                                                 disabled={isLoggingVisit}
                                             >
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {newVisitForm.nextAppointmentDate ? format(newVisitForm.nextAppointmentDate, "PPP") : <span>Pick a date</span>}
+                                                {newVisitForm.nextAppointmentDate ? format(newVisitForm.nextAppointmentDate, "PPP") : <span>{t('patientRegistration.dob.placeholder')}</span>}
                                             </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
-                                            <Calendar mode="single" selected={newVisitForm.nextAppointmentDate} onSelect={(date) => setNewVisitForm(prev => ({...prev, nextAppointmentDate: date}))} initialFocus />
+                                            <Calendar locale={currentLocale === 'pt' ? require('date-fns/locale/pt-BR') : undefined} mode="single" selected={newVisitForm.nextAppointmentDate} onSelect={(date) => setNewVisitForm(prev => ({...prev, nextAppointmentDate: date}))} initialFocus />
                                             </PopoverContent>
                                         </Popover>
                                     </div>
                                 </div>
                                 <DialogFooter>
-                                    <DialogClose asChild><Button type="button" variant="outline" disabled={isLoggingVisit}>Cancel</Button></DialogClose>
+                                    <DialogClose asChild><Button type="button" variant="outline" disabled={isLoggingVisit}>{t('maternity.newVisitModal.cancelButton')}</Button></DialogClose>
                                     <Button type="submit" disabled={isLoggingVisit || !newVisitForm.visitDate}>
                                         {isLoggingVisit ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                        {isLoggingVisit ? "Logging Visit..." : "Log Visit"}
+                                        {isLoggingVisit ? t('maternity.newVisitModal.submitButton.loading') : t('maternity.newVisitModal.submitButton')}
                                     </Button>
                                 </DialogFooter>
                             </form>
@@ -888,16 +884,16 @@ export default function MaternityCarePage() {
 
               <Card className="shadow-sm">
                 <CardHeader>
-                    <CardTitle>Ultrasound & Lab Results Summary</CardTitle>
-                    <CardDescription>Key findings and links to reports for {selectedPatient.fullName}.</CardDescription>
+                    <CardTitle>{t('maternity.resultsSummary.title')}</CardTitle>
+                    <CardDescription>{t('maternity.resultsSummary.description', {patientName: selectedPatient.fullName})}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-1">
-                        <Label className="flex items-center gap-1.5"><ScanSearch className="h-4 w-4 text-primary"/> Latest Ultrasound Summary (Mock)</Label>
+                        <Label className="flex items-center gap-1.5"><ScanSearch className="h-4 w-4 text-primary"/>{t('maternity.resultsSummary.ultrasound.label')}</Label>
                         <Textarea readOnly defaultValue="Anomaly scan at 20w 2d: Normal fetal anatomy. Placenta posterior, clear of os. AFI normal. EFW: 350g. Next scan: Growth scan at 32w." className="text-sm bg-muted/50"/>
                     </div>
                      <div className="space-y-1">
-                        <Label className="flex items-center gap-1.5"><Microscope className="h-4 w-4 text-primary"/> Key Lab Results (Mock)</Label>
+                        <Label className="flex items-center gap-1.5"><Microscope className="h-4 w-4 text-primary"/>{t('maternity.resultsSummary.lab.label')}</Label>
                         <Textarea readOnly defaultValue="Hb: 11.5 g/dL (12w)\nGTT: Normal (26w)\nUrine Culture: No growth (12w)\nHIV/Syphilis/HepB: Non-reactive" className="text-sm bg-muted/50"/>
                     </div>
                 </CardContent>
@@ -906,16 +902,16 @@ export default function MaternityCarePage() {
                       <DialogTrigger asChild>
                         <Button variant="outline" disabled={!selectedPatient || isOrderingLabs}>
                             {isOrderingLabs ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FlaskConical className="mr-2 h-4 w-4"/>}
-                            {isOrderingLabs ? "Ordering..." : "Order Labs"}
+                            {isOrderingLabs ? t('maternity.resultsSummary.orderLabsButton.loading') : t('maternity.resultsSummary.orderLabsButton')}
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                          <DialogTitle>Order Lab Tests for {selectedPatient?.fullName}</DialogTitle>
-                          <DialogDescription>Select the required lab tests and add any clinical notes.</DialogDescription>
+                          <DialogTitle>{t('maternity.orderLabsModal.title', {patientName: selectedPatient?.fullName || ""})}</DialogTitle>
+                          <DialogDescription>{t('maternity.orderLabsModal.description')}</DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                          <Label className="text-base font-semibold">Common Prenatal Tests:</Label>
+                          <Label className="text-base font-semibold">{t('maternity.orderLabsModal.commonTests.label')}</Label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                             {COMMON_ORDERABLE_LAB_TESTS.map((test) => ( 
                               <div key={test.id} className="flex items-center space-x-2">
@@ -933,15 +929,15 @@ export default function MaternityCarePage() {
                           </div>
                           <Separator className="my-2"/>
                           <div className="space-y-2">
-                            <Label htmlFor="maternityLabClinicalNotes">Clinical Notes / Reason for Test(s)</Label>
-                            <Textarea id="maternityLabClinicalNotes" placeholder="e.g., Routine antenatal screening, specific concerns..." disabled={isOrderingLabs} />
+                            <Label htmlFor="maternityLabClinicalNotes">{t('maternity.orderLabsModal.notes.label')}</Label>
+                            <Textarea id="maternityLabClinicalNotes" placeholder={t('maternity.orderLabsModal.notes.placeholder')} disabled={isOrderingLabs} />
                           </div>
                         </div>
                         <DialogFooter>
-                          <DialogClose asChild><Button type="button" variant="outline" disabled={isOrderingLabs}>Cancel</Button></DialogClose>
+                          <DialogClose asChild><Button type="button" variant="outline" disabled={isOrderingLabs}>{t('maternity.orderLabsModal.cancelButton')}</Button></DialogClose>
                           <Button type="button" onClick={handleSubmitLabOrder} disabled={isOrderingLabs || Object.values(selectedLabTests).every(v => !v)}>
                             {isOrderingLabs ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                            {isOrderingLabs ? "Submitting..." : "Submit Lab Order"}
+                            {isOrderingLabs ? t('maternity.orderLabsModal.submitButton.loading') : t('maternity.orderLabsModal.submitButton')}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -960,43 +956,43 @@ export default function MaternityCarePage() {
                       <DialogTrigger asChild>
                         <Button variant="outline" disabled={!selectedPatient || isOrderingImaging}>
                             {isOrderingImaging ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RadioTower className="mr-2 h-4 w-4"/>}
-                            {isOrderingImaging ? "Ordering..." : "Order Imaging Study"}
+                            {isOrderingImaging ? t('maternity.resultsSummary.orderImagingButton.loading') : t('maternity.resultsSummary.orderImagingButton')}
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                          <DialogTitle>Order Imaging Study for {selectedPatient?.fullName}</DialogTitle>
-                          <DialogDescription>Select imaging type, specify details, and add clinical notes.</DialogDescription>
+                          <DialogTitle>{t('maternity.orderImagingModal.title', {patientName: selectedPatient?.fullName || ""})}</DialogTitle>
+                          <DialogDescription>{t('maternity.orderImagingModal.description')}</DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                           <div className="space-y-2">
-                            <Label htmlFor="maternityImagingType">Imaging Type</Label>
+                            <Label htmlFor="maternityImagingType">{t('maternity.orderImagingModal.type.label')}</Label>
                             <Select disabled={isOrderingImaging} name="maternityImagingType" defaultValue="" id="maternityImagingType">
                               <SelectTrigger>
-                                <SelectValue placeholder="Select imaging type" />
+                                <SelectValue placeholder={t('maternity.orderImagingModal.type.placeholder')} />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="ultrasound">Ultrasound</SelectItem>
-                                <SelectItem value="xray">X-Ray</SelectItem>
-                                <SelectItem value="mri">MRI</SelectItem>
-                                <SelectItem value="ctscan">CT Scan</SelectItem>
+                                <SelectItem value="ultrasound">{t('maternity.orderImagingModal.type.ultrasound')}</SelectItem>
+                                <SelectItem value="xray">{t('maternity.orderImagingModal.type.xray')}</SelectItem>
+                                <SelectItem value="mri">{t('maternity.orderImagingModal.type.mri')}</SelectItem>
+                                <SelectItem value="ctscan">{t('maternity.orderImagingModal.type.ctscan')}</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="maternityImagingRegionDetails">Region / Details of Study</Label>
-                            <Textarea id="maternityImagingRegionDetails" placeholder="e.g., Anomaly Scan, Pelvic Ultrasound, Fetal Growth Scan, Chest X-ray PA view, MRI Brain..." disabled={isOrderingImaging} />
+                            <Label htmlFor="maternityImagingRegionDetails">{t('maternity.orderImagingModal.region.label')}</Label>
+                            <Textarea id="maternityImagingRegionDetails" placeholder={t('maternity.orderImagingModal.region.placeholder')} disabled={isOrderingImaging} />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="maternityImagingClinicalNotes">Clinical Notes / Reason for Study</Label>
-                            <Textarea id="maternityImagingClinicalNotes" placeholder="e.g., Routine 20-week scan, assess fetal well-being, rule out pneumonia..." disabled={isOrderingImaging}/>
+                            <Label htmlFor="maternityImagingClinicalNotes">{t('maternity.orderImagingModal.notes.label')}</Label>
+                            <Textarea id="maternityImagingClinicalNotes" placeholder={t('maternity.orderImagingModal.notes.placeholder')} disabled={isOrderingImaging}/>
                           </div>
                         </div>
                         <DialogFooter>
-                           <DialogClose asChild><Button type="button" variant="outline" disabled={isOrderingImaging}>Cancel</Button></DialogClose>
+                           <DialogClose asChild><Button type="button" variant="outline" disabled={isOrderingImaging}>{t('maternity.orderImagingModal.cancelButton')}</Button></DialogClose>
                           <Button type="button" onClick={handleSubmitImagingOrder} disabled={isOrderingImaging}>
                             {isOrderingImaging ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                            {isOrderingImaging ? "Submitting..." : "Submit Imaging Order"}
+                            {isOrderingImaging ? t('maternity.orderImagingModal.submitButton.loading') : t('maternity.orderImagingModal.submitButton')}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -1006,14 +1002,14 @@ export default function MaternityCarePage() {
 
                <Card className="shadow-sm">
                 <CardHeader>
-                    <CardTitle>Birth Plan & Delivery Notes</CardTitle>
-                    <CardDescription>Preferences and important notes for delivery for {selectedPatient.fullName}.</CardDescription>
+                    <CardTitle>{t('maternity.birthPlan.title')}</CardTitle>
+                    <CardDescription>{t('maternity.birthPlan.description', {patientName: selectedPatient.fullName})}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Textarea placeholder="Enter patient's birth preferences, specific requests, or important notes for the delivery team..." className="min-h-[100px]"/>
+                    <Textarea placeholder={t('maternity.birthPlan.placeholder')} className="min-h-[100px]"/>
                 </CardContent>
                 <CardFooter>
-                    <Button onClick={() => toast({title: "Mock Action", description:"Birth plan notes saved."})}>Save Birth Plan</Button>
+                    <Button onClick={() => toast({title: t('maternity.toast.birthPlanSaved'), description:t('maternity.toast.birthPlanSaved.desc')})}>{t('maternity.birthPlan.saveButton')}</Button>
                 </CardFooter>
               </Card>
             </div>
@@ -1023,3 +1019,5 @@ export default function MaternityCarePage() {
   );
 }
 
+
+    
