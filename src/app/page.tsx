@@ -1,10 +1,10 @@
 
 "use client"; 
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2, FileClock } from "lucide-react";
+import { Activity, Users, CalendarCheck, BedDouble, Siren, Briefcase, Microscope, Baby, TrendingUp, HeartPulse, Pill as PillIcon, PieChart as PieChartIcon, BarChart3, Loader2, FileClock, Stethoscope } from "lucide-react";
 import Link from "next/link";
 import { useLocale } from '@/context/locale-context';
 import { getTranslator, type Locale, defaultLocale } from '@/lib/i18n';
@@ -14,11 +14,11 @@ import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/compone
 interface SummaryCardData {
   id: string;
   titleKey: string;
-  value: string | string[]; // Can be a single value or an array for Top 5 Prescriptions
-  iconName: "TrendingUp" | "CalendarCheck" | "BedDouble" | "Siren" | "Users" | "HeartPulse" | "PillIcon" | "FileClock";
+  value: string | string[]; 
+  iconName: "TrendingUp" | "CalendarCheck" | "BedDouble" | "Siren" | "Users" | "HeartPulse" | "PillIcon" | "FileClock" | "Stethoscope";
   color: string;
   descriptionKey: string;
-  link?: string; // Link is optional
+  link?: string;
 }
 
 interface QuickActionData {
@@ -53,13 +53,13 @@ interface DraftedConsultationItem {
 }
 
 const ICONS_MAP: { [key: string]: React.ElementType } = {
-  TrendingUp, CalendarCheck, BedDouble, Siren, Users, HeartPulse, PillIcon, Briefcase, Microscope, Baby, FileClock
+  TrendingUp, CalendarCheck, BedDouble, Siren, Users, HeartPulse, PillIcon, Briefcase, Microscope, Baby, FileClock, Stethoscope
 };
 
 
 export default function DashboardPage() {
   const { currentLocale } = useLocale();
-  const t = getTranslator(currentLocale);
+  const t = useMemo(() => getTranslator(currentLocale), [currentLocale]);
 
   const [summaryCardsData, setSummaryCardsData] = useState<SummaryCardData[]>([]);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
@@ -82,7 +82,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsLoadingSummary(true);
-    const currentT = getTranslator(currentLocale); 
+    const currentT = getTranslator(currentLocale); // Use currentLocale for data generation if needed
     setTimeout(() => {
       const fetchedSummary: SummaryCardData[] = [
         { id: "sc1", titleKey: "dashboard.card.totalPatients.title", value: "156", iconName: "TrendingUp", color: "text-green-500", descriptionKey: "dashboard.card.totalPatients.description", link: "#" },
@@ -90,7 +90,7 @@ export default function DashboardPage() {
         { id: "sc3", titleKey: "dashboard.card.wardOccupancy.title", value: "75%", iconName: "BedDouble", color: "text-indigo-500", descriptionKey: "dashboard.card.wardOccupancy.description", link: "/ward-management" },
         { id: "sc4", titleKey: "dashboard.card.erStatus.title", value: "12 Active", iconName: "Siren", color: "text-red-500", descriptionKey: "dashboard.card.erStatus.description", link: "/emergency-room" },
         { id: "sc5", titleKey: "dashboard.card.newPatients.title", value: "5", iconName: "Users", color: "text-emerald-500", descriptionKey: "dashboard.card.newPatients.description", link: "/patient-registration" },
-        { id: "sc6", titleKey: "dashboard.card.commonCondition.title", value: "Flu", iconName: "HeartPulse", color: "text-orange-500", descriptionKey: "dashboard.card.commonCondition.description", link: "#" },
+        { id: "sc6", titleKey: "dashboard.card.commonCondition.title", value: "Hypertension,Type 2 Diabetes,Influenza,Malaria,Pneumonia", iconName: "Stethoscope", color: "text-orange-500", descriptionKey: "dashboard.card.commonCondition.description", link: "#" },
         { id: "sc7", titleKey: "dashboard.card.prescribedDrug.title", value: "Paracetamol,Amoxicillin,Ibuprofen,Omeprazole,Salbutamol", iconName: "PillIcon", color: "text-purple-500", descriptionKey: "dashboard.card.prescribedDrug.description", link: "#" },
       ];
       setSummaryCardsData(fetchedSummary);
@@ -173,12 +173,12 @@ export default function DashboardPage() {
     }, 1400);
   }, []);
 
-  const chartConfig = {
+  const chartConfig = useMemo(() => ({
     outpatient: { label: t('dashboard.charts.entryPoints.outpatient'), color: "hsl(var(--chart-1))" },
     emergency: { label: t('dashboard.charts.entryPoints.emergency'), color: "hsl(var(--chart-2))" },
     epidemic: { label: t('dashboard.charts.entryPoints.epidemic'), color: "hsl(var(--chart-3))" },
     patients: { label: t('dashboard.charts.dailyAttendance.patients'), color: "hsl(var(--chart-4))" },
-  } satisfies ChartConfig;
+  }), [t]) satisfies ChartConfig;
 
 
   return (
@@ -190,7 +190,7 @@ export default function DashboardPage() {
 
         {isLoadingSummary ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {Array.from({length: 4}).map((_, index) => (
+                {Array.from({length: 8}).map((_, index) => ( // Increased length for skeleton
                     <Card key={`skl-sum-${index}`} className="shadow-sm">
                         <CardHeader className="pb-2"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/></CardHeader>
                         <CardContent><div className="h-5 w-3/4 bg-muted rounded animate-pulse"/><div className="h-3 w-1/2 bg-muted rounded mt-1 animate-pulse"/></CardContent>
@@ -202,6 +202,8 @@ export default function DashboardPage() {
             {summaryCardsData.map((item) => {
                 const Icon = ICONS_MAP[item.iconName];
                 const isPrescriptionCard = item.titleKey === "dashboard.card.prescribedDrug.title";
+                const isDiagnosticsCard = item.titleKey === "dashboard.card.commonCondition.title"; // This now refers to Top 5 Diagnostics
+
                 return (
                 <Card key={item.id} className="shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -209,9 +211,9 @@ export default function DashboardPage() {
                     {Icon && <Icon className={`h-5 w-5 ${item.color}`} />}
                 </CardHeader>
                 <CardContent>
-                    {isPrescriptionCard && typeof item.value === 'string' ? (
+                    {(isPrescriptionCard || isDiagnosticsCard) && typeof item.value === 'string' ? (
                        <ul className="text-sm font-semibold list-decimal list-inside space-y-0.5">
-                          {(item.value as string).split(',').slice(0,5).map((drug, idx) => <li key={idx} className="text-xs">{drug.trim()}</li>)}
+                          {(item.value as string).split(',').slice(0,5).map((entry, idx) => <li key={idx} className="text-xs">{entry.trim()}</li>)}
                         </ul>
                     ) : (
                       <div className="text-2xl font-bold">{Array.isArray(item.value) ? item.value.join(', ') : item.value}</div>
@@ -422,6 +424,3 @@ export default function DashboardPage() {
       </div>
   );
 }
-
-
-    
