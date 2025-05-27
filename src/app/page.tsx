@@ -130,7 +130,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsLoadingEntryPoints(true);
-    const localT = getTranslator(currentLocale); // Get t specifically for this effect
+    const localT = getTranslator(currentLocale); // Get t specifically for this effect if needed for data
     setTimeout(() => {
         const fetchedEntryPoints: ChartDataItem[] = [
             { name: localT('dashboard.charts.entryPoints.outpatient'), value: 400, fill: "hsl(var(--chart-1))" },
@@ -177,7 +177,7 @@ export default function DashboardPage() {
     emergency: { label: t('dashboard.charts.entryPoints.emergency'), color: "hsl(var(--chart-2))" },
     epidemic: { label: t('dashboard.charts.entryPoints.epidemic'), color: "hsl(var(--chart-3))" },
     patients: { label: t('dashboard.charts.dailyAttendance.patients'), color: "hsl(var(--chart-4))" },
-  }), [t]) satisfies ChartConfig; // chartConfig depends on `t`, which depends on `currentLocale`
+  }), [t]) satisfies ChartConfig;
 
 
   return (
@@ -291,7 +291,9 @@ export default function DashboardPage() {
                     ))}
                 </ul>
               )}
-               <Button variant="outline" className="mt-4 w-full" disabled={isLoadingActivity}>{t('dashboard.recentActivity.viewAll')}</Button>
+               <Button variant="outline" className="mt-4 w-full" disabled={isLoadingActivity} asChild>
+                  <Link href="/system-activity-log">{t('dashboard.recentActivity.viewAll')}</Link>
+                </Button>
             </CardContent>
           </Card>
           <Card className="shadow-sm">
@@ -360,8 +362,8 @@ export default function DashboardPage() {
                                 <RechartsLegend content={({ payload }) => {
                                     return (
                                     <div className="flex items-center justify-center gap-3 mt-4">
-                                        {payload?.map((entry: any) => (
-                                        <div key={`item-${entry.value}`} className="flex items-center space-x-1">
+                                        {payload?.map((entry: any, index: number) => ( // Added index for key
+                                        <div key={`item-${entry.value}-${index}`} className="flex items-center space-x-1"> {/* Added index to key */}
                                             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
                                             <span className="text-xs text-muted-foreground">{entry.payload.name}</span>
                                         </div>
@@ -401,8 +403,8 @@ export default function DashboardPage() {
                                     <RechartsLegend
                                         content={({ payload }) => (
                                             <div className="flex items-center justify-center gap-2 mt-2">
-                                            {payload?.map((entry: any) => (
-                                                <div key={`item-${entry.value}`} className="flex items-center space-x-1">
+                                            {payload?.map((entry: any, index: number) => ( // Added index for key
+                                                <div key={`item-${entry.value}-${index}`} className="flex items-center space-x-1"> {/* Added index to key */}
                                                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
                                                 <span className="text-xs text-muted-foreground">{entry.value}</span>
                                                 </div>
