@@ -2,8 +2,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link"; // Still needed for H365 logo link
+import { usePathname, useRouter } from "next/navigation"; // useRouter for programmatic navigation
 import { Stethoscope, Menu } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarInset,
+  useSidebar, // Import useSidebar
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -35,68 +36,66 @@ import { getTranslator } from "@/lib/i18n";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
+  const router = useRouter(); // For navigation
   const { currentLocale } = useLocale();
   const t = getTranslator(currentLocale);
   const currentYear = new Date().getFullYear();
 
-  // const { state: sidebarState, collapsible: sidebarCollapsible, toggleSidebar } = useSidebar();
-  // const isIconOnlyCollapsed = sidebarState === "collapsed" && sidebarCollapsible === "icon";
+  const { open: sidebarOpen, toggleSidebar } = useSidebar(); // Get state and toggle from context
 
   return (
     <>
       <Sidebar>
-        <SidebarHeader>
+        <SidebarHeader 
+          className={cn(
+            sidebarOpen ? "p-4" : "p-2 items-center h-[64px] flex-col justify-center"
+          )}
+        >
           <div className={cn(
             "flex items-center justify-between w-full",
-            // isIconOnlyCollapsed ? "p-2 h-[64px] flex-col items-center" : "p-4"
-            "p-4" // Always expanded padding for header
+            !sidebarOpen && "flex-col"
           )}>
             <Link
               href="/"
-              className="flex items-center gap-2 overflow-hidden"
+              className={cn(
+                "flex items-center gap-2 overflow-hidden",
+                !sidebarOpen && "justify-center"
+              )}
             >
               <Stethoscope className="h-7 w-7 text-primary shrink-0" />
               <h1 className={cn(
                 "text-xl font-semibold whitespace-nowrap",
-                // isIconOnlyCollapsed && "opacity-0 w-0 h-0 sr-only pointer-events-none"
+                !sidebarOpen && "hidden" // Hide text when collapsed
               )}>H365</h1>
             </Link>
-            {/* Menu toggle button removed for permanently expanded sidebar */}
-            {/* {!isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={toggleSidebar}
-                aria-label="Toggle sidebar"
-              >
-                <Menu />
-              </Button>
-            )} */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7" // Always visible
+              onClick={toggleSidebar}
+              aria-label="Toggle sidebar"
+            >
+              <Menu />
+            </Button>
           </div>
         </SidebarHeader>
         <SidebarContent 
           className={cn(
-            // isIconOnlyCollapsed && "p-2"
-            "p-2" // Always expanded padding
+            sidebarOpen ? "p-2" : "p-2 items-center"
           )}
         >
           <SidebarMenu>
             {NAV_ITEMS.map((item: NavItem) => (
-              <SidebarMenuItem key={item.href}>
+              <SidebarMenuItem key={item.label}>
                 <SidebarMenuButton
-                  asChild
                   isActive={pathname === item.href}
                   disabled={item.disabled}
                   className={cn(item.disabled && "cursor-not-allowed opacity-50")}
+                  onClick={() => !item.disabled && router.push(item.href)} // Programmatic navigation
+                  tooltip={item.label} // Tooltip for collapsed state
                 >
-                  <Link href={item.href} passHref legacyBehavior>
-                    <a className="flex items-center gap-2">
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </a>
-                  </Link>
+                  <item.icon />
+                  <span>{item.label}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
@@ -104,25 +103,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarContent>
         <SidebarFooter 
           className={cn(
-            // isIconOnlyCollapsed && "p-2"
-            "p-2" // Always expanded padding
+            sidebarOpen ? "p-2" : "p-2 items-center"
           )}
         >
            <SidebarMenu>
             {BOTTOM_NAV_ITEMS.map((item: NavItem) => (
-              <SidebarMenuItem key={item.label}> {/* Changed key to item.label */}
+              <SidebarMenuItem key={item.label}>
                 <SidebarMenuButton
-                  asChild
                   isActive={pathname === item.href}
                   disabled={item.disabled}
                   className={cn(item.disabled && "cursor-not-allowed opacity-50")}
+                  onClick={() => !item.disabled && router.push(item.href)} // Programmatic navigation
+                  tooltip={item.label}
                 >
-                  <Link href={item.href} passHref legacyBehavior>
-                    <a className="flex items-center gap-2">
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </a>
-                  </Link>
+                  <item.icon />
+                  <span>{item.label}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
@@ -132,7 +127,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <SidebarInset>
         <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 sm:px-6">
           <div className="flex-1">
-            {/* Breadcrumbs or page title can go here */}
+            {/* Optional: Page title or breadcrumbs */}
           </div>
           <div className="flex items-center gap-4">
             <LocaleToggle />

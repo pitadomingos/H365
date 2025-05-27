@@ -25,8 +25,7 @@ export const metadata: Metadata = {
 };
 
 const SIDEBAR_WIDTH = "16rem"; 
-// SIDEBAR_WIDTH_ICON is no longer needed if sidebar is always expanded
-// const SIDEBAR_WIDTH_ICON = "3rem"; 
+const SIDEBAR_WIDTH_ICON = "3.5rem"; // Standard icon-only width (e.g., 56px)
 
 export default function RootLayout({
   children,
@@ -43,13 +42,13 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {/* SidebarProvider might only be needed for TooltipProvider if toggle logic is removed */}
-            <SidebarProvider> 
+            {/* SidebarProvider now has defaultOpen={true} */}
+            <SidebarProvider defaultOpen={true}> 
               <div
                 style={
                   {
                     "--sidebar-width": SIDEBAR_WIDTH,
-                    // "--sidebar-width-icon": SIDEBAR_WIDTH_ICON, // No longer needed
+                    "--sidebar-width-icon": SIDEBAR_WIDTH_ICON, 
                   } as React.CSSProperties
                 }
                 className={cn(
