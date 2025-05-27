@@ -29,7 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/telemedicine', label: 'Telemedicine', icon: Video },
   { href: '/analytics-bi', label: 'Analytics & BI', icon: BrainCircuit },
   { href: '/blood-bank', label: 'Blood Bank', icon: Droplets },
-  { href: '/system-activity-log', label: 'System Activity Log', icon: ListCollapse },
+  { href: '/system-activity-log', label: 'System Activity Log', icon: ListCollapse }, // Ensured it's enabled
   { href: '/technical-overview', label: 'Technical Overview', icon: Info },
   { href: '/backend-schema-roadmap', label: 'Backend Roadmap', icon: Database },
   { href: '/architecture-options', label: 'Architecture Options', icon: Network },
@@ -39,9 +39,9 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 export const BOTTOM_NAV_ITEMS: NavItem[] = [
-    { href: '/notifications', label: 'Notifications', icon: Bell, disabled: true },
-    { href: '/settings', label: 'Settings', icon: Settings, disabled: true },
-    { href: '/logout', label: 'Logout', icon: LogOut, disabled: true },
+    { href: '#', label: 'Notifications', icon: Bell, disabled: true }, // Kept disabled as per previous state
+    { href: '#', label: 'Settings', icon: Settings, disabled: true },  // Kept disabled
+    { href: '#', label: 'Logout', icon: LogOut, disabled: true },    // Kept disabled
 ];
 
 export interface OrderableLabTest {
@@ -178,5 +178,5 @@ export const MATERNITY_SPECIFIC_LAB_TESTS: OrderableLabTest[] = [
   { id: "group_b_strep_screen_mat", label: "Group B Strep Screen (GBS)", category: "Microbiology" },
   { id: "antibody_screen_indirect_coombs_mat", label: "Antibody Screen (Indirect Coombs)", category: "Hematology" },
 ];
-
+ 
     
