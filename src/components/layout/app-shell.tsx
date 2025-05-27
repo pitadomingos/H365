@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation"; // Import useRouter
+import { usePathname, useRouter } from "next/navigation";
 import { Stethoscope, Menu } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -31,75 +31,98 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LocaleToggle } from "@/components/locale-toggle";
 import { useLocale } from '@/context/locale-context';
+import { getTranslator } from "@/lib/i18n";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter(); // Initialize useRouter
+  const router = useRouter();
   const { currentLocale } = useLocale();
+  const t = getTranslator(currentLocale);
   const currentYear = new Date().getFullYear();
 
+  // const { state: sidebarState, collapsible: sidebarCollapsible, toggleSidebar } = useSidebar();
+  // const isIconOnlyCollapsed = sidebarState === "collapsed" && sidebarCollapsible === "icon";
+
   return (
-    <div
-      style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
-      className={cn(
-        "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar"
-      )}
-    >
+    <>
       <Sidebar>
         <SidebarHeader>
-          <div className="flex items-center justify-between w-full p-4">
+          <div className={cn(
+            "flex items-center justify-between w-full",
+            // isIconOnlyCollapsed ? "p-2 h-[64px] flex-col items-center" : "p-4"
+            "p-4" // Always expanded padding for header
+          )}>
             <Link
               href="/"
               className="flex items-center gap-2 overflow-hidden"
             >
               <Stethoscope className="h-7 w-7 text-primary shrink-0" />
-              <h1 className="text-xl font-semibold whitespace-nowrap">H365</h1>
+              <h1 className={cn(
+                "text-xl font-semibold whitespace-nowrap",
+                // isIconOnlyCollapsed && "opacity-0 w-0 h-0 sr-only pointer-events-none"
+              )}>H365</h1>
             </Link>
             {/* Menu toggle button removed for permanently expanded sidebar */}
+            {/* {!isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={toggleSidebar}
+                aria-label="Toggle sidebar"
+              >
+                <Menu />
+              </Button>
+            )} */}
           </div>
         </SidebarHeader>
-        <SidebarContent>
+        <SidebarContent 
+          className={cn(
+            // isIconOnlyCollapsed && "p-2"
+            "p-2" // Always expanded padding
+          )}
+        >
           <SidebarMenu>
             {NAV_ITEMS.map((item: NavItem) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
+                  asChild
                   isActive={pathname === item.href}
                   disabled={item.disabled}
                   className={cn(item.disabled && "cursor-not-allowed opacity-50")}
-                  onClick={() => { // Handle navigation via onClick
-                    if (!item.disabled) {
-                      router.push(item.href);
-                    }
-                  }}
-                  aria-disabled={item.disabled}
-                  tabIndex={item.disabled ? -1 : undefined}
                 >
-                  {/* Direct children are icon and span */}
-                  <item.icon />
-                  <span>{item.label}</span>
+                  <Link href={item.href} passHref legacyBehavior>
+                    <a className="flex items-center gap-2">
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter>
+        <SidebarFooter 
+          className={cn(
+            // isIconOnlyCollapsed && "p-2"
+            "p-2" // Always expanded padding
+          )}
+        >
            <SidebarMenu>
             {BOTTOM_NAV_ITEMS.map((item: NavItem) => (
-              <SidebarMenuItem key={item.href}>
+              <SidebarMenuItem key={item.label}> {/* Changed key to item.label */}
                 <SidebarMenuButton
+                  asChild
                   isActive={pathname === item.href}
                   disabled={item.disabled}
                   className={cn(item.disabled && "cursor-not-allowed opacity-50")}
-                  onClick={() => { // Handle navigation via onClick
-                    if (!item.disabled) {
-                      router.push(item.href);
-                    }
-                  }}
-                  aria-disabled={item.disabled}
-                  tabIndex={item.disabled ? -1 : undefined}
                 >
-                  <item.icon />
-                  <span>{item.label}</span>
+                  <Link href={item.href} passHref legacyBehavior>
+                    <a className="flex items-center gap-2">
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </a>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
@@ -150,8 +173,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p>Version 0.1.0 (Prototype)</p>
         </footer>
       </SidebarInset>
-    </div>
+    </>
   );
 }
-
-    
