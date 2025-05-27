@@ -106,32 +106,32 @@ export default function AppointmentsPage() {
       }
     };
     fetchAppointments();
-  }, [currentLocale, t]); // Depends on t for toast messages
+  }, [t]); // Depends on t for toast messages
 
   React.useEffect(() => {
     const fetchNotifications = async () => {
       setIsLoadingNotifications(true);
+      const currentT = getTranslator(currentLocale); // Get t inside the effect
       try {
         // console.log("Fetching notifications from /api/v1/notifications?context=appointments...");
         // const response = await fetch('/api/v1/notifications?context=appointments');
-        // if (!response.ok) throw new Error(t('appointments.toast.loadNotificationsError'));
+        // if (!response.ok) throw new Error(currentT('appointments.toast.loadNotificationsError'));
         // const data = await response.json();
         // setNotifications(data);
         await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
-        // The message itself is translated, so this effect depends on `t` (and thus `currentLocale`)
         const fetchedNotifications: NotificationItem[] = [
-          { id: 1, message: t('appointments.notifications.mock.message1'), time: "2 hours ago", read: false },
+          { id: 1, message: currentT('appointments.notifications.mock.message1'), time: "2 hours ago", read: false },
         ];
         setNotifications(fetchedNotifications);
       } catch (error) {
         console.error("Error fetching notifications:", error);
-        toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadNotificationsError')});
+        toast({ variant: "destructive", title: currentT('appointments.toast.loadError'), description: currentT('appointments.toast.loadNotificationsError')});
       } finally {
         setIsLoadingNotifications(false);
       }
     };
     fetchNotifications();
-  }, [currentLocale, t]); // Depends on t for mock data and toast messages
+  }, [currentLocale]); // Depends on currentLocale for data generation
 
   React.useEffect(() => {
     const fetchDoctors = async () => {
@@ -143,7 +143,7 @@ export default function AppointmentsPage() {
             // const data = await response.json();
             // setDoctors(data);
             await new Promise(resolve => setTimeout(resolve, 600)); // Simulate API delay
-            setDoctors(initialMockDoctors); // Static mock data, doesn't depend on locale
+            setDoctors(initialMockDoctors);
         } catch (error) {
             console.error("Error fetching doctors:", error);
             toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadDoctorsError') });
@@ -152,7 +152,7 @@ export default function AppointmentsPage() {
         }
     };
     fetchDoctors();
-  }, [currentLocale, t]); // Depends on t for toast messages
+  }, [t]); // Depends on t for toast messages
 
   const handleScheduleNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
