@@ -82,7 +82,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsLoadingSummary(true);
-    const currentT = getTranslator(currentLocale); // Use currentLocale for data generation if needed
+    // const currentT = getTranslator(currentLocale); // t is already available from useMemo
     setTimeout(() => {
       const fetchedSummary: SummaryCardData[] = [
         { id: "sc1", titleKey: "dashboard.card.totalPatients.title", value: "156", iconName: "TrendingUp", color: "text-green-500", descriptionKey: "dashboard.card.totalPatients.description", link: "#" },
@@ -90,13 +90,13 @@ export default function DashboardPage() {
         { id: "sc3", titleKey: "dashboard.card.wardOccupancy.title", value: "75%", iconName: "BedDouble", color: "text-indigo-500", descriptionKey: "dashboard.card.wardOccupancy.description", link: "/ward-management" },
         { id: "sc4", titleKey: "dashboard.card.erStatus.title", value: "12 Active", iconName: "Siren", color: "text-red-500", descriptionKey: "dashboard.card.erStatus.description", link: "/emergency-room" },
         { id: "sc5", titleKey: "dashboard.card.newPatients.title", value: "5", iconName: "Users", color: "text-emerald-500", descriptionKey: "dashboard.card.newPatients.description", link: "/patient-registration" },
-        { id: "sc6", titleKey: "dashboard.card.commonCondition.title", value: "Hypertension,Type 2 Diabetes,Influenza,Malaria,Pneumonia", iconName: "Stethoscope", color: "text-orange-500", descriptionKey: "dashboard.card.commonCondition.description", link: "#" },
+        { id: "sc6", titleKey: "dashboard.card.topDiagnostics.title", value: "Hypertension,Type 2 Diabetes,Influenza,Malaria,Pneumonia", iconName: "Stethoscope", color: "text-orange-500", descriptionKey: "dashboard.card.topDiagnostics.description", link: "#" },
         { id: "sc7", titleKey: "dashboard.card.prescribedDrug.title", value: "Paracetamol,Amoxicillin,Ibuprofen,Omeprazole,Salbutamol", iconName: "PillIcon", color: "text-purple-500", descriptionKey: "dashboard.card.prescribedDrug.description", link: "#" },
       ];
       setSummaryCardsData(fetchedSummary);
       setIsLoadingSummary(false);
     }, 1000);
-  }, [currentLocale]); 
+  }, [currentLocale]); // Depend on currentLocale if keys or mock data generation needs to be sensitive to it
 
   useEffect(() => {
     setIsLoadingQuickActions(true);
@@ -162,6 +162,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsLoadingDraftedConsultations(true);
+    // const currentT = getTranslator(currentLocale); // Not needed if draft content isn't localized
     setTimeout(() => {
       const fetchedDrafts: DraftedConsultationItem[] = [
         { id: "draft1", patientName: "Pending: John Doe", specialtyOrReason: "Awaiting Lab Results (Cardiology)", lastSavedTime: "2h ago" },
@@ -190,7 +191,7 @@ export default function DashboardPage() {
 
         {isLoadingSummary ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {Array.from({length: 8}).map((_, index) => ( // Increased length for skeleton
+                {Array.from({length: 8}).map((_, index) => ( 
                     <Card key={`skl-sum-${index}`} className="shadow-sm">
                         <CardHeader className="pb-2"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/></CardHeader>
                         <CardContent><div className="h-5 w-3/4 bg-muted rounded animate-pulse"/><div className="h-3 w-1/2 bg-muted rounded mt-1 animate-pulse"/></CardContent>
@@ -201,8 +202,7 @@ export default function DashboardPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {summaryCardsData.map((item) => {
                 const Icon = ICONS_MAP[item.iconName];
-                const isPrescriptionCard = item.titleKey === "dashboard.card.prescribedDrug.title";
-                const isDiagnosticsCard = item.titleKey === "dashboard.card.commonCondition.title"; // This now refers to Top 5 Diagnostics
+                const isMultiListItemCard = item.titleKey === "dashboard.card.prescribedDrug.title" || item.titleKey === "dashboard.card.topDiagnostics.title";
 
                 return (
                 <Card key={item.id} className="shadow-sm hover:shadow-md transition-shadow">
@@ -211,7 +211,7 @@ export default function DashboardPage() {
                     {Icon && <Icon className={`h-5 w-5 ${item.color}`} />}
                 </CardHeader>
                 <CardContent>
-                    {(isPrescriptionCard || isDiagnosticsCard) && typeof item.value === 'string' ? (
+                    {isMultiListItemCard && typeof item.value === 'string' ? (
                        <ul className="text-sm font-semibold list-decimal list-inside space-y-0.5">
                           {(item.value as string).split(',').slice(0,5).map((entry, idx) => <li key={idx} className="text-xs">{entry.trim()}</li>)}
                         </ul>
@@ -240,7 +240,7 @@ export default function DashboardPage() {
                         <span className="text-xs text-muted-foreground">Loading drafts...</span>
                     </div>
                   ) : draftedConsultations.length > 0 ? (
-                    <ul className="space-y-1.5 text-xs">
+                    <ul className="space-y-1.5 text-xs max-h-[100px] overflow-y-auto">
                       {draftedConsultations.slice(0,3).map(draft => (
                         <li key={draft.id}>
                           <p className="font-medium truncate">{draft.patientName}</p>
@@ -424,3 +424,4 @@ export default function DashboardPage() {
       </div>
   );
 }
+
