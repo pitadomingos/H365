@@ -87,12 +87,12 @@ export default function AppointmentsPage() {
     const fetchAppointments = async () => {
       setIsLoadingAppointments(true);
       try {
-        // console.log("Fetching appointments...");
+        // console.log("Fetching appointments with /api/v1/appointments...");
         // const response = await fetch('/api/v1/appointments'); 
         // if (!response.ok) throw new Error(t('appointments.toast.loadAppointmentsError'));
         // const data = await response.json();
         // setAppointments(data);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
         const fetchedAppointments: Appointment[] = [
           { id: "APT001", patientName: "Alice Wonderland", doctorName: "Dr. Smith", date: "2024-08-15", time: "10:00 AM - 10:30 AM", type: "Consultation", status: "Confirmed" },
           { id: "APT002", patientName: "Bob The Builder", doctorName: "Dr. Jones", date: "2024-08-15", time: "11:00 AM - 11:45 AM", type: "Check-up", status: "Pending" },
@@ -106,18 +106,18 @@ export default function AppointmentsPage() {
       }
     };
     fetchAppointments();
-  }, [t, currentLocale]); // Depends on t for potential error messages, and currentLocale if API were localized
+  }, [currentLocale, t]); // Depends on t for toast messages
 
   React.useEffect(() => {
     const fetchNotifications = async () => {
       setIsLoadingNotifications(true);
       try {
-        // console.log("Fetching notifications...");
+        // console.log("Fetching notifications from /api/v1/notifications?context=appointments...");
         // const response = await fetch('/api/v1/notifications?context=appointments');
         // if (!response.ok) throw new Error(t('appointments.toast.loadNotificationsError'));
         // const data = await response.json();
         // setNotifications(data);
-        await new Promise(resolve => setTimeout(resolve, 800));
+        await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API delay
         // The message itself is translated, so this effect depends on `t` (and thus `currentLocale`)
         const fetchedNotifications: NotificationItem[] = [
           { id: 1, message: t('appointments.notifications.mock.message1'), time: "2 hours ago", read: false },
@@ -131,19 +131,19 @@ export default function AppointmentsPage() {
       }
     };
     fetchNotifications();
-  }, [t, currentLocale]); // Depends on t for mock data and potential error messages
+  }, [currentLocale, t]); // Depends on t for mock data and toast messages
 
   React.useEffect(() => {
     const fetchDoctors = async () => {
         setIsLoadingDoctors(true);
         try {
-            // console.log("Fetching doctors...");
+            // console.log("Fetching doctors from /api/v1/doctors...");
             // const response = await fetch('/api/v1/doctors');
             // if (!response.ok) throw new Error(t('appointments.toast.loadDoctorsError'));
             // const data = await response.json();
             // setDoctors(data);
-            await new Promise(resolve => setTimeout(resolve, 600));
-            setDoctors(initialMockDoctors); // Static mock data
+            await new Promise(resolve => setTimeout(resolve, 600)); // Simulate API delay
+            setDoctors(initialMockDoctors); // Static mock data, doesn't depend on locale
         } catch (error) {
             console.error("Error fetching doctors:", error);
             toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadDoctorsError') });
@@ -152,7 +152,7 @@ export default function AppointmentsPage() {
         }
     };
     fetchDoctors();
-  }, [t]); // Only depends on t for potential error messages
+  }, [currentLocale, t]); // Depends on t for toast messages
 
   const handleScheduleNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,13 +169,13 @@ export default function AppointmentsPage() {
     const payload = {
         patientName: newPatientName,
         doctorId: newSelectedDoctorId,
-        date: newAppointmentDate,
-        time: newAppointmentTime, 
+        date: newAppointmentDate, // YYYY-MM-DD
+        time: newAppointmentTime, // HH:MM
         type: newAppointmentType,
     };
 
     try {
-        // console.log("Scheduling new appointment with payload:", payload);
+        // console.log("Scheduling new appointment with payload (to /api/v1/appointments):", payload);
         // const response = await fetch('/api/v1/appointments', {
         //     method: 'POST',
         //     headers: { 'Content-Type': 'application/json' },
@@ -187,7 +187,7 @@ export default function AppointmentsPage() {
         // }
         // const newApt: Appointment = await response.json();
         
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
         const doctor = doctors.find(d => d.id === newSelectedDoctorId);
         const appointmentDateObj = new Date(newAppointmentDate + 'T' + newAppointmentTime);
         const endTime = new Date(appointmentDateObj.getTime() + 30 * 60000); 
@@ -416,5 +416,4 @@ export default function AppointmentsPage() {
       </div>
   );
 }
-
     
