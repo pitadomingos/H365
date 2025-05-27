@@ -1,5 +1,5 @@
 
-"use client"; 
+"use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/compone
 interface SummaryCardData {
   id: string;
   titleKey: string;
-  value: string | string[]; 
+  value: string | string[];
   iconName: "TrendingUp" | "CalendarCheck" | "BedDouble" | "Siren" | "Users" | "HeartPulse" | "PillIcon" | "FileClock" | "Stethoscope";
   color: string;
   descriptionKey: string;
@@ -29,8 +29,8 @@ interface QuickActionData {
 
 interface RecentActivityItem {
   user: string;
-  action: string; 
-  time: string;   
+  action: string;
+  time: string;
 }
 
 interface ChartDataItem {
@@ -40,9 +40,9 @@ interface ChartDataItem {
 }
 
 interface DailyAttendanceItem {
-    day: string; 
+    day: string;
     patients: number;
-    fill?: string; 
+    fill?: string;
 }
 
 interface DraftedConsultationItem {
@@ -63,7 +63,7 @@ export default function DashboardPage() {
 
   const [summaryCardsData, setSummaryCardsData] = useState<SummaryCardData[]>([]);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
-  
+
   const [quickActionsData, setQuickActionsData] = useState<QuickActionData[]>([]);
   const [isLoadingQuickActions, setIsLoadingQuickActions] = useState(true);
 
@@ -72,7 +72,7 @@ export default function DashboardPage() {
 
   const [patientEntryPointsData, setPatientEntryPointsData] = useState<ChartDataItem[]>([]);
   const [isLoadingEntryPoints, setIsLoadingEntryPoints] = useState(true);
-  
+
   const [dailyAttendanceData, setDailyAttendanceData] = useState<DailyAttendanceItem[]>([]);
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
 
@@ -95,7 +95,7 @@ export default function DashboardPage() {
       setSummaryCardsData(fetchedSummary);
       setIsLoadingSummary(false);
     }, 1000);
-  }, []); 
+  }, []); // Runs once on mount
 
   useEffect(() => {
     setIsLoadingQuickActions(true);
@@ -111,7 +111,7 @@ export default function DashboardPage() {
         setQuickActionsData(fetchedQuickActions);
         setIsLoadingQuickActions(false);
     }, 800);
-  }, []); 
+  }, []); // Runs once on mount
 
   useEffect(() => {
     setIsLoadingActivity(true);
@@ -126,11 +126,11 @@ export default function DashboardPage() {
         setRecentActivity(fetchedActivity);
         setIsLoadingActivity(false);
     }, 1200);
-  }, []); 
-  
+  }, []); // Runs once on mount
+
   useEffect(() => {
     setIsLoadingEntryPoints(true);
-    const localT = getTranslator(currentLocale); 
+    const localT = getTranslator(currentLocale); // Get t specifically for this effect
     setTimeout(() => {
         const fetchedEntryPoints: ChartDataItem[] = [
             { name: localT('dashboard.charts.entryPoints.outpatient'), value: 400, fill: "hsl(var(--chart-1))" },
@@ -140,7 +140,7 @@ export default function DashboardPage() {
         setPatientEntryPointsData(fetchedEntryPoints);
         setIsLoadingEntryPoints(false);
     }, 1500);
-  }, [currentLocale]); 
+  }, [currentLocale]); // Runs on mount and when currentLocale changes
 
   useEffect(() => {
     setIsLoadingAttendance(true);
@@ -157,7 +157,7 @@ export default function DashboardPage() {
         setDailyAttendanceData(fetchedAttendanceData);
         setIsLoadingAttendance(false);
     }, 1600);
-  }, []); 
+  }, []); // Runs once on mount
 
   useEffect(() => {
     setIsLoadingDraftedConsultations(true);
@@ -170,14 +170,14 @@ export default function DashboardPage() {
       setDraftedConsultations(fetchedDrafts);
       setIsLoadingDraftedConsultations(false);
     }, 1400);
-  }, []);
+  }, []); // Runs once on mount
 
   const chartConfig = useMemo(() => ({
     outpatient: { label: t('dashboard.charts.entryPoints.outpatient'), color: "hsl(var(--chart-1))" },
     emergency: { label: t('dashboard.charts.entryPoints.emergency'), color: "hsl(var(--chart-2))" },
     epidemic: { label: t('dashboard.charts.entryPoints.epidemic'), color: "hsl(var(--chart-3))" },
     patients: { label: t('dashboard.charts.dailyAttendance.patients'), color: "hsl(var(--chart-4))" },
-  }), [t]) satisfies ChartConfig;
+  }), [t]) satisfies ChartConfig; // chartConfig depends on `t`, which depends on `currentLocale`
 
 
   return (
@@ -189,7 +189,7 @@ export default function DashboardPage() {
 
         {isLoadingSummary ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {Array.from({length: 8}).map((_, index) => ( 
+                {Array.from({length: 8}).map((_, index) => (
                     <Card key={`skl-sum-${index}`} className="shadow-sm">
                         <CardHeader className="pb-2"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground"/></CardHeader>
                         <CardContent><div className="h-5 w-3/4 bg-muted rounded animate-pulse"/><div className="h-3 w-1/2 bg-muted rounded mt-1 animate-pulse"/></CardContent>
@@ -234,7 +234,7 @@ export default function DashboardPage() {
                 <CardContent>
                   {isLoadingDraftedConsultations ? (
                      <div className="flex items-center justify-center py-3">
-                        <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" /> 
+                        <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
                         <span className="text-xs text-muted-foreground">{t('dashboard.loading')}</span>
                     </div>
                   ) : draftedConsultations.length > 0 ? (
@@ -256,7 +256,7 @@ export default function DashboardPage() {
               </Card>
             </div>
         )}
-        
+
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="shadow-sm">
@@ -284,7 +284,7 @@ export default function DashboardPage() {
                     <li key={index} className="flex items-start text-sm">
                         <Activity className="h-4 w-4 mr-3 mt-1 shrink-0 text-primary" />
                         <div>
-                        <span className="font-medium">{activity.user}</span> {activity.action} {/* Updated to not translate mock action/time */}
+                        <span className="font-medium">{activity.user}</span> {activity.action}
                         <p className="text-xs text-muted-foreground">{activity.time}</p>
                         </div>
                     </li>
@@ -311,10 +311,10 @@ export default function DashboardPage() {
                 quickActionsData.map((action) => {
                     const Icon = ICONS_MAP[action.iconName];
                     return(
-                    <Button 
-                    key={action.href} 
-                    asChild 
-                    className="w-full justify-start text-left" 
+                    <Button
+                    key={action.href}
+                    asChild
+                    className="w-full justify-start text-left"
                     variant={action.href === "/treatment-recommendation" ? "default" : "secondary"}
                     >
                     <Link href={action.href}>
@@ -327,7 +327,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
             <Card className="shadow-sm">
                 <CardHeader>
@@ -422,9 +422,8 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
         </div>
-
       </div>
   );
 }
 
-
+    
