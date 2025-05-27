@@ -87,7 +87,7 @@ export default function AppointmentsPage() {
     const fetchAppointments = async () => {
       setIsLoadingAppointments(true);
       try {
-        console.log("Fetching appointments...");
+        // console.log("Fetching appointments...");
         // const response = await fetch('/api/v1/appointments'); 
         // if (!response.ok) throw new Error(t('appointments.toast.loadAppointmentsError'));
         // const data = await response.json();
@@ -105,16 +105,20 @@ export default function AppointmentsPage() {
         setIsLoadingAppointments(false);
       }
     };
+    fetchAppointments();
+  }, [t, currentLocale]); // Depends on t for potential error messages, and currentLocale if API were localized
 
+  React.useEffect(() => {
     const fetchNotifications = async () => {
       setIsLoadingNotifications(true);
       try {
-        console.log("Fetching notifications...");
+        // console.log("Fetching notifications...");
         // const response = await fetch('/api/v1/notifications?context=appointments');
         // if (!response.ok) throw new Error(t('appointments.toast.loadNotificationsError'));
         // const data = await response.json();
         // setNotifications(data);
         await new Promise(resolve => setTimeout(resolve, 800));
+        // The message itself is translated, so this effect depends on `t` (and thus `currentLocale`)
         const fetchedNotifications: NotificationItem[] = [
           { id: 1, message: t('appointments.notifications.mock.message1'), time: "2 hours ago", read: false },
         ];
@@ -126,17 +130,20 @@ export default function AppointmentsPage() {
         setIsLoadingNotifications(false);
       }
     };
+    fetchNotifications();
+  }, [t, currentLocale]); // Depends on t for mock data and potential error messages
 
+  React.useEffect(() => {
     const fetchDoctors = async () => {
         setIsLoadingDoctors(true);
         try {
-            console.log("Fetching doctors...");
+            // console.log("Fetching doctors...");
             // const response = await fetch('/api/v1/doctors');
             // if (!response.ok) throw new Error(t('appointments.toast.loadDoctorsError'));
             // const data = await response.json();
             // setDoctors(data);
             await new Promise(resolve => setTimeout(resolve, 600));
-            setDoctors(initialMockDoctors);
+            setDoctors(initialMockDoctors); // Static mock data
         } catch (error) {
             console.error("Error fetching doctors:", error);
             toast({ variant: "destructive", title: t('appointments.toast.loadError'), description: t('appointments.toast.loadDoctorsError') });
@@ -144,11 +151,8 @@ export default function AppointmentsPage() {
             setIsLoadingDoctors(false);
         }
     };
-
-    fetchAppointments();
-    fetchNotifications();
     fetchDoctors();
-  }, [t, currentLocale]); // Added currentLocale to dependency array for re-fetching localized mock data
+  }, [t]); // Only depends on t for potential error messages
 
   const handleScheduleNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,7 +175,7 @@ export default function AppointmentsPage() {
     };
 
     try {
-        console.log("Scheduling new appointment with payload:", payload);
+        // console.log("Scheduling new appointment with payload:", payload);
         // const response = await fetch('/api/v1/appointments', {
         //     method: 'POST',
         //     headers: { 'Content-Type': 'application/json' },
@@ -182,18 +186,16 @@ export default function AppointmentsPage() {
         //     throw new Error(errorData.error || `API error: ${response.statusText}`);
         // }
         // const newApt: Appointment = await response.json();
-        // Optimistic update for mock:
+        
         await new Promise(resolve => setTimeout(resolve, 1500));
         const doctor = doctors.find(d => d.id === newSelectedDoctorId);
-        const timeParts = newAppointmentTime.split(':');
         const appointmentDateObj = new Date(newAppointmentDate + 'T' + newAppointmentTime);
-        const endTime = new Date(appointmentDateObj.getTime() + 30 * 60000); // Mock 30 min duration
-        const formattedTime = `${newAppointmentTime} - ${endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+        const endTime = new Date(appointmentDateObj.getTime() + 30 * 60000); 
+        const formattedTime = `${newAppointmentTime} - ${endTime.toLocaleTimeString(currentLocale === 'pt' ? 'pt-BR' : 'en-US', {hour: '2-digit', minute:'2-digit'})}`;
         
         const newApt: Appointment = {
             id: `APT${Date.now()}`,
             patientName: newPatientName,
-            // doctorId: newSelectedDoctorId, // Not in Appointment interface used for display
             doctorName: doctor ? doctor.name : "Unknown Doctor",
             date: newAppointmentDate,
             time: formattedTime,
@@ -414,3 +416,5 @@ export default function AppointmentsPage() {
       </div>
   );
 }
+
+    
