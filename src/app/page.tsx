@@ -29,8 +29,8 @@ interface QuickActionData {
 
 interface RecentActivityItem {
   user: string;
-  action: string;
-  time: string;
+  action: string; 
+  time: string;   
 }
 
 interface ChartDataItem {
@@ -40,9 +40,9 @@ interface ChartDataItem {
 }
 
 interface DailyAttendanceItem {
-    day: string;
+    day: string; 
     patients: number;
-    fill: string;
+    fill?: string; 
 }
 
 interface DraftedConsultationItem {
@@ -59,7 +59,7 @@ const ICONS_MAP: { [key: string]: React.ElementType } = {
 
 export default function DashboardPage() {
   const { currentLocale } = useLocale();
-  const t = useMemo(() => getTranslator(currentLocale), [currentLocale]);
+  const t = React.useMemo(() => getTranslator(currentLocale), [currentLocale]);
 
   const [summaryCardsData, setSummaryCardsData] = useState<SummaryCardData[]>([]);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
@@ -82,7 +82,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsLoadingSummary(true);
-    // const currentT = getTranslator(currentLocale); // t is already available from useMemo
     setTimeout(() => {
       const fetchedSummary: SummaryCardData[] = [
         { id: "sc1", titleKey: "dashboard.card.totalPatients.title", value: "156", iconName: "TrendingUp", color: "text-green-500", descriptionKey: "dashboard.card.totalPatients.description", link: "#" },
@@ -96,7 +95,7 @@ export default function DashboardPage() {
       setSummaryCardsData(fetchedSummary);
       setIsLoadingSummary(false);
     }, 1000);
-  }, [currentLocale]); // Depend on currentLocale if keys or mock data generation needs to be sensitive to it
+  }, []); 
 
   useEffect(() => {
     setIsLoadingQuickActions(true);
@@ -131,12 +130,12 @@ export default function DashboardPage() {
   
   useEffect(() => {
     setIsLoadingEntryPoints(true);
-    const currentT = getTranslator(currentLocale); 
+    const localT = getTranslator(currentLocale); 
     setTimeout(() => {
         const fetchedEntryPoints: ChartDataItem[] = [
-            { name: currentT('dashboard.charts.entryPoints.outpatient'), value: 400, fill: "hsl(var(--chart-1))" },
-            { name: currentT('dashboard.charts.entryPoints.emergency'), value: 150, fill: "hsl(var(--chart-2))" },
-            { name: currentT('dashboard.charts.entryPoints.epidemic'), value: 25, fill: "hsl(var(--chart-3))" },
+            { name: localT('dashboard.charts.entryPoints.outpatient'), value: 400, fill: "hsl(var(--chart-1))" },
+            { name: localT('dashboard.charts.entryPoints.emergency'), value: 150, fill: "hsl(var(--chart-2))" },
+            { name: localT('dashboard.charts.entryPoints.epidemic'), value: 25, fill: "hsl(var(--chart-3))" },
         ];
         setPatientEntryPointsData(fetchedEntryPoints);
         setIsLoadingEntryPoints(false);
@@ -162,7 +161,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsLoadingDraftedConsultations(true);
-    // const currentT = getTranslator(currentLocale); // Not needed if draft content isn't localized
     setTimeout(() => {
       const fetchedDrafts: DraftedConsultationItem[] = [
         { id: "draft1", patientName: "Pending: John Doe", specialtyOrReason: "Awaiting Lab Results (Cardiology)", lastSavedTime: "2h ago" },
@@ -202,7 +200,7 @@ export default function DashboardPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {summaryCardsData.map((item) => {
                 const Icon = ICONS_MAP[item.iconName];
-                const isMultiListItemCard = item.titleKey === "dashboard.card.prescribedDrug.title" || item.titleKey === "dashboard.card.topDiagnostics.title";
+                const isMultiListItemCard = item.id === "sc6" || item.id === "sc7";
 
                 return (
                 <Card key={item.id} className="shadow-sm hover:shadow-md transition-shadow">
@@ -237,7 +235,7 @@ export default function DashboardPage() {
                   {isLoadingDraftedConsultations ? (
                      <div className="flex items-center justify-center py-3">
                         <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" /> 
-                        <span className="text-xs text-muted-foreground">Loading drafts...</span>
+                        <span className="text-xs text-muted-foreground">{t('dashboard.loading')}</span>
                     </div>
                   ) : draftedConsultations.length > 0 ? (
                     <ul className="space-y-1.5 text-xs max-h-[100px] overflow-y-auto">
@@ -249,7 +247,7 @@ export default function DashboardPage() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-xs text-muted-foreground text-center py-2">No pending drafts.</p>
+                    <p className="text-xs text-muted-foreground text-center py-2">{t('dashboard.drafts.empty')}</p>
                   )}
                   <Button variant="link" asChild className="px-0 pt-2 h-auto text-sm">
                     <Link href="/treatment-recommendation">{t('dashboard.card.viewAllDrafts')}</Link>
@@ -286,7 +284,7 @@ export default function DashboardPage() {
                     <li key={index} className="flex items-start text-sm">
                         <Activity className="h-4 w-4 mr-3 mt-1 shrink-0 text-primary" />
                         <div>
-                        <span className="font-medium">{activity.user}</span> {activity.action}
+                        <span className="font-medium">{activity.user}</span> {activity.action} {/* Updated to not translate mock action/time */}
                         <p className="text-xs text-muted-foreground">{activity.time}</p>
                         </div>
                     </li>
@@ -412,7 +410,11 @@ export default function DashboardPage() {
                                             </div>
                                         )}
                                         />
-                                    <Bar dataKey="patients" name={t('dashboard.charts.dailyAttendance.patients')} radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="patients" name={t('dashboard.charts.dailyAttendance.patients')} radius={[4, 4, 0, 0]}>
+                                      {dailyAttendanceData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill || "hsl(var(--chart-4))"} />
+                                      ))}
+                                    </Bar>
                                 </RechartsBarChart>
                             </ResponsiveContainer>
                         </ChartContainer>
@@ -424,4 +426,5 @@ export default function DashboardPage() {
       </div>
   );
 }
+
 
