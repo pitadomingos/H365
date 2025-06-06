@@ -243,7 +243,14 @@ export default function ConsultationRoomPage() {
   const [draftedConsultations, setDraftedConsultations] = useState<DraftedConsultationItem[]>([]);
   const [isLoadingDraftedConsultations, setIsLoadingDraftedConsultations] = useState(true);
 
-  const [dataToLoadInForm, setDataToLoadInForm] = useState<ConsultationInitialData | null>(null);
+  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null); // New state to hold the selected draft ID
+
+  const dataToLoadInForm = useMemo(() => {
+    if (selectedDraftId && MOCK_FULL_DRAFT_DETAILS[selectedDraftId]) {
+      return MOCK_FULL_DRAFT_DETAILS[selectedDraftId];
+    }
+    return null;
+  }, [selectedDraftId]); // dataToLoadInForm now only changes when selectedDraftId changes
 
   useEffect(() => {
     const fetchWaitingListData = async () => {
@@ -297,7 +304,7 @@ export default function ConsultationRoomPage() {
   const handleResumeConsultation = (draftId: string) => {
     const draftDetails = MOCK_FULL_DRAFT_DETAILS[draftId];
     if (draftDetails) {
-      setDataToLoadInForm(draftDetails);
+      setSelectedDraftId(draftId); // Update selectedDraftId instead of dataToLoadInForm directly
       toast({ title: t('consultationRoom.toast.loadingDraft.title'), description: t('consultationRoom.toast.loadingDraft.description', { patientName: draftDetails.patientData?.fullName || "patient" }) });
     } else {
       toast({ variant: "destructive", title: t('consultationForm.toast.error'), description: t('consultationRoom.toast.loadingDraft.error') });

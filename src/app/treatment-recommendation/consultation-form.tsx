@@ -197,7 +197,7 @@ export function ConsultationForm({ getRecommendationAction, initialData }: Consu
       setRecommendation(initialData.recommendation || null);
       setError(null); 
     }
-  }, [initialData, form, patientData?.nationalId]);
+}, [initialData, form]);
 
 
   useEffect(() => {
